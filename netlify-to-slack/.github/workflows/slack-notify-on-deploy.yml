@@ -1,0 +1,24 @@
+name: Notify Slack After Deploy
+
+on:
+  push:
+    branches:
+      - main # 또는 배포 브랜치 이름
+
+jobs:
+  notify-slack:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Wait for Netlify Deploy to Finish
+        run: |
+          echo "Waiting 30 seconds for Netlify to finish deployment..."
+          sleep 30
+
+      - name: Send Slack Notification
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+          --data '{"text":"🎷세상에!! 새로운 배포 버전이 업데이트되었지 뭐야??!!\n🔗 https://likelionhackathon.netlify.app"}' \
+          $SLACK_WEBHOOK_URL
