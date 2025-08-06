@@ -17,8 +17,8 @@ jobs:
 
       - name: Send Slack Notification
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_FROM_NETLIFY_URL }}
+          SLACK_FROM_NETLIFY_URL: ${{ secrets.SLACK_FROM_NETLIFY_URL }}
         run: |
           curl -X POST -H 'Content-type: application/json' \
           --data '{"text":"🎷세상에!! 새로운 배포 버전이 업데이트되었지 뭐야??!!\n🔗 https://likelionhackathon.netlify.app"}' \
-          $SLACK_WEBHOOK_URL
+          $SLACK_FROM_NETLIFY_URL
