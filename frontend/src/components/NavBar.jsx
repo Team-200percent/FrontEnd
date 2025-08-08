@@ -6,7 +6,9 @@ const NavContainer = styled.nav`
   position: fixed;
   bottom: 0;
   width: 100%;
-  max-width: 430px; 
+  transform: translateX(-50%);    
+  left: 50%;     
+  max-width: 500px; 
   height: 64px;
   background-color: #ffffff;
   display: flex;
