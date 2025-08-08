@@ -1,35 +1,40 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import "./App.css";
+import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
+import Home from "./pages/Home";
+import Map from "./pages/Map";
+import Explore from "./pages/Explore";
+import MyPage from "./pages/MyPage";
+import Layout from "./layout/Layout";
+import NavBar from "./components/NavBar";
 
-function App() {
-  const [count, setCount] = useState(0)
+function AppInner() {
+  const location = useLocation(); // 현재 URL 전체 정보를 주는 React Hook
+  const hideNavPaths = ["/login", "/onboarding"]; // 여기에 숨길 경로들 적기
+  const shouldHideNav = hideNavPaths.some(path => location.pathname.startsWith(path));
+  // 현재 경로가 hideNavPaths 중 하나로 시작하는지 확인하는 boolean 변수 
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+    <Layout>
+      <div style={{ paddingBottom: "80px" }}>
+        <Routes>
+          {/* Main Pages */}
+          <Route path="/" element={<Home />} />
+          <Route path="/map" element={<Map />} />
+          <Route path="/explore" element={<Explore />} />
+          <Route path="/mypage" element={<MyPage />} />
+
+          {/* Sub Pages */}
+        </Routes>
+        {!shouldHideNav && <NavBar />}
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    </Layout>
   )
 }
 
-export default App
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AppInner />
+    </BrowserRouter>
+  );
+}
