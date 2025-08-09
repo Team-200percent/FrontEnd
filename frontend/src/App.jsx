@@ -1,4 +1,3 @@
-import "./App.css";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
 import Home from "./pages/Home";
 import Map from "./pages/Map";
@@ -14,8 +13,8 @@ function AppInner() {
   // 현재 경로가 hideNavPaths 중 하나로 시작하는지 확인하는 boolean 변수 
 
   return (
-    <Layout>
-      <div style={{ paddingBottom: "80px" }}>
+    // <Layout>
+      <div> 
         <Routes>
           {/* Main Pages */}
           <Route path="/" element={<Home />} />
@@ -27,7 +26,7 @@ function AppInner() {
         </Routes>
         {!shouldHideNav && <NavBar />}
       </div>
-    </Layout>
+    // </Layout>
   )
 }
 
