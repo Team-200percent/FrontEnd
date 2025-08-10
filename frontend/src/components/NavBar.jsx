@@ -45,7 +45,7 @@ export default function NavBar() {
 
   return (
     <NavContainer>
-      <NavItem to="/" active={path === '/'}>
+      <NavItem to="/home" active={path === '/home'}>
         <Home size={20} />
         홈
       </NavItem>
