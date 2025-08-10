@@ -6,7 +6,7 @@ const GlobalStyle = createGlobalStyle`
 
   * {
     box-sizing: border-box;
-    font-family: 'Pretendard', sans-serif;
+    font-family: 'Pretendard', sans-serif !important;
   }
 
   body {
@@ -16,7 +16,6 @@ const GlobalStyle = createGlobalStyle`
 
   a {
     text-decoration: none;
-    color: inherit;
   }
 `;
 

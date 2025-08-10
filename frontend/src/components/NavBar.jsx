@@ -1,66 +1,86 @@
-import { useLocation, Link } from 'react-router-dom';
-import styled from 'styled-components';
-import { Home, Map, Search, User } from 'lucide-react';
+import { Link, useLocation } from "react-router-dom";
+import styled from "styled-components";
 
 const NavContainer = styled.nav`
   position: fixed;
-  bottom: 0;
-  width: 100%;
   left: 50%;
-  transform: translateX(-50%);       
+  bottom: 0;
+  transform: translateX(-50%);
+  width: 100%;
   max-width: 430px;
-  height: 64px;
-  padding-bottom: var(--safe-bottom);
-  background-color: #ffffff;
-  display: flex;
+  height: 70px;
+  background: #fff;
   border-top: 1px solid #eee;
   box-shadow: 0 -1px 4px rgba(0, 0, 0, 0.05);
+  display: flex;
+  /* align-items: center;       // 불필요 */
+  /* justify-content: space-around; // 불필요 */
   z-index: 1000;
 `;
 
-const NavItem = styled(Link)`
+const Item = styled(Link)`
   flex: 1;
+  height: 100%;
   text-align: center;
-  padding: 8px 0;
-  color: ${props => (props.active ? '#007bff' : '#888')};
-  font-size: 10px;
+  text-decoration: none;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 4px;
 
-  svg {
-    stroke: ${props => (props.active ? '#007bff' : '#888')};
-    margin-bottom: 4px;
-  }
-
+  /* hover 부드럽게: transition은 요소에 */
+  transition: background-color 0.2s ease;
   &:hover {
     background-color: #f8f8f8;
   }
+
+  /* 모바일 탭 하이라이트 제거(선택) */
+  -webkit-tap-highlight-color: transparent;
 `;
 
-export default function NavBar() {
-  const location = useLocation();
-  const path = location.pathname;
+const IconBox = styled.div`
+  width: 40px; 
+  height: 32px;
+  display: grid;
+  place-items: center;
+`;
+
+const Icon = styled.img`
+  width: ${({ $w }) => ($w ? `${$w}px` : "24px")};
+  height: ${({ $h }) => ($h ? `${$h}px` : "24px")};
+  object-fit: contain;
+`;
+
+const Label = styled.span`
+  font-size: 11px;
+  font-weight: 600;
+  color: ${({ $active }) => ($active ? "#2b7cff" : "#9aa3b2")};
+`;
+
+export default function BottomNav() {
+  const { pathname } = useLocation();
+
+  const tabs = [
+    { to: "/home",      img: "/icons/navbar-home.png",      label: "홈",   w: 34, h: 20 },
+    { to: "/map",       img: "/icons/navbar-map.png",       label: "지도", w: 26, h: 22 },
+    { to: "/recommend", img: "/icons/navbar-recommend.png", label: "추천", w: 22, h: 22 },
+    { to: "/mypage",    img: "/icons/navbar-my.png",        label: "마이", w: 24, h: 24 },
+  ];
 
   return (
     <NavContainer>
-      <NavItem to="/" active={path === '/'}>
-        <Home size={20} />
-        홈
-      </NavItem>
-      <NavItem to="/map" active={path === '/map'}>
-        <Map size={20} />
-        지도
-      </NavItem>
-      <NavItem to="/explore" active={path === '/explore'}>
-        <Search size={20} />
-        찾기
-      </NavItem>
-      <NavItem to="/mypage" active={path === '/mypage'}>
-        <User size={20} />
-        마이
-      </NavItem>
+      {tabs.map(({ to, img, label, w, h }) => {
+        const active = pathname === to;
+        return (
+          <Item key={to} to={to}>
+            <IconBox>
+              <Icon src={img} alt={label} $w={w} $h={h} />
+            </IconBox>
+            <Label $active={active}>{label}</Label>
+          </Item>
+        );
+      })}
     </NavContainer>
   );
 }
