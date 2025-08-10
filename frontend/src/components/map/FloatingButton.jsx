@@ -3,7 +3,7 @@ import styled from "styled-components";
 
 export const FloatingButton = styled.button`
   position: absolute; /* 부모가 relative면 부모 기준 */
-  top: 12px; /* 상단 위치 */
+  top: 68px; /* 상단 위치 */
   right: 12px; /* 우측 위치 */
   width: 48px;
   height: 48px;
@@ -16,6 +16,10 @@ export const FloatingButton = styled.button`
   opacity: ${(p) => (p.disabled ? 0.6 : 1)};
   transition: transform 0.15s ease, box-shadow 0.2s ease, opacity 0.2s ease;
 
+  &:hover {
+    background-color: #f7f8fa;
+  }
+
   &:active {
     transform: translateY(1px);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
@@ -27,7 +31,7 @@ export const FloatingButton = styled.button`
 
 export function KakaoLocateIcon({ active = false, size = 22 }) {
   const stroke = active ? "#2b7cff" : "#9aa3b2"; // 링/크로스 색
-  const dot = "#2b7cff";                          // 중앙 점 색은 항상 파랑
+  const dot = "#2b7cff"; // 중앙 점 색은 항상 파랑
 
   return (
     <svg
@@ -41,12 +45,14 @@ export function KakaoLocateIcon({ active = false, size = 22 }) {
       {/* 바깥 링 */}
       <circle cx="12" cy="12" r="7.5" stroke={stroke} strokeWidth="2" />
       {/* 크로스헤어 (12시/3시/6시/9시) */}
-      <path d="M12 2v4M12 18v4M2 12h4M18 12h4" stroke={stroke} strokeWidth="2" strokeLinecap="round" />
+      <path
+        d="M12 2v4M12 18v4M2 12h4M18 12h4"
+        stroke={stroke}
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
       {/* 중앙 점 */}
       <circle cx="12" cy="12" r="3" fill={dot} />
     </svg>
   );
 }
-
-
-
