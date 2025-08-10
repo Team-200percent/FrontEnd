@@ -6,12 +6,15 @@ const NavContainer = styled.nav`
   position: fixed;
   bottom: 0;
   width: 100%;
-  max-width: 430px; 
+  left: 50%;
+  transform: translateX(-50%);       
+  max-width: 430px;
   height: 64px;
+  padding-bottom: var(--safe-bottom);
   background-color: #ffffff;
   display: flex;
   border-top: 1px solid #eee;
-  box-shadow: 0 -1px 5px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 -1px 4px rgba(0, 0, 0, 0.05);
   z-index: 1000;
 `;
 

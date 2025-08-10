@@ -1,4 +1,3 @@
-// GlobalStyle.jsx
 import { createGlobalStyle } from 'styled-components';
 import reset from 'styled-reset';
 
@@ -11,7 +10,7 @@ const GlobalStyle = createGlobalStyle`
   }
 
   body {
-    background: #fff; // 일단은 이거로.
+    background: #fff;
     color: #111;
   }
 
