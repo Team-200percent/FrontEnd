@@ -18,7 +18,7 @@ export default function Splash() {
   useEffect(() => {
     const t = setTimeout(() => {
       navigate("/onboarding");
-    }, 500000);
+    }, 5000);
     return () => clearTimeout(t);
   }, [navigate]);
 
