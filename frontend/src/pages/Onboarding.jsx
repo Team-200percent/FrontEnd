@@ -15,7 +15,7 @@ export default function Onboarding() {
 
   const nextStep = () => {
     if (step < slides.length - 1) setStep(step + 1);
-    else navigate("/signup");
+    else navigate("/home");
   };
 
   return (
