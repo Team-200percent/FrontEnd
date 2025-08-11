@@ -6,7 +6,7 @@ import {
   useLocation,
 } from "react-router-dom";
 import Home from "./pages/Home";
-import Map from "./pages/Map";
+import Map from "./pages/map/Map";
 import MyPage from "./pages/MyPage";
 import Layout from "./layout/Layout";
 import NavBar from "./components/NavBar";
@@ -14,6 +14,8 @@ import Onboarding from "./pages/Onboarding";
 import Splash from "./pages/Splash";
 import Recommend from "./pages/Recommend";
 import Login from "./pages/Login";
+import MapSearch from "./pages/map/MapSearch";
+import FindRoute from "./pages/map/FindRoute";
 
 function AppInner() {
   const location = useLocation(); // 현재 URL 전체 정보를 주는 React Hook
@@ -39,6 +41,8 @@ function AppInner() {
         <Route path="/mypage" element={<MyPage />} />
 
         {/* Sub Pages */}
+        <Route path="/map-search" element={<MapSearch />} />
+        <Route path="/findroute" element={<FindRoute />} />
       </Routes>
       {!shouldHideNav && <NavBar />}
     </Layout>

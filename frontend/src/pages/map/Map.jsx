@@ -1,14 +1,19 @@
 import { useEffect, useRef, useState } from "react";
-import LocateButton from "../components/map/LocateButton";
-import FavoriteButton from "../components/map/FavoriteButton";
+import LocateButton from "../../components/map/LocateButton";
+import FavoriteButton from "../../components/map/FavoriteButton";
+import SearchBar from "../../components/map/SearchBar";
+import CategoryChips from "../../components/map/CategoryChips";
 
-const SDK_URL = "https://dapi.kakao.com/v2/maps/sdk.js?autoload=false&appkey=304f6dd93c56bc5f21d1a1b0f4ebcc73";
+const SDK_URL =
+  "https://dapi.kakao.com/v2/maps/sdk.js?autoload=false&appkey=304f6dd93c56bc5f21d1a1b0f4ebcc73";
 let kakaoLoaderPromise = null;
 function loadKakaoSdk() {
   if (window.kakao?.maps) return Promise.resolve();
   if (kakaoLoaderPromise) return kakaoLoaderPromise;
   kakaoLoaderPromise = new Promise((resolve, reject) => {
-    const existed = Array.from(document.scripts).find(s => s.src?.startsWith(SDK_URL.split("?")[0]));
+    const existed = Array.from(document.scripts).find((s) =>
+      s.src?.startsWith(SDK_URL.split("?")[0])
+    );
     const onload = () => resolve();
     const onerror = () => reject(new Error("Kakao SDK load error"));
     if (existed) {
@@ -57,7 +62,10 @@ export default function Map() {
         new window.kakao.maps.Size(24, 24),
         { offset: new window.kakao.maps.Point(12, 12) }
       );
-      markerRef.current = new window.kakao.maps.Marker({ position: loc, image: img });
+      markerRef.current = new window.kakao.maps.Marker({
+        position: loc,
+        image: img,
+      });
       markerRef.current.setMap(map);
     } else {
       markerRef.current.setPosition(loc);
@@ -80,7 +88,10 @@ export default function Map() {
       circleRef.current.setRadius(radius);
     }
 
-    sessionStorage.setItem(SS_KEY, JSON.stringify({ lat: latitude, lng: longitude, accuracy }));
+    sessionStorage.setItem(
+      SS_KEY,
+      JSON.stringify({ lat: latitude, lng: longitude, accuracy })
+    );
 
     if (!hasLoc) {
       map.panTo(loc);
@@ -90,7 +101,8 @@ export default function Map() {
 
   const requestCurrentPosition = (opts) =>
     new Promise((resolve, reject) => {
-      if (!("geolocation" in navigator)) return reject(new Error("No geolocation"));
+      if (!("geolocation" in navigator))
+        return reject(new Error("No geolocation"));
       navigator.geolocation.getCurrentPosition(
         (pos) => resolve(pos.coords),
         (err) => reject(err),
@@ -120,13 +132,21 @@ export default function Map() {
           const { lat, lng, accuracy } = JSON.parse(cached);
           upsertPosition({ latitude: lat, longitude: lng, accuracy });
         } catch {
-            console.warn("Invalid cached position data, clearing");
-            sessionStorage.removeItem(SS_KEY);
+          console.warn("Invalid cached position data, clearing");
+          sessionStorage.removeItem(SS_KEY);
         }
       }
 
-      const high = { enableHighAccuracy: true, timeout: 15000, maximumAge: 3000 };
-      const loose = { enableHighAccuracy: false, timeout: 20000, maximumAge: 10000 };
+      const high = {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 3000,
+      };
+      const loose = {
+        enableHighAccuracy: false,
+        timeout: 20000,
+        maximumAge: 10000,
+      };
 
       const tryLocate = async () => {
         try {
@@ -152,11 +172,12 @@ export default function Map() {
           high
         );
       } catch {
-        console.warn("Geolocation watch failed, falling back to manual location");
+        console.warn(
+          "Geolocation watch failed, falling back to manual location"
+        );
         // watch 실패시에도 위치 요청을 시도
         tryLocate();
       }
-
 
       const onVisible = () => {
         if (document.visibilityState === "visible") tryLocate();
@@ -176,7 +197,8 @@ export default function Map() {
     init();
 
     return () => {
-      if (watchIdRef.current != null) navigator.geolocation.clearWatch(watchIdRef.current);
+      if (watchIdRef.current != null)
+        navigator.geolocation.clearWatch(watchIdRef.current);
     };
   }, [hasLoc]);
 
@@ -188,8 +210,16 @@ export default function Map() {
   };
 
   return (
-    <div style={{ width: "min(100vw, 430px)", margin: "0 auto", position: "relative" }}>
-      <div ref={boxRef} style={{ width: "100%", height: "100dvh" }} />
+    <div
+      style={{
+        width: "min(100vw, 430px)",
+        margin: "0 auto",
+        position: "relative",
+      }}
+    >
+    <div ref={boxRef} style={{ width: "100%", height: "100dvh" }} />
+      <SearchBar />
+      <CategoryChips />
       <FavoriteButton disabled={!hasLoc} />
       <LocateButton onClick={flyToMe} disabled={!hasLoc} />
     </div>
