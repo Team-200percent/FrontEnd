@@ -71,7 +71,7 @@ const Bubble = styled.div`
     100%;
   position: relative;
   color: #111;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 600;
   line-height: 1.4;
   display: flex;
