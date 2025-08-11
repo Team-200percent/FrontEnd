@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import LocateButton from "../components/map/LocateButton";
+import FavoriteButton from "../components/map/FavoriteButton";
 
 const SDK_URL = "https://dapi.kakao.com/v2/maps/sdk.js?autoload=false&appkey=304f6dd93c56bc5f21d1a1b0f4ebcc73";
 let kakaoLoaderPromise = null;
@@ -48,7 +49,7 @@ export default function Map() {
         encodeURIComponent(
           `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24">
             <circle cx="12" cy="12" r="11" fill="#ffffff"/>
-            <circle cx="12" cy="12" r="8" fill="#2b7cff"/>
+            <circle cx="12" cy="12" r="8" fill="#13c0ff"/>
           </svg>`
         );
       const img = new window.kakao.maps.MarkerImage(
@@ -68,9 +69,9 @@ export default function Map() {
         center: loc,
         radius,
         strokeWeight: 0,
-        strokeColor: "#2b7cff",
+        strokeColor: "#13c0ff",
         strokeOpacity: 0.5,
-        fillColor: "#2b7cff",
+        fillColor: "#13c0ff",
         fillOpacity: 0.18,
       });
       circleRef.current.setMap(map);
@@ -189,6 +190,7 @@ export default function Map() {
   return (
     <div style={{ width: "min(100vw, 430px)", margin: "0 auto", position: "relative" }}>
       <div ref={boxRef} style={{ width: "100%", height: "100dvh" }} />
+      <FavoriteButton disabled={!hasLoc} />
       <LocateButton onClick={flyToMe} disabled={!hasLoc} />
     </div>
   );
