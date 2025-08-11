@@ -20,7 +20,7 @@ export default function Login() {
         </Field>
 
         <Submit type="button">로그인</Submit>
-        <Join to="/signup">회원가입</Join>
+        <Join to="/home">홈으로(임시)</Join>
       </Form>
     </Wrapper>
   );
