@@ -5,7 +5,7 @@ export default function Login() {
   return (
     <Wrapper>
       <Header>
-        <Brand>서비스명</Brand>
+        <Brand>동네방네</Brand>
       </Header>
 
       <Form>
@@ -35,6 +35,8 @@ const Wrapper = styled.div`
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
+  justify-content: center;
+  gap: 40px;
 `;
 
 const Header = styled.header`
@@ -44,9 +46,9 @@ const Header = styled.header`
 `;
 
 const Brand = styled.h1`
-  color: #4f7bff;
+  color: #5682fc;
   font-size: 28px;
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: -0.2px;
 `;
 
@@ -63,46 +65,54 @@ const Field = styled.div`
 `;
 
 const Label = styled.label`
-  color: #4f7bff;
-  font-size: 18px;
-  font-weight: 700;
+  color: #5682fc;
+  font-size: 16px;
+  font-weight: 600;
 `;
 
 const Input = styled.input`
-  height: 56px;
+  height: 46px;
   width: 100%;
-  padding: 0 16px;
-  border-radius: 16px;
-  border: 1.5px solid #6f8cff;
+  padding: 10px 10px 10px 15px;
+  border-radius: 10px;
+  border: 1.5px solid #5682fc;
   background: #fff;
   font-size: 16px;
   outline: none;
 
-  &::placeholder { color: #c7cbd6; }
+  &::placeholder {
+    color: #c1c1c1;
+    font-size: 14px;
+    font-family: "Pretendard", sans-serif;
+    font-weight: 520;
+
+  }
   &:focus {
-    border-color: #4f7bff;
+    border-color: #5682fc;
     box-shadow: 0 0 0 3px rgba(79, 123, 255, 0.15);
   }
 `;
 
 const Submit = styled.button`
   margin-top: 8px;
-  height: 56px;
+  height: 46px;
   border: 0;
-  border-radius: 16px;
-  background: #4f7bff;
+  border-radius: 10px;
+  background: #5682fc;
   color: #fff;
-  font-size: 18px;
-  font-weight: 800;
+  font-size: 16px;
+  font-weight: 600;
   letter-spacing: -0.2px;
-  transition: opacity .2s ease, transform .06s ease;
-  &:active { transform: translateY(1px); }
+  transition: opacity 0.2s ease, transform 0.06s ease;
+  &:active {
+    transform: translateY(1px);
+  }
 `;
 
 const Join = styled(Link)`
-  margin-top: 18px;
   text-align: center;
   color: #111;
   font-size: 16px;
+  font-weight: 600;
   text-decoration: none;
 `;
