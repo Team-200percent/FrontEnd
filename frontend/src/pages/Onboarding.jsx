@@ -4,7 +4,10 @@ import styled from "styled-components";
 
 const SLIDES = [
   { bubble: "동작구가 처음이신가요?", img: "/img/avatar1.png" },
-  { bubble: "AI가 상황과 취향을 분석해\n 딱 맞는 정보를 추천해드려요!", img: "/img/avatar2.png" },
+  {
+    bubble: "AI가 상황과 취향을 분석해\n 딱 맞는 정보를 추천해드려요!",
+    img: "/img/avatar2.png",
+  },
   { bubble: "미션하고 리워드도 받아요!", img: "/img/avatar3.png" },
 ];
 
@@ -64,7 +67,8 @@ const Stage = styled.div`
 const Bubble = styled.div`
   width: min(90%, 320px);
   height: 122px;
-  background: url("/icons/onboarding/polygon-top.svg") no-repeat center/100% 100%;
+  background: url("/icons/onboarding/polygon-top.svg") no-repeat center/100%
+    100%;
   position: relative;
   color: #111;
   font-size: 20px;
@@ -84,7 +88,8 @@ const Bubble = styled.div`
     bottom: -28px;
     width: 100%;
     height: 32px;
-    background: url("/icons/onboarding/polygon-bottom.svg") no-repeat center/100% 100%;
+    background: url("/icons/onboarding/polygon-bottom.svg") no-repeat
+      center/100% 100%;
   }
 `;
 
@@ -114,7 +119,7 @@ const Dot = styled.div`
   width: ${({ $active }) => ($active ? "35px" : "6px")};
   height: 6px;
   border-radius: 6px;
-  background: ${({ $active }) => ($active ? "#4f7bff" : "#d0d5dd")};
+  background: ${({ $active }) => ($active ? "#5682fc" : "#d0d5dd")};
   transition: width 0.25s ease, background-color 0.25s ease;
 `;
 
