@@ -41,10 +41,10 @@ export default function BottomNav() {
   const { pathname } = useLocation();
 
   const tabs = [
-    { to: "/home",      imgOn: "/icons/navbar/navbar-home-on.svg",      imgOff: "/icons/navbar/navbar-home-off.svg",      label: "홈",      match: (p) => p === "/home" || p === "/" },
-    { to: "/map",       imgOn: "/icons/navbar/navbar-map-on.svg",       imgOff: "/icons/navbar/navbar-map-off.svg",       label: "지도",    match: (p) => p.startsWith("/map") },
-    { to: "/recommend", imgOn: "/icons/navbar/navbar-recommend-on.svg", imgOff: "/icons/navbar/navbar-recommend-off.svg", label: "추천",    match: (p) => p.startsWith("/recommend") },
-    { to: "/mypage",    imgOn: "/icons/navbar/navbar-my-on.svg",        imgOff: "/icons/navbar/navbar-my-off.svg",        label: "마이",    match: (p) => p.startsWith("/mypage") },
+    { to: "/home",      imgOn: "/icons/navbar/home-on.svg",      imgOff: "/icons/navbar/home-off.svg",      label: "홈",      match: (p) => p === "/home" || p === "/" },
+    { to: "/map",       imgOn: "/icons/navbar/map-on.svg",       imgOff: "/icons/navbar/map-off.svg",       label: "지도",    match: (p) => p.startsWith("/map") },
+    { to: "/recommend", imgOn: "/icons/navbar/recommend-on.svg", imgOff: "/icons/navbar/recommend-off.svg", label: "추천",    match: (p) => p.startsWith("/recommend") },
+    { to: "/mypage",    imgOn: "/icons/navbar/mypage-on.svg",        imgOff: "/icons/navbar/mypage-off.svg",        label: "마이",    match: (p) => p.startsWith("/mypage") },
   ];
 
   return (
