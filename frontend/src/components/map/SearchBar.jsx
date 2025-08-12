@@ -5,13 +5,15 @@ import { useNavigate } from "react-router-dom";
 export default function SearchBar() {
   //   const [q, setQ] = useState(""); // 검색어 상태
   const navigate = useNavigate();
+  const isMapPage = location.pathname === "/map";
+  const isMapSearchPage = location.pathname === "/map-search";
 
   return (
     <Wrapper>
       <Row>
         <SearchBox onClick={() => navigate("/map-search")}>
-          <LeftIcon aria-hidden>
-            {/* 뒤로가기 아이콘 */}
+          {/* 뒤로가기 아이콘 */}
+          <LeftIcon onClick={() => navigate(-1)} $hidden={isMapPage} >            
             <img src="/icons/map/leftarrow.svg" alt="왼쪽 화살표" />
           </LeftIcon>
           <Placeholder>서울 동작구 상도동</Placeholder>
@@ -20,13 +22,14 @@ export default function SearchBar() {
             <img src="/icons/map/microphone.svg" alt="음성검색 마이크 아이콘" />
           </RightIcon>
         </SearchBox>
-
-        <RouteBtn onClick={() => navigate("/findroute")}>
-          <RouteIcon>
-            <img src="/icons/map/findroutearrow.svg" alt="길찾기 아이콘" />
-          </RouteIcon>
-          <p>길찾기</p>
-        </RouteBtn>
+        {!isMapSearchPage && (
+          <RouteBtn onClick={() => navigate("/findroute")}>
+            <RouteIcon>
+              <img src="/icons/map/findroutearrow.svg" alt="길찾기 아이콘" />
+            </RouteIcon>
+            <p>길찾기</p>
+          </RouteBtn>
+        )}
       </Row>
     </Wrapper>
   );
@@ -52,8 +55,9 @@ const Row = styled.div`
 
 const SearchBox = styled.div`
   flex: 1;
-  height: 56px;
+  height: 53px;
   background: #fff;
+  border: 1px solid #e5e7eb;
   border-radius: 14px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
   display: grid;
@@ -66,8 +70,11 @@ const LeftIcon = styled.div`
   display: grid;
   place-items: center;
   margin-right: 8px;
+  opacity: ${({ $hidden }) => ($hidden ? 0 : 1)};
+  pointer-events: ${({ $hidden }) => ($hidden ? "none" : "auto")};
+  visibility: ${({ $hidden }) => ($hidden ? "hidden" : "visible")};
   img {
-    width: 8px;
+    width: 9px;
     height: auto;
   }
 `;
