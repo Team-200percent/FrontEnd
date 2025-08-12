@@ -217,7 +217,7 @@ export default function Map() {
         position: "relative",
       }}
     >
-    <div ref={boxRef} style={{ width: "100%", height: "100dvh" }} />
+      <div ref={boxRef} style={{ width: "100%", height: "100dvh" }} />
       <SearchBar />
       <CategoryChips />
       <FavoriteButton disabled={!hasLoc} />

@@ -43,8 +43,6 @@ return (
   );
 }
 
-/* ===== styles ===== */
-
 const Wrapper = styled.div`
   position: absolute;
   left: 50%;

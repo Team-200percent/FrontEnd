@@ -5,12 +5,14 @@ import { useNavigate } from "react-router-dom";
 export default function SearchBar() {
   //   const [q, setQ] = useState(""); // 검색어 상태
   const navigate = useNavigate();
+  const isSearchBarPage = location.pathname === "/map";
+  const isMapSearchPage = location.pathname === "/map-search";
 
   return (
     <Wrapper>
       <Row>
         <SearchBox onClick={() => navigate("/map-search")}>
-          <LeftIcon aria-hidden>
+          <LeftIcon $hidden={!isSearchBarPage}>
             {/* 뒤로가기 아이콘 */}
             <img src="/icons/map/leftarrow.svg" alt="왼쪽 화살표" />
           </LeftIcon>
@@ -20,13 +22,14 @@ export default function SearchBar() {
             <img src="/icons/map/microphone.svg" alt="음성검색 마이크 아이콘" />
           </RightIcon>
         </SearchBox>
-
-        <RouteBtn onClick={() => navigate("/findroute")}>
-          <RouteIcon>
-            <img src="/icons/map/findroutearrow.svg" alt="길찾기 아이콘" />
-          </RouteIcon>
-          <p>길찾기</p>
-        </RouteBtn>
+        {!isMapSearchPage && (
+          <RouteBtn onClick={() => navigate("/findroute")}>
+            <RouteIcon>
+              <img src="/icons/map/findroutearrow.svg" alt="길찾기 아이콘" />
+            </RouteIcon>
+            <p>길찾기</p>
+          </RouteBtn>
+        )}
       </Row>
     </Wrapper>
   );
@@ -66,6 +69,9 @@ const LeftIcon = styled.div`
   display: grid;
   place-items: center;
   margin-right: 8px;
+  opacity: ${({ $hidden }) => ($hidden ? 0 : 1)};
+  pointer-events: ${({ $hidden }) => ($hidden ? "none" : "auto")};
+  visibility: ${({ $hidden }) => ($hidden ? "hidden" : "visible")};
   img {
     width: 8px;
     height: auto;
