@@ -19,7 +19,7 @@ import FindRoute from "./pages/map/FindRoute";
 
 function AppInner() {
   const location = useLocation(); // 현재 URL 전체 정보를 주는 React Hook
-  const hideNavPaths = ["/splash", "/onboarding", "/login"]; // 여기에 숨길 경로들 적기
+  const hideNavPaths = ["/splash", "/onboarding", "/login", "/map-search"]; // 여기에 숨길 경로들 적기
   const shouldHideNav = hideNavPaths.some((path) =>
     location.pathname.startsWith(path)
   );
