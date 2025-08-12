@@ -52,7 +52,7 @@ export default function Splash() {
 const Shell = styled.div`
   height: 100dvh;
   display: flex;
-  background: #5682fc;
+  background: #1dc3ff;
   justify-content: center;
 `;
 

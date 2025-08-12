@@ -5,7 +5,9 @@ export default function Login() {
   return (
     <Wrapper>
       <Header>
-        <Brand><img src="/icons/mainlogo.svg" /></Brand>
+        <Brand>
+          <img src="/icons/mainlogo.svg" />
+        </Brand>
       </Header>
 
       <Form>
@@ -31,12 +33,11 @@ const Wrapper = styled.div`
   margin: 0 auto;
   min-height: 100dvh;
   background: #fff;
-  padding: 32px 20px 24px;
+  padding: 32px 32px 24px;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 40px;
 `;
 
 const Header = styled.header`
@@ -45,11 +46,11 @@ const Header = styled.header`
   margin: 8px 0 36px;
 `;
 
-const Brand = styled.h1`
-  color: #5682fc;
-  font-size: 28px;
-  font-weight: 600;
-  letter-spacing: -0.2px;
+const Brand = styled.div`
+  img {
+    width: 121px;
+    height: 116.71px;
+  }
 `;
 
 const Form = styled.div`
@@ -65,9 +66,9 @@ const Field = styled.div`
 `;
 
 const Label = styled.label`
-  color: #5682fc;
+  color: #1dc3ff;
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 500;
 `;
 
 const Input = styled.input`
@@ -75,7 +76,7 @@ const Input = styled.input`
   width: 100%;
   padding: 10px 10px 10px 15px;
   border-radius: 10px;
-  border: 1.5px solid #5682fc;
+  border: 1.5px solid #1dc3ff;
   background: #fff;
   font-size: 16px;
   outline: none;
@@ -84,11 +85,10 @@ const Input = styled.input`
     color: #c1c1c1;
     font-size: 14px;
     font-family: "Pretendard", sans-serif;
-    font-weight: 520;
-
+    font-weight: 500;
   }
   &:focus {
-    border-color: #5682fc;
+    border-color: #1dc3ff;
     box-shadow: 0 0 0 3px rgba(79, 123, 255, 0.15);
   }
 `;
@@ -98,7 +98,7 @@ const Submit = styled.button`
   height: 46px;
   border: 0;
   border-radius: 10px;
-  background: #5682fc;
+  background: #1dc3ff;
   color: #fff;
   font-size: 16px;
   font-weight: 600;
