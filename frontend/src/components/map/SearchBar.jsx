@@ -5,15 +5,15 @@ import { useNavigate } from "react-router-dom";
 export default function SearchBar() {
   //   const [q, setQ] = useState(""); // 검색어 상태
   const navigate = useNavigate();
-  const isSearchBarPage = location.pathname === "/map";
+  const isMapPage = location.pathname === "/map";
   const isMapSearchPage = location.pathname === "/map-search";
 
   return (
     <Wrapper>
       <Row>
         <SearchBox onClick={() => navigate("/map-search")}>
-          <LeftIcon $hidden={!isSearchBarPage}>
-            {/* 뒤로가기 아이콘 */}
+          {/* 뒤로가기 아이콘 */}
+          <LeftIcon onClick={() => navigate(-1)} $hidden={isMapPage} >            
             <img src="/icons/map/leftarrow.svg" alt="왼쪽 화살표" />
           </LeftIcon>
           <Placeholder>서울 동작구 상도동</Placeholder>
@@ -55,8 +55,9 @@ const Row = styled.div`
 
 const SearchBox = styled.div`
   flex: 1;
-  height: 56px;
+  height: 53px;
   background: #fff;
+  border: 1px solid #e5e7eb;
   border-radius: 14px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
   display: grid;
@@ -73,7 +74,7 @@ const LeftIcon = styled.div`
   pointer-events: ${({ $hidden }) => ($hidden ? "none" : "auto")};
   visibility: ${({ $hidden }) => ($hidden ? "hidden" : "visible")};
   img {
-    width: 8px;
+    width: 9px;
     height: auto;
   }
 `;

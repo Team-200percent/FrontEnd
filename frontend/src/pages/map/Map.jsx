@@ -3,6 +3,7 @@ import LocateButton from "../../components/map/LocateButton";
 import FavoriteButton from "../../components/map/FavoriteButton";
 import SearchBar from "../../components/map/SearchBar";
 import CategoryChips from "../../components/map/CategoryChips";
+import { useNavigate } from "react-router-dom";
 
 const SDK_URL =
   "https://dapi.kakao.com/v2/maps/sdk.js?autoload=false&appkey=304f6dd93c56bc5f21d1a1b0f4ebcc73";
@@ -209,6 +210,8 @@ export default function Map() {
     map.panTo(marker.getPosition());
   };
 
+  const navigate = useNavigate();
+
   return (
     <div
       style={{
@@ -219,7 +222,11 @@ export default function Map() {
     >
       <div ref={boxRef} style={{ width: "100%", height: "100dvh" }} />
       <SearchBar />
-      <CategoryChips />
+      <CategoryChips
+        onSelect={(key) => {
+          navigate("/map-search", { state: { activeCategory: key } });
+        }}
+      />
       <FavoriteButton disabled={!hasLoc} />
       <LocateButton onClick={flyToMe} disabled={!hasLoc} />
     </div>

@@ -1,13 +1,17 @@
 import React from "react";
 import styled from "styled-components";
 import SearchBar from "../../components/map/SearchBar";
-import MapSearchCategoryChips from "../../components/map/MapSearchCategoryChips";
+import CategoryChips from "../../components/map/CategoryChips";
+import { useLocation } from "react-router-dom";
 
 const MapSearch = () => {
+  const location = useLocation();
+  const activeCategory = location.state?.activeCategory || null;
+
   return (
     <Wrapper>
       <SearchBar />
-      <MapSearchCategoryChips />
+      <CategoryChips defaultActive={activeCategory} />
     </Wrapper>
   );
 };

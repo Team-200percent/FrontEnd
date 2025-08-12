@@ -5,7 +5,7 @@ export default function Login() {
   return (
     <Wrapper>
       <Header>
-        <Brand>동네방네</Brand>
+        <Brand><img src="/icons/mainlogo.svg" /></Brand>
       </Header>
 
       <Form>
