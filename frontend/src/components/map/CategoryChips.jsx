@@ -1,48 +1,101 @@
 import styled from "styled-components";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 
-
-
-const CATEGORIES = [
+// /map 페이지 아이콘 (단일 버전)
+const MAP_ICONS = [
   { key: "food", label: "음식점", icon: "/icons/map/CategoryChips/food.svg" },
   { key: "cafe", label: "카페", icon: "/icons/map/CategoryChips/cafe.svg" },
   { key: "store", label: "편의점", icon: "/icons/map/CategoryChips/store.svg" },
-  { key: "hos", label: "병원", icon: "/icons/map/CategoryChips/hos.png" },
-  { key: "pha", label: "약국", icon: "/icons/map/CategoryChips/phar.svg" },
+  { key: "hos", label: "병원", icon: "/icons/map/CategoryChips/hos.svg" },
+  { key: "phar", label: "약국", icon: "/icons/map/CategoryChips/phar.svg" },
   { key: "life", label: "생활기관", icon: "/icons/map/CategoryChips/life.svg" },
 ];
 
+// /map-search 페이지 아이콘 (하늘색 & 흰색 버전)
+const MAP_SEARCH_ICONS = {
+  food: {
+    on: "/icons/map/CategoryChips/white/food.svg",
+    off: "/icons/map/CategoryChips/sky/food.svg",
+  },
+  cafe: {
+    on: "/icons/map/CategoryChips/white/cafe.svg",
+    off: "/icons/map/CategoryChips/sky/cafe.svg",
+  },
+  store: {
+    on: "/icons/map/CategoryChips/white/store.svg",
+    off: "/icons/map/CategoryChips/sky/store.svg",
+  },
+  hos: {
+    on: "/icons/map/CategoryChips/white/hos.svg",
+    off: "/icons/map/CategoryChips/sky/hos.svg",
+  },
+  phar: {
+    on: "/icons/map/CategoryChips/white/phar.svg",
+    off: "/icons/map/CategoryChips/sky/phar.svg",
+  },
+  life: {
+    on: "/icons/map/CategoryChips/white/life.svg",
+    off: "/icons/map/CategoryChips/sky/life.svg",
+  },
+};
 
+export default function CategoryChips({ onSelect, defaultActive = null }) {
+  const { pathname } = useLocation();
+  const pageType = pathname === "/map-search" ? "map-search" : "map";
+  const [active, setActive] = useState(defaultActive);
 
-export default function CategoryChips({ onSelect }) {
-  const [active, setActive] = useState(null);
+  useEffect(() => {
+    setActive(defaultActive);
+  }, [defaultActive]);
 
   const handleClick = (key) => {
     setActive(key);
     onSelect?.(key);
   };
 
-return (
+  const categories =
+    pageType === "map"
+      ? MAP_ICONS
+      : Object.keys(MAP_SEARCH_ICONS).map((key) => ({
+          key,
+          label:
+            MAP_ICONS.find((c) => c.key === key)?.label || key.toUpperCase(),
+        }));
+
+  return (
     <Wrapper>
       <Scroller>
-        {CATEGORIES.map(({ key, label, icon }) => (
-          <Chip
-            key={key}
-            type="button"
-            $active={active === key}
-            onClick={() => handleClick(key)}
-          >
-            <IconBox>
-              <img src={icon} alt="" />
-            </IconBox>
-            <span>{label}</span>
-          </Chip>
-        ))}
+        {categories.map(({ key, label, icon }) => {
+          let imgSrc = icon; // /map 용
+          if (pageType === "map-search") {
+            imgSrc =
+              active === key
+                ? MAP_SEARCH_ICONS[key].on
+                : MAP_SEARCH_ICONS[key].off;
+          }
+
+          return (
+            <Chip
+              key={key}
+              type="button"
+              $active={active === key}
+              $pageType={pageType}
+              onClick={() => handleClick(key)}
+            >
+              <IconBox>
+                <img src={imgSrc} alt="" />
+              </IconBox>
+              <span>{label}</span>
+            </Chip>
+          );
+        })}
       </Scroller>
     </Wrapper>
   );
 }
 
+// styled-components
 const Wrapper = styled.div`
   position: absolute;
   left: 50%;
@@ -58,20 +111,18 @@ const Wrapper = styled.div`
 const Scroller = styled.div`
   pointer-events: auto;
   display: flex;
-  gap: 2px;
+  gap: 4px;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   padding: 6px 2px;
-
   scrollbar-width: none;
   &::-webkit-scrollbar {
     display: none;
   }
-
   mask-image: linear-gradient(
     to right,
     transparent 0,
-    black 8px,
+    black 4px,
     black calc(100% - 8px),
     transparent 100%
   );
@@ -79,9 +130,25 @@ const Scroller = styled.div`
 
 const Chip = styled.button`
   flex: 0 0 auto;
-  border: 1px solid ${({ $active }) => ($active ? "#2b7cff" : "#e5e7eb")};
-  background: ${({ $active }) => ($active ? "#eef4ff" : "#fff")};
-  color: ${({ $active }) => ($active ? "#2b7cff" : "#333")};
+  border: 1px solid
+    ${({ $active, $pageType }) =>
+      $active
+        ? $pageType === "map"
+          ? "#2b7cff"
+          : "#fff"
+        : $pageType === "map-search"
+        ? "#1dc3ff"
+        : "#e5e7eb"};
+  background: ${({ $active, $pageType }) =>
+    $active ? ($pageType === "map" ? "#fff" : "#3fccff") : "#fff"};
+  color: ${({ $active, $pageType }) =>
+    $active
+      ? $pageType === "map"
+        ? "#2b7cff"
+        : "#fff"
+      : $pageType === "map"
+      ? "#333"
+      : "#2b7cff"};
   padding: 10px;
   border-radius: 50px;
   font-size: 14px;
