@@ -18,8 +18,11 @@ jobs:
       - name: Get latest 5 commit messages
         id: get_commits
         run: |
+          # 최신 5개 커밋 메시지 수집
+          commits=$(git log -n 5 --pretty=format:"- %s")
+          # ENV에 멀티라인 문자열로 저장하기 (EOF 구분자 없이 간단하게 처리)
           echo "COMMITS<<EOF" >> $GITHUB_ENV
-          git log -n 5 --pretty=format:"- %s" >> $GITHUB_ENV
+          echo "$commits" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
       - name: Wait for Netlify Deploy to Finish
@@ -29,6 +32,9 @@ jobs:
         env:
           SLACK_FROM_NETLIFY_URL: ${{ secrets.SLACK_FROM_NETLIFY_URL }}
         run: |
+          # COMMITS 값을 안전하게 이스케이프 처리: 줄바꿈을 \\n으로 치환
+          commits_escaped=$(printf "%s" "$COMMITS" | sed ':a;N;$!ba;s/\n/\\n/g')
+          payload="{\"text\":\"🎷세상에!! 새로운 배포 버전이 업데이트되었지 뭐야??!!\\n🔗 https://likelionhackathon.netlify.app\\n\\n이번 배포 커밋:\\n$commits_escaped\"}"
           curl -X POST -H 'Content-type: application/json' \
-          --data "{\"text\":\"🎷세상에!! 새로운 배포 버전이 업데이트되었지 뭐야??!!\n🔗 https://likelionhackathon.netlify.app\n\n이번 배포 커밋:\n$COMMITS\"}" \
-          $SLACK_FROM_NETLIFY_URL
+            --data "$payload" \
+            "$SLACK_FROM_NETLIFY_URL"
