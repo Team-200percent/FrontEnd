@@ -10,6 +10,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # 전체 커밋 내역을 가져오도록 설정
+
+      - name: Get latest commit messages
+        id: get_commits
+        run: |
+          echo "COMMITS<<EOF" >> $GITHUB_OUTPUT
+          git log -n 5 --pretty=format:"- %s" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Wait for Netlify Deploy to Finish
         run: |
           echo "Waiting 30 seconds for Netlify to finish deployment..."
@@ -20,5 +32,5 @@ jobs:
           SLACK_FROM_NETLIFY_URL: ${{ secrets.SLACK_FROM_NETLIFY_URL }}
         run: |
           curl -X POST -H 'Content-type: application/json' \
-          --data '{"text":"🎷세상에!! 새로운 배포 버전이 업데이트되었지 뭐야??!!\n🔗 https://likelionhackathon.netlify.app"}' \
+          --data '{"text":"🎷세상에!! 새로운 배포 버전이 업데이트되었지 뭐야??!!\n🔗 https://likelionhackathon.netlify.app\n\n이번 배포에서는 다음과 같은 커밋이 발생했어요:\n${{ steps.get_commits.outputs.COMMITS }}"}' \
           $SLACK_FROM_NETLIFY_URL
