@@ -260,7 +260,7 @@ export default function Map() {
       }}
     >
       <div ref={boxRef} style={{ width: "100%", height: "100dvh" }} />
-      <SearchBar />
+      <SearchBar mode="display" />
       <CategoryChips
         onSelect={(key) => {
           navigate("/map-search", { state: { activeCategory: key } });

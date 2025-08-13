@@ -1,5 +1,5 @@
 // pages/map/MapSearch.jsx
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import styled from "styled-components";
 import SearchBar from "../../components/map/SearchBar";
 import CategoryChips from "../../components/map/CategoryChips";
@@ -13,10 +13,17 @@ const recentPlaces = [
 export default function MapSearch() {
   const location = useLocation();
   const activeCategory = location.state?.activeCategory || null;
+  const searchInputRef = useRef(null); // SearchBar의 input을 가리킬 ref 생성
+
+  useEffect(() => {
+    if (searchInputRef.current) {
+      searchInputRef.current.focus(); // 컴포넌트가 마운트되면 검색창에 포커스
+    }
+  }, []);
 
   return (
     <Wrapper>
-      <SearchBar layout="flow" />
+      <SearchBar mode="input" ref={searchInputRef} />
       <CategoryChips layout="flow" defaultActive={activeCategory} />
 
       <BottomContainer>

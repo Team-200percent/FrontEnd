@@ -1,12 +1,18 @@
 import styled from "styled-components";
 import { useNavigate } from "react-router-dom";
-// import { useState } from "react";
+import { forwardRef } from "react";
+import { useState } from "react";
 
-export default function SearchBar() {
-  //   const [q, setQ] = useState(""); // 검색어 상태
+const SearchBar = forwardRef(({ mode = "display" }, ref) => {
+  const [query, setQuery] = useState(""); // 검색어 상태
   const navigate = useNavigate();
   const isMapPage = location.pathname === "/map";
   const isMapSearchPage = location.pathname === "/map-search";
+
+  const handleBoxClick = () => {
+    if (mode === "display") navigate("/map-search");
+  }
+
 
   return (
     <Wrapper>
@@ -16,7 +22,18 @@ export default function SearchBar() {
           <LeftIcon onClick={() => navigate(-1)} $hidden={isMapPage} >            
             <img src="/icons/map/leftarrow.svg" alt="왼쪽 화살표" />
           </LeftIcon>
-          <Placeholder>서울 동작구 상도동</Placeholder>
+
+          {mode === "input" ? (
+            <Input
+              ref={ref}
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="장소를 검색해보세요"
+            />
+          ) : (
+            <Placeholder>서울 동작구 상도동</Placeholder>
+          )}
           <RightIcon aria-label="음성 입력">
             {/* 마이크 아이콘 */}
             <img src="/icons/map/microphone.svg" alt="음성검색 마이크 아이콘" />
@@ -33,7 +50,9 @@ export default function SearchBar() {
       </Row>
     </Wrapper>
   );
-}
+});
+
+export default SearchBar;
 
 const Wrapper = styled.div`
   position: absolute;
@@ -87,6 +106,20 @@ const Placeholder = styled.div`
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+`;
+
+const Input = styled.input`
+  width: 100%;
+  border: none;
+  background: transparent;
+  font-size: 16px;
+  font-weight: 500;
+  color: #333;
+  outline: none;
+
+  &::placeholder {
+    color: #8b8585;
+  }
 `;
 
 const RightIcon = styled.button`
