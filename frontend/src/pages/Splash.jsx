@@ -7,9 +7,9 @@ const fadeInUp = keyframes`
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
 `;
-const pulse = keyframes`
-  0%,100% { transform: scale(1);    box-shadow: 0 6px 24px rgba(0,0,0,.15); }
-  50%     { transform: scale(1.03); box-shadow: 0 10px 32px rgba(0,0,0,.2); }
+const fill = keyframes`
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
 `;
 
 export default function Splash() {
@@ -18,7 +18,7 @@ export default function Splash() {
   useEffect(() => {
     const t = setTimeout(() => {
       navigate("/onboarding");
-    }, 5000);
+    }, 500000);
     return () => clearTimeout(t);
   }, [navigate]);
 
@@ -26,7 +26,14 @@ export default function Splash() {
     <Shell>
       <Frame>
         <TopTexts>
-          <Line style={{ animationDelay: "0ms" }}>이사온 동네</Line>
+          <Line style={{ animationDelay: "0ms" }}>
+            <span className="bold">이사 온 동네</span>
+          </Line>
+          {/* ── 로딩바 (5초 진행) ───────────────────────────── */}
+          <Loader aria-label="로딩 중">
+            <Bar />
+          </Loader>
+          {/* ──────────────────────────────────────────────── */}
           <Lines>
             <Line style={{ animationDelay: "120ms" }}>
               <span className="bold">초보</span>부터
@@ -38,11 +45,9 @@ export default function Splash() {
         </TopTexts>
 
         <LogoWrap>
-          <LogoCircle />
-          <LogoText>로고미정</LogoText>
+          <img src="/icons/introegg.svg" className="egg" />
+          <img src="/icons/mainlogo-white.svg" className="mainlogo" />
         </LogoWrap>
-
-        <Foot>LOGOXX</Foot>
       </Frame>
     </Shell>
   );
@@ -61,7 +66,6 @@ const Frame = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 40px;
   color: #fff;
 `;
 
@@ -69,23 +73,42 @@ const TopTexts = styled.div`
   width: 100%;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 20px;
+  align-items: center;
   padding: 30px 50px;
-  margin-top: 80px;
+  margin-top: 100px;
 `;
 
 const Line = styled.h1`
-  font-size: 32px;
+  font-size: 24px;
   line-height: 1.25;
-  font-weight: 500;
+  font-weight: 400;
   opacity: 0;
   animation: ${fadeInUp} 520ms ease forwards;
   letter-spacing: -0.5px;
 
   .bold {
-    font-weight: 750;
+    font-weight: 700;
   }
+`;
+
+const Loader = styled.div`
+  width: 125px; /* 로딩바 전체 너비 */
+  height: 3px; /* 높이 */
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.35); /* 트랙 색 */
+  overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.08);
+  margin-top: 5px;
+  margin-bottom: 30px;
+`;
+
+const Bar = styled.div`
+  width: 100%;
+  height: 100%;
+  background: #fff; /* 채워지는 색 */
+  transform-origin: left; /* 왼쪽 기준으로 확장 */
+  transform: scaleX(0); /* 초기값 */
+  animation: ${fill} 5s linear forwards; /* 5초 진행 */
 `;
 
 const Lines = styled.div`
@@ -93,34 +116,16 @@ const Lines = styled.div`
 `;
 
 const LogoWrap = styled.div`
-  margin-top: 200px;
-  align-self: center;
-  justify-self: center;
+  margin-top: 50px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
   position: relative;
   animation: ${fadeInUp} 520ms ease 180ms forwards;
-`;
 
-const LogoCircle = styled.div`
-  width: 230px;
-  height: 230px;
-  border-radius: 999px;
-  background: #fff;
-  animation: ${pulse} 1600ms ease-in-out infinite;
-`;
-
-const LogoText = styled.div`
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  color: #c7c7c7;
-  font-weight: 800;
-  letter-spacing: 1px;
-`;
-
-const Foot = styled.div`
-  opacity: 0.85;
-  font-size: 10px;
-  letter-spacing: 0.8px;
-  animation: ${fadeInUp} 520ms ease 280ms forwards;
+  .egg {
+    width: 55%;
+    height: auto;
+  }
 `;
