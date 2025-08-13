@@ -113,7 +113,7 @@ export default function PlaceSheet({ open, onClose, place }) {
             <IconBtn aria-label="공유">
               <ShareIcon />
             </IconBtn>
-            <IconBtn aria-label="저장">
+            <IconBtn aria-label="저장하기">
               <SaveIcon />
             </IconBtn>
             <IconBtn aria-label="복사">
