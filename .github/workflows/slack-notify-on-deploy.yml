@@ -34,7 +34,7 @@ jobs:
         run: |
           # COMMITS 값을 안전하게 이스케이프 처리: 줄바꿈을 \\n으로 치환
           commits_escaped=$(printf "%s" "$COMMITS" | sed ':a;N;$!ba;s/\n/\\n/g')
-          payload="{\"text\":\"🎷세상에!! 새로운 배포 버전이 업데이트되었지 뭐야??!!\\n🔗 https://likelionhackathon.netlify.app\\n\\n이번 배포 커밋:\\n$commits_escaped\"}"
+          payload="{\"text\":\"🎷세상에!! 새로운 배포 버전이 업데이트되었지 뭐야??!!\\n🔗 https://likelionhackathon.netlify.app\\n\\n이번 배포에는 다음과 같은 커밋이 발생했어요:\\n$commits_escaped\"}"
           curl -X POST -H 'Content-type: application/json' \
             --data "$payload" \
             "$SLACK_FROM_NETLIFY_URL"
