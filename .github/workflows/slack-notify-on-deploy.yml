@@ -15,12 +15,14 @@ jobs:
         with:
           fetch-depth: 0 # 전체 커밋 내역을 가져오도록 설정
 
-      - name: Get latest commit messages
+      - name: Get latest 5 commit messages
         id: get_commits
         run: |
-          echo "COMMITS<<EOF" >> $GITHUB_OUTPUT
-          git log -n 5 --pretty=format:"- %s" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          {
+            echo "COMMITS<<EOF"
+            git log -n 5 --pretty=format:"- %s"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Wait for Netlify Deploy to Finish
         run: |
@@ -31,7 +33,6 @@ jobs:
         env:
           SLACK_FROM_NETLIFY_URL: ${{ secrets.SLACK_FROM_NETLIFY_URL }}
         run: |
-          COMMIT_LOG=$(git log -1 --pretty=format:"%s")
           curl -X POST -H 'Content-type: application/json' \
-          --data "{\"text\":\"🎷세상에!! 새로운 배포 버전이 업데이트되었지 뭐야??!!\n🔗 https://likelionhackathon.netlify.app\n\n이번 배포 커밋:\n$COMMIT_LOG\"}" \
+          --data "{\"text\":\"🎷세상에!! 새로운 배포 버전이 업데이트되었지 뭐야??!!\n🔗 https://likelionhackathon.netlify.app\n\n이번 배포 커밋:\n${{ steps.get_commits.outputs.COMMITS }}\"}" \
           $SLACK_FROM_NETLIFY_URL
