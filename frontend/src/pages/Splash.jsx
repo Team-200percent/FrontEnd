@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import styled, { keyframes } from "styled-components";
 import { useNavigate } from "react-router-dom";
 
@@ -14,18 +14,27 @@ const fill = keyframes`
 
 export default function Splash() {
   const navigate = useNavigate();
+  const [isSky, setIsSky] = useState(false);
 
   useEffect(() => {
-    const t = setTimeout(() => {
+    const transitionTimer = setTimeout(() => {
+      setIsSky(true);
+    }, 2000);
+
+    const navigationTimer = setTimeout(() => {
       navigate("/onboarding");
     }, 5000);
-    return () => clearTimeout(t);
+
+    return () => {
+      clearTimeout(transitionTimer);
+      clearTimeout(navigationTimer);
+    };
   }, [navigate]);
 
   return (
-    <Shell>
+    <Shell $isSky={isSky}>
       <Frame>
-        <TopTexts>
+        <TopTexts $isSky={isSky}>
           <Line style={{ animationDelay: "0ms" }}>
             <span className="bold">이사 온 동네</span>
           </Line>
@@ -45,8 +54,12 @@ export default function Splash() {
         </TopTexts>
 
         <LogoWrap>
-          <img src="/icons/introegg.svg" className="egg" />
-          <img src="/icons/mainlogo-white.svg" className="mainlogo" />
+          <img src="/icons/introegg.png" className="egg" />
+          {isSky ? (
+            <img src="/icons/mainlogo-white.png" className="mainlogo" />
+          ) : (
+            <img src="/icons/mainlogo-sky.png" className="mainlogo" />
+          )}
         </LogoWrap>
       </Frame>
     </Shell>
@@ -59,6 +72,8 @@ const Shell = styled.div`
   display: flex;
   background: #1dc3ff;
   justify-content: center;
+  background: ${({ $isSky }) => ($isSky ? "#1dc3ff" : "#fff")};
+  transition: background-color 1.5s ease;
 `;
 
 const Frame = styled.div`
@@ -76,6 +91,8 @@ const TopTexts = styled.div`
   align-items: center;
   padding: 30px 50px;
   margin-top: 100px;
+  color: ${({ $isSky }) => ($isSky ? "#fff" : "#1dc3ff")};
+  transition: color 1.5s ease;
 `;
 
 const Line = styled.h1`
@@ -95,7 +112,7 @@ const Loader = styled.div`
   width: 125px; /* 로딩바 전체 너비 */
   height: 3px; /* 높이 */
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.35); /* 트랙 색 */
+  background: ${({ $isSky }) => ($isSky ? "#fff" : "#1dc3ff")};
   overflow: hidden;
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.08);
   margin-top: 5px;
@@ -124,8 +141,14 @@ const LogoWrap = styled.div`
   position: relative;
   animation: ${fadeInUp} 520ms ease 180ms forwards;
 
+  
   .egg {
-    width: 55%;
+    width: 25%;
+    height: auto;
+  }
+
+  .mainlogo {
+    width: 50%;
     height: auto;
   }
 `;
