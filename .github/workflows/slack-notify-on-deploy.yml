@@ -3,7 +3,7 @@ name: Notify Slack After Deploy
 on:
   push:
     branches:
-      - main # 또는 배포 브랜치 이름
+      - main
 
 jobs:
   notify-slack:
@@ -13,26 +13,22 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0 # 전체 커밋 내역을 가져오도록 설정
+          fetch-depth: 0
 
       - name: Get latest 5 commit messages
         id: get_commits
         run: |
-          {
-            echo "COMMITS<<EOF"
-            git log -n 5 --pretty=format:"- %s"
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
+          echo "COMMITS<<EOF" >> $GITHUB_ENV
+          git log -n 5 --pretty=format:"- %s" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
 
       - name: Wait for Netlify Deploy to Finish
-        run: |
-          echo "Waiting 30 seconds for Netlify to finish deployment..."
-          sleep 30
+        run: sleep 30
 
       - name: Send Slack Notification
         env:
           SLACK_FROM_NETLIFY_URL: ${{ secrets.SLACK_FROM_NETLIFY_URL }}
         run: |
           curl -X POST -H 'Content-type: application/json' \
-          --data "{\"text\":\"🎷세상에!! 새로운 배포 버전이 업데이트되었지 뭐야??!!\n🔗 https://likelionhackathon.netlify.app\n\n이번 배포 커밋:\n${{ steps.get_commits.outputs.COMMITS }}\"}" \
+          --data "{\"text\":\"🎷세상에!! 새로운 배포 버전이 업데이트되었지 뭐야??!!\n🔗 https://likelionhackathon.netlify.app\n\n이번 배포 커밋:\n$COMMITS\"}" \
           $SLACK_FROM_NETLIFY_URL
