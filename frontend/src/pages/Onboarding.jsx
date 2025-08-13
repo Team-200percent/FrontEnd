@@ -5,29 +5,29 @@ import styled from "styled-components";
 const SLIDES = [
   {
     label: (
-      <>
+      <span>
         <strong>동작구</strong>가&nbsp;<strong>처음</strong>이신가요?
-      </>
+      </span>
     ),
-    img: "/images/onboarding/onboarding1.svg",
+    img: "/images/onboarding/onboarding1.png",
   },
   {
     label: (
-      <>
+      <span>
         <strong>AI</strong>가&nbsp;<strong>상황과&nbsp;취향</strong>을&nbsp;분석해
         <br />
         <strong>딱&nbsp;맞는&nbsp;정보</strong>를&nbsp;<strong>추천</strong>해드려요!
-      </>
+      </span>
     ),
-    img: "/images/onboarding/onboarding2.svg",
+    img: "/images/onboarding/onboarding2.png",
   },
   {
     label: (
-      <>
+      <span>
         <strong>미션</strong>하고&nbsp;<strong>리워드</strong>도&nbsp;받아요!
-      </>
+      </span>
     ),
-    img: "/images/onboarding/onboarding3.svg",
+    img: "/images/onboarding/onboarding3.png",
   },
 ];
 
@@ -87,6 +87,10 @@ const Stage = styled.div`
 const Label = styled.div`
   margin-top: 10px;
   width: min(90%, 320px);
+  height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 24px;
   font-weight: 400;
   line-height: 1.6;
@@ -97,6 +101,8 @@ const Label = styled.div`
   strong {
     font-weight: 700;
   }
+
+
 `;
 
 const Imgwrapper = styled.div`
