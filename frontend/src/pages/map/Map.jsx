@@ -7,7 +7,6 @@ import { useNavigate } from "react-router-dom";
 import { DUMMY_PLACES } from "../../data/DummyData";
 import PlaceSheet from "../../components/PlaceSheet";
 
-
 const KAKAO_APP_KEY = import.meta.env.VITE_KAKAO_APP_KEY;
 const SDK_URL = `https://dapi.kakao.com/v2/maps/sdk.js?autoload=false&appkey=${KAKAO_APP_KEY}`;
 
@@ -18,7 +17,8 @@ function loadKakaoSdk() {
   if (window.kakao?.maps) return Promise.resolve(); // window.kakao.maps라는게 이미 있으면, Promise.resolve()를 반환
   if (kakaoLoaderPromise) return kakaoLoaderPromise; // 이미 Promise가 있다면 그걸 반환
 
-  kakaoLoaderPromise = new Promise((resolve, reject) => { // 없으면 새로운 Promise를 생성
+  kakaoLoaderPromise = new Promise((resolve, reject) => {
+    // 없으면 새로운 Promise를 생성
     const existed = Array.from(document.scripts).find((s) =>
       s.src?.startsWith(SDK_URL.split("?")[0])
     );
@@ -58,13 +58,13 @@ export default function Map() {
   /* 마커 클릭 핸들러 */
   const handleMarkerClick = (place) => {
     setSelectedPlace(place);
-    set
+    setIsSheetOpen(true);
   };
 
   /* 바텀 시트 닫기 핸들러 */
-  const handleSheetClose = () => { 
+  const handleSheetClose = () => {
     setIsSheetOpen(false);
-  }
+  };
 
   const upsertPosition = (coords) => {
     const map = mapRef.current;
@@ -105,6 +105,7 @@ export default function Map() {
         strokeOpacity: 0.5,
         fillColor: "#13c0ff",
         fillOpacity: 0.18,
+        zIndex: 1,
       });
       circleRef.current.setMap(map);
     } else {
@@ -151,9 +152,14 @@ export default function Map() {
       mapRef.current = map;
 
       DUMMY_PLACES.forEach((place) => {
-        const markerPosition = new window.kakao.maps.LatLng(place.lat, place.lng);
+        const markerPosition = new window.kakao.maps.LatLng(
+          place.lat,
+          place.lng
+        );
         const marker = new window.kakao.maps.Marker({
           position: markerPosition,
+          clickable: true,
+          zIndex: 5,
         });
 
         marker.setMap(map);
@@ -245,8 +251,6 @@ export default function Map() {
     map.panTo(marker.getPosition());
   };
 
- 
-
   return (
     <div
       style={{
@@ -267,7 +271,7 @@ export default function Map() {
 
       <PlaceSheet
         open={isSheetOpen}
-        onClose={handleSheetClose}
+        onClose={() => setIsSheetOpen(false)}
         place={selectedPlace}
       />
     </div>

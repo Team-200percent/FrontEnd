@@ -90,9 +90,8 @@ export default function PlaceSheet({ open, onClose, place }) {
 
   return (
     <>
-      <Backdrop $show={open} onClick={clickBackdrop} />
       <Sheet
-        style={{ transform: `translateY(${open ? y : vh}px)` }}
+        style={{ transform: `translate(-50%, ${open ? y : vh}px)` }}
         onMouseMove={onPointerMove}
         onMouseUp={onPointerUp}
         onMouseLeave={onPointerUp}
@@ -139,6 +138,10 @@ export default function PlaceSheet({ open, onClose, place }) {
           </RateRow>
         )}
 
+        <DetailButton onClick={() => alert(`${place?.name} 자세히 보기`)}>
+          자세히 보기
+        </DetailButton>
+
         <Divider />
 
         <Buttons>
@@ -155,23 +158,29 @@ export default function PlaceSheet({ open, onClose, place }) {
   );
 }
 
-/* ========= styles ========= */
+const DetailButton = styled.button`
+  width: 100%;
+  padding: 8px;
+  margin-top: 12px;
+  border-radius: 8px;
+  border: 1px solid #eef0f4;
+  background: #f6f8ff;
+  color: #384150;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
 
-const Backdrop = styled.div`
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.25);
-  opacity: ${({ $show }) => ($show ? 1 : 0)};
-  pointer-events: ${({ $show }) => ($show ? "auto" : "none")};
-  transition: opacity 0.18s ease;
-  z-index: 900;
+  &:hover {
+    background: #eaf3ff;
+  }
 `;
+
+
 
 const Sheet = styled.div`
   position: fixed;
   left: 50%;
-  transform: translateX(-50%);
-  bottom: 0;
+  top: 25%;
   width: 100%;
   max-width: 430px;
   background: #fff;
@@ -179,7 +188,7 @@ const Sheet = styled.div`
   border-top-right-radius: 18px;
   box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.15);
   transition: transform 0.18s ease;
-  z-index: 901;
+  z-index: 10000;
   will-change: transform;
   padding: 8px 14px 16px;
 `;
@@ -213,7 +222,6 @@ const Title = styled.h2`
   letter-spacing: -0.2px;
   color: #111;
   flex: 1;
-  overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 `;
