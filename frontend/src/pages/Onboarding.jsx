@@ -9,7 +9,7 @@ const SLIDES = [
         <strong>동작구</strong>가&nbsp;<strong>처음</strong>이신가요?
       </>
     ),
-    img: "/images/onboarding/onboarding1.png",
+    img: "/images/onboarding/onboarding1.svg",
   },
   {
     label: (
@@ -19,7 +19,7 @@ const SLIDES = [
         <strong>딱&nbsp;맞는&nbsp;정보</strong>를&nbsp;<strong>추천</strong>해드려요!
       </>
     ),
-    img: "/images/onboarding/onboarding2.png",
+    img: "/images/onboarding/onboarding2.svg",
   },
   {
     label: (
@@ -27,7 +27,7 @@ const SLIDES = [
         <strong>미션</strong>하고&nbsp;<strong>리워드</strong>도&nbsp;받아요!
       </>
     ),
-    img: "/images/onboarding/onboarding3.png",
+    img: "/images/onboarding/onboarding3.svg",
   },
 ];
 
