@@ -4,14 +4,21 @@ import FavoriteButton from "../../components/map/FavoriteButton";
 import SearchBar from "../../components/map/SearchBar";
 import CategoryChips from "../../components/map/CategoryChips";
 import { useNavigate } from "react-router-dom";
+import { DUMMY_PLACES } from "../../data/DummyData";
+import PlaceSheet from "../../components/PlaceSheet";
 
-const SDK_URL =
-  "https://dapi.kakao.com/v2/maps/sdk.js?autoload=false&appkey=304f6dd93c56bc5f21d1a1b0f4ebcc73";
+
+const KAKAO_APP_KEY = import.meta.env.VITE_KAKAO_APP_KEY;
+const SDK_URL = `https://dapi.kakao.com/v2/maps/sdk.js?autoload=false&appkey=${KAKAO_APP_KEY}`;
+
 let kakaoLoaderPromise = null;
+
+/* 지도 설명서 가져오기 */
 function loadKakaoSdk() {
-  if (window.kakao?.maps) return Promise.resolve();
-  if (kakaoLoaderPromise) return kakaoLoaderPromise;
-  kakaoLoaderPromise = new Promise((resolve, reject) => {
+  if (window.kakao?.maps) return Promise.resolve(); // window.kakao.maps라는게 이미 있으면, Promise.resolve()를 반환
+  if (kakaoLoaderPromise) return kakaoLoaderPromise; // 이미 Promise가 있다면 그걸 반환
+
+  kakaoLoaderPromise = new Promise((resolve, reject) => { // 없으면 새로운 Promise를 생성
     const existed = Array.from(document.scripts).find((s) =>
       s.src?.startsWith(SDK_URL.split("?")[0])
     );
@@ -42,6 +49,22 @@ export default function Map() {
   const watchIdRef = useRef(null);
   const didInitRef = useRef(false);
   const [hasLoc, setHasLoc] = useState(false);
+  const navigate = useNavigate();
+
+  /* 바텀 시트 제어를 위한 상태 추가 */
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [selectedPlace, setSelectedPlace] = useState(null);
+
+  /* 마커 클릭 핸들러 */
+  const handleMarkerClick = (place) => {
+    setSelectedPlace(place);
+    set
+  };
+
+  /* 바텀 시트 닫기 핸들러 */
+  const handleSheetClose = () => { 
+    setIsSheetOpen(false);
+  }
 
   const upsertPosition = (coords) => {
     const map = mapRef.current;
@@ -127,6 +150,18 @@ export default function Map() {
       });
       mapRef.current = map;
 
+      DUMMY_PLACES.forEach((place) => {
+        const markerPosition = new window.kakao.maps.LatLng(place.lat, place.lng);
+        const marker = new window.kakao.maps.Marker({
+          position: markerPosition,
+        });
+
+        marker.setMap(map);
+
+        window.kakao.maps.event.addListener(marker, "click", () => {
+          handleMarkerClick(place);
+        });
+      });
       const cached = sessionStorage.getItem(SS_KEY);
       if (cached) {
         try {
@@ -201,7 +236,7 @@ export default function Map() {
       if (watchIdRef.current != null)
         navigator.geolocation.clearWatch(watchIdRef.current);
     };
-  }, [hasLoc]);
+  }, []);
 
   const flyToMe = () => {
     const map = mapRef.current;
@@ -210,7 +245,7 @@ export default function Map() {
     map.panTo(marker.getPosition());
   };
 
-  const navigate = useNavigate();
+ 
 
   return (
     <div
@@ -229,6 +264,12 @@ export default function Map() {
       />
       <FavoriteButton disabled={!hasLoc} />
       <LocateButton onClick={flyToMe} disabled={!hasLoc} />
+
+      <PlaceSheet
+        open={isSheetOpen}
+        onClose={handleSheetClose}
+        place={selectedPlace}
+      />
     </div>
   );
 }
