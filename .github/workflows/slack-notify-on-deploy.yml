@@ -31,6 +31,7 @@ jobs:
         env:
           SLACK_FROM_NETLIFY_URL: ${{ secrets.SLACK_FROM_NETLIFY_URL }}
         run: |
+          COMMIT_LOG=$(git log -1 --pretty=format:"%s")
           curl -X POST -H 'Content-type: application/json' \
-          --data '{"text":"🎷세상에!! 새로운 배포 버전이 업데이트되었지 뭐야??!!\n🔗 https://likelionhackathon.netlify.app\n\n이번 배포에서는 다음과 같은 커밋이 발생했어요:\n${{ steps.get_commits.outputs.COMMITS }}"}' \
+          --data "{\"text\":\"🎷세상에!! 새로운 배포 버전이 업데이트되었지 뭐야??!!\n🔗 https://likelionhackathon.netlify.app\n\n이번 배포 커밋:\n$COMMIT_LOG\"}" \
           $SLACK_FROM_NETLIFY_URL
