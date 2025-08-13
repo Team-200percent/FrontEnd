@@ -6,7 +6,7 @@ export default function Login() {
     <Wrapper>
       <Header>
         <Brand>
-          <img src="/icons/mainlogo-sky.svg" />
+          <img src="/icons/mainlogo-sky.png" />
         </Brand>
       </Header>
 
