@@ -1,7 +1,42 @@
-import { Link } from "react-router-dom";
+import { use, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import styled from "styled-components";
+import axios from 'axios';
 
 export default function Login() {
+
+  const [userId, setUserId] = useState("");
+  const [password, setPassword] = useState("");
+  const navigate = useNavigate();
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+
+    if (!userId || !password) {
+      alert("아이디와 비밀번호를 입력해주세요.");
+      return;
+    }
+
+    const loginData = {
+      user_id: userId,
+      password: password,
+    }
+
+    try {
+      const response = await axios.post(
+        'https://200percent.p-e.kr/account/',
+        loginData
+      );
+
+      console.log("로그인 성공:", response.data);
+      alert('로그인 성공!');
+      navigate('/home'); // 로그인 성공 후 홈으로 이동
+    } catch (error) {
+      console.error("로그인 실패:", error);
+      alert('아이디와 비밀번호를 확인해주세요.');
+    }
+  };
+
   return (
     <Wrapper>
       <Header>
@@ -10,18 +45,23 @@ export default function Login() {
         </Brand>
       </Header>
 
-      <Form>
+      <Form onSubmit={handleLogin}>
         <Field>
           <Label>아이디</Label>
-          <Input placeholder="영어, 숫자 조합 4~10자 이내" />
+          <Input 
+          type="text"
+          placeholder="영어, 숫자 조합 4~10자 이내"
+          value={userId}
+          onChange={(e) => setUserId(e.target.value)}
+          />
         </Field>
 
         <Field>
           <Label>비밀번호</Label>
-          <Input type="password" placeholder="영어, 숫자 조합 8~15자 이내" />
+          <Input type="password" placeholder="영어, 숫자 조합 8~15자 이내" value={password} onChange={(e) => setPassword(e.target.value)} />
         </Field>
 
-        <Submit type="button">로그인</Submit>
+        <Submit type="submit">로그인</Submit>
         <Join to="/home">홈으로(임시)</Join>
       </Form>
     </Wrapper>
@@ -53,7 +93,7 @@ const Brand = styled.div`
   }
 `;
 
-const Form = styled.div`
+const Form = styled.form`
   display: flex;
   flex-direction: column;
   gap: 24px;
