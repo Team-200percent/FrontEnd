@@ -28,7 +28,7 @@ export default function MapSearch() {
 
       <BottomContainer>
         <Line />
-        <AdBanner>광고</AdBanner>
+        <AdBanner><img src="/images/mapsearchad.png" alt="Ad Banner" /></AdBanner>
 
         <Content>
           <SectionHeader>
@@ -77,7 +77,7 @@ const Line = styled.div`
 `;
 
 const AdBanner = styled.div`
-  margin-top: 24px;
+  margin-top: 15px;
   width: 100%;
   height: 96px;
   background: #d9d9d9;
@@ -85,7 +85,11 @@ const AdBanner = styled.div`
   display: grid;
   place-items: center;
   font-size: 18px;
-  margin-bottom: 18px;
+  
+  img {
+    width: 100%;
+    height: 100%;
+  }
 `;
 
 const SectionHeader = styled.div`
