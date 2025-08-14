@@ -5,7 +5,8 @@ import SearchBar from "../../components/map/SearchBar";
 import CategoryChips from "../../components/map/CategoryChips";
 import { useNavigate } from "react-router-dom";
 import { DUMMY_PLACES } from "../../data/DummyData";
-import PlaceSheet from "../../components/PlaceSheet";
+import PlaceSheet from "../../components/map/PlaceSheet";
+import styled from "styled-components";
 
 const KAKAO_APP_KEY = import.meta.env.VITE_KAKAO_APP_KEY;
 const SDK_URL = `https://dapi.kakao.com/v2/maps/sdk.js?autoload=false&appkey=${KAKAO_APP_KEY}`;
@@ -55,10 +56,13 @@ export default function Map() {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [selectedPlace, setSelectedPlace] = useState(null);
 
+  const [sheetViewMode, setSheetViewMode] = useState("compact"); // 'compact' | 'expanded'
+
   /* 마커 클릭 핸들러 */
   const handleMarkerClick = (place) => {
     setSelectedPlace(place);
     setIsSheetOpen(true);
+    setSheetViewMode("compact"); // 마커 클릭 시 항상 작은 창으로 시작
   };
 
   /* 바텀 시트 닫기 핸들러 */
@@ -260,20 +264,61 @@ export default function Map() {
       }}
     >
       <div ref={boxRef} style={{ width: "100%", height: "100dvh" }} />
-      <SearchBar mode="display" />
-      <CategoryChips
-        onSelect={(key) => {
-          navigate("/map-search", { state: { activeCategory: key } });
-        }}
-      />
-      <FavoriteButton disabled={!hasLoc} />
-      <LocateButton onClick={flyToMe} disabled={!hasLoc} />
+      {sheetViewMode !== "expanded" && (
+        <>
+          <SearchBar mode="display" />
+          <CategoryChips
+            onSelect={(key) => {
+              navigate("/map-search", { state: { activeCategory: key } });
+            }}
+          />
+          <FavoriteButton disabled={!hasLoc} />
+          <LocateButtonWrapper
+            $isSheetOpen={isSheetOpen}
+            $viewMode={sheetViewMode}
+          >
+            <LocateButton onClick={flyToMe} disabled={!hasLoc} />
+          </LocateButtonWrapper>
+        </>
+      )}
 
       <PlaceSheet
         open={isSheetOpen}
-        onClose={() => setIsSheetOpen(false)}
+        onClose={handleSheetClose}
         place={selectedPlace}
+        viewMode={sheetViewMode}
+        onViewModeChange={setSheetViewMode}
       />
     </div>
   );
 }
+
+const LocateButtonWrapper = styled.div`
+  position: absolute;
+  right: 16px;
+  z-index: 100;
+  transition: bottom 0.3s ease-out, opacity 0.3s ease-out;
+
+  /* ✅ 시트 상태에 따라 위치와 투명도를 조절합니다. */
+  ${({ $isSheetOpen, $viewMode }) => {
+    if ($viewMode === 'expanded') {
+      return `
+        opacity: 0;
+        pointer-events: none; /* 클릭 안 되게 */
+        bottom: 90px; /* 원래 위치로 돌아가면서 사라지도록 */
+      `;
+    }
+    if ($isSheetOpen) {
+      // 작은 시트(compact)가 열려있을 때
+      return `
+        opacity: 1;
+        bottom: calc(35% + 16px); /* 시트 높이(35%) + 여백(16px) */
+      `;
+    }
+    // 시트가 닫혀있을 때
+    return `
+      opacity: 1;
+      bottom: 90px; /* 원래 기본 위치 */
+    `;
+  }}
+`;
