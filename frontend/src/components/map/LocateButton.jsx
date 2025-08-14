@@ -1,9 +1,6 @@
 import styled from "styled-components";
 
 const Btn = styled.button`
-  position: absolute;
-  right: 2%;
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 88px);
   width: 64px;
   height: 64px;
   padding: 0;
@@ -12,7 +9,6 @@ const Btn = styled.button`
   background: transparent;
   display: block;
   overflow: hidden;
-  z-index: 9999;
 
   img {
     width: 100%;
