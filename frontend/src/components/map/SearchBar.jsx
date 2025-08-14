@@ -7,7 +7,6 @@ const SearchBar = forwardRef(({ mode = "display" }, ref) => {
   const [query, setQuery] = useState(""); // 검색어 상태
   const navigate = useNavigate();
   const isMapPage = location.pathname === "/map";
-  const isMapSearchPage = location.pathname === "/map-search";
 
   const handleBoxClick = () => {
     if (mode === "display") navigate("/map-search");
@@ -39,14 +38,6 @@ const SearchBar = forwardRef(({ mode = "display" }, ref) => {
             <img src="/icons/map/microphone.svg" alt="음성검색 마이크 아이콘" />
           </RightIcon>
         </SearchBox>
-        {!isMapSearchPage && (
-          <RouteBtn onClick={() => navigate("/findroute")}>
-            <RouteIcon>
-              <img src="/icons/map/findroutearrow.svg" alt="길찾기 아이콘" />
-            </RouteIcon>
-            <p>길찾기</p>
-          </RouteBtn>
-        )}
       </Row>
     </Wrapper>
   );
