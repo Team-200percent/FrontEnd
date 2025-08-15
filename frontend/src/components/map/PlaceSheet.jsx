@@ -36,7 +36,7 @@ const CompactContent = ({ place, onViewDetails, onLike }) => (
 );
 
 // 2. 전체 화면 모드 UI
-const ExpandedContent = ({ place, onGoBack, onLike }) => (
+const ExpandedContent = ({ place, onGoBack, onLike, onCloseAll }) => (
   <ExpandedWrapper>
     <ExpandedHeader>
       <BackButton onClick={onGoBack}>
@@ -46,7 +46,7 @@ const ExpandedContent = ({ place, onGoBack, onLike }) => (
         <GrayLikeButton onClick={onLike}>
           <img src="icons/map/mapdetail/grayheart.svg" alt="좋아요" />
         </GrayLikeButton>
-        <GrayXButton>
+        <GrayXButton onClick={onCloseAll}>
           <img src="icons/map/mapdetail/x.svg" alt="x" />
         </GrayXButton>
       </ButtonWrapper>
@@ -118,11 +118,13 @@ const ExpandedContent = ({ place, onGoBack, onLike }) => (
 export default function PlaceSheet({
   open,
   onClose,
+  onCloseAll,
   place,
   viewMode,
   onViewModeChange,
+  isGroupSheetOpen,
+  onGroupSheetToggle,
 }) {
-  const [isGroupSheetOpen, setIsGroupSheetOpen] = useState(false);
   const sheetRef = useRef(null);
 
   // 드래그 로직 (간소화 버전)
@@ -167,20 +169,23 @@ export default function PlaceSheet({
           <CompactContent
             place={place}
             onViewDetails={() => onViewModeChange("expanded")}
-            onLike={() => setIsGroupSheetOpen(true)}
+            onLike={() => onGroupSheetToggle(true)}
+            onCloseAll={onCloseAll}
           />
         ) : (
           <ExpandedContent
             place={place}
             onGoBack={() => onViewModeChange("compact")}
-            onLike={() => setIsGroupSheetOpen(true)}
+            onLike={() => onGroupSheetToggle(true)}
+            onCloseAll={onCloseAll}
           />
         )}
       </SheetContainer>
 
       <GroupSheet
         open={isGroupSheetOpen}
-        onClose={() => setIsGroupSheetOpen(false)}
+        onClose={() => onGroupSheetToggle(false)}
+        onCloseAll={onCloseAll}
         placeName={place?.name}
       />
     </>
