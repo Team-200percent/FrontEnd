@@ -15,7 +15,6 @@ import Splash from "./pages/Splash";
 import Recommend from "./pages/Recommend";
 import Login from "./pages/Login";
 import MapSearch from "./pages/map/MapSearch";
-import FindRoute from "./pages/map/FindRoute";
 
 function AppInner() {
   const location = useLocation(); // 현재 URL 전체 정보를 주는 React Hook
@@ -42,7 +41,6 @@ function AppInner() {
 
         {/* Sub Pages */}
         <Route path="/map-search" element={<MapSearch />} />
-        <Route path="/findroute" element={<FindRoute />} />
       </Routes>
       {!shouldHideNav && <NavBar />}
     </Layout>
