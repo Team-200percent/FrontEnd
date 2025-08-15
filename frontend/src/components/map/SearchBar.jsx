@@ -10,16 +10,21 @@ const SearchBar = forwardRef(({ mode = "display" }, ref) => {
 
   const handleBoxClick = () => {
     if (mode === "display") navigate("/map-search");
-  }
-
+  };
 
   return (
     <Wrapper>
       <Row>
         <SearchBox onClick={() => navigate("/map-search")}>
           {/* 뒤로가기 아이콘 */}
-          <LeftIcon onClick={() => navigate(-1)} $hidden={isMapPage} >            
-            <img src="/icons/map/leftarrow.svg" alt="왼쪽 화살표" />
+          <LeftIcon
+            onClick={isMapPage ? undefined : () => navigate(-1)} // 지도에선 클릭 비활성화
+          >
+            {isMapPage ? (
+              <img src="/icons/map/search.svg" alt="돋보기" />
+            ) : (
+              <img src="/icons/map/leftarrow.svg" alt="왼쪽 화살표" />
+            )}
           </LeftIcon>
 
           {mode === "input" ? (
@@ -70,36 +75,36 @@ const SearchBox = styled.div`
   border: 1px solid #e5e7eb;
   border-radius: 14px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
-  display: grid;
+  display: flex;
   grid-template-columns: 36px 1fr 40px;
   align-items: center;
-  padding: 0 12px;
 `;
 
 const LeftIcon = styled.div`
-  display: grid;
-  place-items: center;
-  margin-right: 8px;
+  margin-left: 16px;
+  margin-right: 10px;
   opacity: ${({ $hidden }) => ($hidden ? 0 : 1)};
   pointer-events: ${({ $hidden }) => ($hidden ? "none" : "auto")};
   visibility: ${({ $hidden }) => ($hidden ? "hidden" : "visible")};
   img {
-    width: 9px;
-    height: auto;
+    width: 17px;
+    height: 20px;
   }
 `;
 
 const Placeholder = styled.div`
-  font-size: 16px;
-  font-weight: 500;
-  line-height: 28px;
-  color: #8b8585;
+  flex: 1;
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 24px;
+  color: #86858b;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 `;
 
 const Input = styled.input`
+  flex: 1;
   width: 100%;
   border: none;
   background: transparent;
