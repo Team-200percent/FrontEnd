@@ -28,7 +28,7 @@ const PrivacyButton = ({ type, active, onClick }) => {
   );
 };
 
-export default function AddGroupSheet({ open, onClose, onCloseAll  }) {
+export default function AddGroupSheet({ open, onClose, onCloseAll }) {
   const [groupName, setGroupName] = useState("");
   const [selectedColor, setSelectedColor] = useState(COLORS[0]);
   const [isPrivate, setIsPrivate] = useState(true);
@@ -338,4 +338,5 @@ const DoneButton = styled.button`
   font-size: 16px;
   font-weight: 700;
   cursor: pointer;
+  margin-bottom: 15%;
 `;
