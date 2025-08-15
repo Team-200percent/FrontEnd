@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { DUMMY_PLACES } from "../../data/DummyData";
 import PlaceSheet from "../../components/map/PlaceSheet";
 import styled from "styled-components";
+import FavoriteGroupsSheet from "../../components/map/FavoriteGroupsSheet";
 
 const KAKAO_APP_KEY = import.meta.env.VITE_KAKAO_APP_KEY;
 const SDK_URL = `https://dapi.kakao.com/v2/maps/sdk.js?autoload=false&appkey=${KAKAO_APP_KEY}`;
@@ -54,6 +55,9 @@ export default function Map() {
 
   /* 바텀 시트 제어를 위한 상태 추가 */
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [isGroupSheetOpen, setIsGroupSheetOpen] = useState(false);
+  const [isFavoriteGroupsSheetOpen, setIsFavoriteGroupsSheetOpen] =
+    useState(false);
   const [selectedPlace, setSelectedPlace] = useState(null);
 
   const [sheetViewMode, setSheetViewMode] = useState("compact"); // 'compact' | 'expanded'
@@ -65,9 +69,17 @@ export default function Map() {
     setSheetViewMode("compact"); // 마커 클릭 시 항상 작은 창으로 시작
   };
 
+  const handleCloseAll = () => {
+    setIsSheetOpen(false);
+    setIsGroupSheetOpen(false);
+    setSheetViewMode("compact");
+  };
+
   /* 바텀 시트 닫기 핸들러 */
   const handleSheetClose = () => {
     setIsSheetOpen(false);
+    setIsGroupSheetOpen(false);
+    setSheetViewMode("compact");
   };
 
   const upsertPosition = (coords) => {
@@ -264,30 +276,51 @@ export default function Map() {
       }}
     >
       <div ref={boxRef} style={{ width: "100%", height: "100dvh" }} />
-      {sheetViewMode !== "expanded" && (
-        <>
-          <SearchBar mode="display" />
-          <CategoryChips
-            onSelect={(key) => {
-              navigate("/map-search", { state: { activeCategory: key } });
-            }}
-          />
-          <FavoriteButton disabled={!hasLoc} />
-          <LocateButtonWrapper
-            $isSheetOpen={isSheetOpen}
-            $viewMode={sheetViewMode}
-          >
-            <LocateButton onClick={flyToMe} disabled={!hasLoc} />
-          </LocateButtonWrapper>
-        </>
-      )}
+      {sheetViewMode !== "expanded" &&
+        !isGroupSheetOpen &&
+        !isFavoriteGroupsSheetOpen && (
+          <>
+            <SearchBar mode="display" />
+            <CategoryChips
+              onSelect={(key) => {
+                navigate("/map-search", { state: { activeCategory: key } });
+              }}
+            />
+            <FavoriteButton
+              onClick={() => setIsFavoriteGroupsSheetOpen(true)}
+              disabled={!hasLoc}
+            />
+            <LocateButtonWrapper
+              $isSheetOpen={isSheetOpen}
+              $viewMode={sheetViewMode}
+            >
+              <LocateButton onClick={flyToMe} disabled={!hasLoc} />
+            </LocateButtonWrapper>
+          </>
+        )}
 
       <PlaceSheet
         open={isSheetOpen}
         onClose={handleSheetClose}
+        onCloseAll={handleCloseAll}
         place={selectedPlace}
         viewMode={sheetViewMode}
         onViewModeChange={setSheetViewMode}
+        isGroupSheetOpen={isGroupSheetOpen}
+        onGroupSheetToggle={setIsGroupSheetOpen}
+        onFavoriteSheetToggle={setIsFavoriteGroupsSheetOpen}
+      />
+
+      <FavoriteGroupsSheet
+        open={isFavoriteGroupsSheetOpen}
+        onClose={() => setIsFavoriteGroupsSheetOpen(false)}
+        onCloseAll={handleCloseAll}
+        placeName={selectedPlace?.name}
+        viewMode={sheetViewMode}
+        onViewModeChange={setSheetViewMode}
+        isGroupSheetOpen={isGroupSheetOpen}
+        onGroupSheetToggle={setIsGroupSheetOpen}
+        onFavoriteSheetToggle={setIsFavoriteGroupsSheetOpen}
       />
     </div>
   );
@@ -299,9 +332,9 @@ const LocateButtonWrapper = styled.div`
   z-index: 100;
   transition: bottom 0.3s ease-out, opacity 0.3s ease-out;
 
-  /* ✅ 시트 상태에 따라 위치와 투명도를 조절합니다. */
+  /* 시트 상태에 따라 위치와 투명도를 조절 */
   ${({ $isSheetOpen, $viewMode }) => {
-    if ($viewMode === 'expanded') {
+    if ($viewMode === "expanded") {
       return `
         opacity: 0;
         pointer-events: none; /* 클릭 안 되게 */
