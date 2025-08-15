@@ -5,7 +5,7 @@ import {
   Routes,
   useLocation,
 } from "react-router-dom";
-import Home from "./pages/Home";
+import Home from "./pages/home/Home";
 import Map from "./pages/map/Map";
 import MyPage from "./pages/MyPage";
 import Layout from "./layout/Layout";
