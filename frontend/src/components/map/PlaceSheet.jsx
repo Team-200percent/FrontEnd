@@ -230,7 +230,6 @@ const HandleBar = styled.div`
   cursor: grab;
 `;
 
-// ... (이 아래로 CompactContent와 ExpandedContent 내부 요소들의 스타일을 추가합니다)
 
 // Compact View 스타일
 const CompactWrapper = styled.div`
