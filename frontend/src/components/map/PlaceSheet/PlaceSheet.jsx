@@ -1,134 +1,217 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef } from "react";
 import styled from "styled-components";
-import GroupSheet from "./GroupSheet";
+import axios from "axios";
+import GroupSheet from "../GroupSheet";
+import ReviewContent from "./ReviewContent";
 
-// 1. 작은 창 모드 UI
-const CompactContent = ({ place, onViewDetails, onLike }) => (
-  <CompactWrapper>
-    <CompactHeader>
-      <Title>{place?.name ?? "장소명"}</Title>
-      <LikeButton onClick={onLike}>
-        <img src="icons/map/heart.svg" alt="좋아요" />
-      </LikeButton>
-    </CompactHeader>
+const LoadingSpinner = () => <Spinner>Loading...</Spinner>;
 
-    <Address>{place?.address ?? "주소 정보 없음"}</Address>
+const CompactContent = ({ place, onViewDetails, onLike }) => {
+  const compactHeartIconSrc = place?.isFavorite
+    ? "/public/icons/map/compact-heart-on.png"
+    : "/public/icons/map/compact-heart-off.png";
 
-    <InfoRow>
-      <HoursInfo>영업중</HoursInfo>
-      <span>{place?.hours?.replace("운영중 ", "") ?? "10:00 - 18:00"}</span>
-      <RatingContainer>
-        <span style={{ marginLeft: "4px", fontWeight: "600" }}>
-          {place?.rating?.toFixed(1) ?? "4.0"}
-        </span>
-        <StarsWrapper>
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Star key={i} $filled={i < Math.round(place?.rating ?? 0)} />
-          ))}
-        </StarsWrapper>
-      </RatingContainer>
-    </InfoRow>
-
-    <DetailButton onClick={onViewDetails}>자세히 보기</DetailButton>
-
-    <ImagePreview />
-  </CompactWrapper>
-);
-
-// 2. 전체 화면 모드 UI
-const ExpandedContent = ({ place, onGoBack, onLike, onCloseAll }) => (
-  <ExpandedWrapper>
-    <ExpandedHeader>
-      <BackButton onClick={onGoBack}>
-        <img src="/icons/map/leftarrow.svg" alt="뒤로가기" />
-      </BackButton>
-      <ButtonWrapper>
-        <GrayLikeButton onClick={onLike}>
-          <img src="icons/map/mapdetail/grayheart.svg" alt="좋아요" />
-        </GrayLikeButton>
-        <GrayXButton onClick={onCloseAll}>
-          <img src="icons/map/mapdetail/x.svg" alt="x" />
-        </GrayXButton>
-      </ButtonWrapper>
-    </ExpandedHeader>
-
-    <ContentArea>
-      <TitleSection>
-        <MainTitle>{place?.name ?? "맥도날드 중앙대점"}</MainTitle>
-        <SubInfo>
-          <span>햄버거</span>
-          <span>·</span>
-          <span>
-            <img src="icons/map/mapdetail/graystar.svg" alt="별점" />{" "}
-            {place?.rating?.toFixed(2) ?? "4.47"}
+  return (
+    <CompactWrapper>
+      <CompactHeader>
+        <Title>{place?.name ?? "장소명"}</Title>
+        <LikeButton onClick={onLike}>
+          <img src={compactHeartIconSrc} alt="좋아요" />
+        </LikeButton>
+      </CompactHeader>
+      <Address>{place?.address ?? "주소 정보 없음"}</Address>
+      <InfoRow>
+        <HoursInfo>{place?.hours ? "영업중" : ""}</HoursInfo>
+        <span>{place?.hours?.replace("운영중 ", "") ?? "정보 없음"}</span>
+        <RatingContainer>
+          <span style={{ fontWeight: "600" }}>
+            {place?.rating?.toFixed(1) ?? "N/A"}
           </span>
-          <span>·</span>
-          <span>리뷰 999+</span>
-        </SubInfo>
-      </TitleSection>
+          <StarsWrapper>
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Star key={i} $filled={i < Math.round(place?.rating ?? 0)} />
+            ))}
+          </StarsWrapper>
+        </RatingContainer>
+      </InfoRow>
+      <DetailButton onClick={onViewDetails}>자세히 보기</DetailButton>
+      <ImagePreview />
+    </CompactWrapper>
+  );
+};
 
-      <PhotoSection>
-        <PlaceholderPhoto />
-        <PlaceholderPhoto />
-        <PlaceholderPhoto />
-      </PhotoSection>
+const ExpandedContent = ({
+  place,
+  onGoBack,
+  onLike,
+  onCloseAll,
+  activeTab,
+  onTabClick,
+}) => {
+  const expandedHeartIconSrc = place?.isFavorite
+    ? "/icons/map/expanded-heart-on.png"
+    : "/icons/map/expanded-heart-off.png";
 
-      <TabNav>
-        <Tab $active>홈</Tab>
-        <Tab>메뉴</Tab>
-        <Tab>리뷰</Tab>
-        <Tab>사진</Tab>
-      </TabNav>
+  return (
+    <ExpandedWrapper>
+      <ExpandedHeader>
+        <BackButton onClick={onGoBack}>
+          <img src="/icons/map/leftarrow.svg" alt="뒤로가기" />
+        </BackButton>
+        <ButtonWrapper>
+          <GrayLikeButton onClick={onLike}>
+            <img src={expandedHeartIconSrc} alt="좋아요" />
+          </GrayLikeButton>
+          <GrayXButton onClick={onCloseAll}>
+            <img src="/icons/map/mapdetail/x.svg" alt="x" />
+          </GrayXButton>
+        </ButtonWrapper>
+      </ExpandedHeader>
 
-      <InfoList>
-        <InfoItem>
-          <span>
-            <img src="icons/map/mapdetail/pin.svg" alt="위치" />
-          </span>
-          <p>{place?.address ?? "서울 동작구 흑석로 84 다길 14"}</p>
-          <MapButton>지도</MapButton>
-        </InfoItem>
-        <InfoItem>
-          <span>
-            <img src="icons/map/mapdetail/time.svg" alt="영업시간" />
-          </span>
-          <p>{place?.hours ?? "영업 중 · 24:00에 영업 종료"}</p>
-        </InfoItem>
-        <InfoItem>
-          <span>
-            <img src="icons/map/mapdetail/tel.svg" alt="전화번호" />
-          </span>
-          <p>02-6332-1500</p>
-        </InfoItem>
-        <InfoItem>
-          <span>
-            <img src="icons/map/mapdetail/link.svg" alt="링크" />
-          </span>
-          <LinkText href="https://www.mcdonalds.co.kr/" target="_blank">
-            https://www.mcdonalds.co.kr/
-          </LinkText>
-        </InfoItem>
-      </InfoList>
-    </ContentArea>
-  </ExpandedWrapper>
-);
+      <ContentArea>
+        <TitleSection>
+          {/* place 데이터가 있으면 name을, 없으면 '장소명'을 표시 */}
+          <MainTitle>{place?.name ?? "장소명"}</MainTitle>
+          <SubInfo>
+            {/* 아래 데이터들은 추후 백엔드에서 추가될 경우 자동으로 표시됩니다. */}
+            <span>{place?.type ?? "카테고리"}</span>
+            <span>·</span>
+            <span>
+              <img src="/icons/map/mapdetail/graystar.svg" alt="별점" />{" "}
+              {place?.rating?.toFixed(1) ?? "평점 없음"}
+            </span>
+            <span>·</span>
+            <span>리뷰 {place?.reviewCount ?? "0"}</span>
+          </SubInfo>
+        </TitleSection>
 
-// --- 메인 컴포넌트 ---
+        <PhotoSection>
+          <PlaceholderPhoto />
+          <PlaceholderPhoto />
+          <PlaceholderPhoto />
+        </PhotoSection>
+
+        <TabNav>
+          <Tab
+            $active={activeTab === "home"}
+            onClick={() => onTabClick("home")}
+          >
+            홈
+          </Tab>
+          <Tab
+            $active={activeTab === "menu"}
+            onClick={() => onTabClick("menu")}
+          >
+            메뉴
+          </Tab>
+          <Tab
+            $active={activeTab === "review"}
+            onClick={() => onTabClick("review")}
+          >
+            리뷰
+          </Tab>
+          <Tab
+            $active={activeTab === "photo"}
+            onClick={() => onTabClick("photo")}
+          >
+            사진
+          </Tab>
+        </TabNav>
+        {activeTab === "home" && (
+          <InfoList>
+            <InfoItem>
+              <span>
+                <img src="/icons/map/mapdetail/pin.svg" alt="위치" />
+              </span>
+              <p>{place?.address ?? "주소 정보 없음"}</p>
+              <MapButton>지도</MapButton>
+            </InfoItem>
+            <InfoItem>
+              <span>
+                <img src="/icons/map/mapdetail/time.svg" alt="영업시간" />
+              </span>
+              <p>{place?.hours ?? "영업시간 정보 없음"}</p>
+            </InfoItem>
+            <InfoItem>
+              <span>
+                <img src="/icons/map/mapdetail/tel.svg" alt="전화번호" />
+              </span>
+              <p>{place?.phone ?? "전화번호 정보 없음"}</p>
+            </InfoItem>
+            <InfoItem>
+              <span>
+                <img src="/icons/map/mapdetail/link.svg" alt="링크" />
+              </span>
+              <LinkText href={place?.website ?? "#"} target="_blank">
+                {place?.website ?? "웹사이트 정보 없음"}
+              </LinkText>
+            </InfoItem>
+          </InfoList>
+        )}
+        {activeTab === "review" && <ReviewContent place={place} />}
+      </ContentArea>
+    </ExpandedWrapper>
+  );
+};
 
 export default function PlaceSheet({
   open,
   onClose,
   onCloseAll,
   place,
+  setPlace,
   viewMode,
   onViewModeChange,
   isGroupSheetOpen,
   onGroupSheetToggle,
 }) {
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+  const [activeTab, setActiveTab] = useState("home");
   const sheetRef = useRef(null);
-
-  // 드래그 로직 (간소화 버전)
   const dragInfo = useRef({ startY: 0, isDragging: false });
+
+  const handleExpand = async () => {
+    if (place && place.description) {
+      onViewModeChange("expanded");
+      return;
+    }
+
+    if (!place || !place.lat || !place.lng) return;
+
+    onViewModeChange("expanded");
+    setIsLoadingDetails(true);
+
+    try {
+      // 1. API 주소를 '/market/detail/'로 변경
+      const response = await axios.get(
+        "https://200percent.p-e.kr/market/detail/",
+        {
+          // 2. params 옵션을 사용해 lat과 lng를 전달
+          params: {
+            lat: place.lat,
+            lng: place.lng,
+          },
+        }
+      );
+
+      // 3. 응답 데이터가 배열이므로 첫 번째 항목을 사용
+      const detailInfo = response.data[0];
+
+      console.log("서버로부터 받은 상세 정보:", detailInfo);
+
+      if (detailInfo) {
+        setPlace((prev) => {
+          const newState = { ...prev, ...detailInfo };
+          console.log("최종으로 합쳐진 place 상태:", newState);
+          return newState;
+        });
+      }
+    } catch (error) {
+      console.error("상세 정보 로딩 실패:", error);
+    } finally {
+      setIsLoadingDetails(false);
+    }
+  };
 
   const onDragStart = (e) => {
     dragInfo.current = {
@@ -136,23 +219,18 @@ export default function PlaceSheet({
       startY: e.touches ? e.touches[0].clientY : e.clientY,
     };
   };
-
   const onDragEnd = (e) => {
     if (!dragInfo.current.isDragging) return;
     const endY = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
     const deltaY = endY - dragInfo.current.startY;
-
-    if (viewMode === "compact" && deltaY < -50) {
-      onViewModeChange("expanded");
-    } else if (viewMode === "expanded" && deltaY > 50) {
+    if (viewMode === "compact" && deltaY < -50) handleExpand();
+    else if (viewMode === "expanded" && deltaY > 50)
       onViewModeChange("compact");
-    } else if (viewMode === "compact" && deltaY > 50) {
-      onClose();
-    }
+    else if (viewMode === "compact" && deltaY > 50) onClose();
     dragInfo.current.isDragging = false;
   };
 
-  if (!open) return null; // open이 false면 아무것도 렌더링하지 않음
+  if (!open) return null;
 
   return (
     <>
@@ -166,22 +244,26 @@ export default function PlaceSheet({
       >
         <HandleBar />
         {viewMode === "compact" ? (
+          // ✅ 1. CompactContent의 JSX를 직접 작성합니다.
           <CompactContent
             place={place}
-            onViewDetails={() => onViewModeChange("expanded")}
+            onViewDetails={handleExpand}
             onLike={() => onGroupSheetToggle(true)}
-            onCloseAll={onCloseAll}
           />
+        ) : isLoadingDetails || !place || !(place.name || place.address) ? (
+          <LoadingSpinner />
         ) : (
+          // ✅ 2. ExpandedContent의 JSX를 직접 작성합니다.
           <ExpandedContent
             place={place}
             onGoBack={() => onViewModeChange("compact")}
             onLike={() => onGroupSheetToggle(true)}
             onCloseAll={onCloseAll}
+            activeTab={activeTab} // ✅ 현재 활성 탭 state 전달
+            onTabClick={setActiveTab} // ✅ 탭을 변경하는 함수 전달
           />
         )}
       </SheetContainer>
-
       <GroupSheet
         open={isGroupSheetOpen}
         onClose={() => onGroupSheetToggle(false)}
@@ -230,10 +312,9 @@ const HandleBar = styled.div`
   cursor: grab;
 `;
 
-
 // Compact View 스타일
 const CompactWrapper = styled.div`
-  padding: 8px 26px;
+  padding: 8px 36px;
   display: flex;
   flex-direction: column;
 `;
@@ -258,7 +339,7 @@ const LikeButton = styled.button`
   height: 40px;
   border-radius: 50%;
   border: none;
-  background-color: #eaf8ff;
+  background: none;
   color: #1dc3ff;
   font-size: 20px;
   display: flex;
@@ -267,7 +348,7 @@ const LikeButton = styled.button`
   cursor: pointer;
 
   img {
-    width: 18px;
+    width: 36px;
     height: auto;
   }
 `;
@@ -316,7 +397,7 @@ const Star = styled.span`
   display: inline-block;
   width: 16px;
   height: 16px;
-  mask: url("icons/map/star.svg") no-repeat center;
+  mask: url("/icons/map/star.svg") no-repeat center;
   background-color: ${({ $filled }) => ($filled ? "#ffc107" : "#e0e0e0")};
 `;
 
@@ -337,6 +418,7 @@ const DetailButton = styled.button`
 
   &:hover {
     background-color: #eaf8ff;
+  }
 `;
 
 // ✅ 이미지 미리보기 영역 스타일
@@ -444,8 +526,8 @@ const PhotoSection = styled.div`
 
 const PlaceholderPhoto = styled.div`
   flex-shrink: 0; /* 줄어들지 않도록 */
-  width: 140px;
-  height: 140px;
+  width: 197px;
+  height: 197px;
   background: #f0f2f5;
   border-radius: 12px;
 `;
@@ -514,4 +596,11 @@ const MapButton = styled.button`
 const LinkText = styled.a`
   color: #2b7cff;
   text-decoration: none;
+`;
+
+const Spinner = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
 `;
