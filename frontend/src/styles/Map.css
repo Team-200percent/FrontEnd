@@ -1,0 +1,30 @@
+.custom-marker {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: #ffde00; /* 노란색 */
+  border: 3px solid #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+}
+
+.info-window {
+  /* Layout */
+  display: inline-flex;
+  padding: 8px 16px; /* 시안보다 상하 여백을 조금 더 주어 안정적으로 만듭니다. */
+  justify-content: center;
+  align-items: center;
+
+  /* Style */
+  border-radius: 30px;
+  background-color: #1dc3ff; /* rgba(29, 195, 255) */
+
+  /* Text */
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+
+  /* 기타 */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  white-space: nowrap; /* 이름이 길어도 줄바꿈 방지 */
+}
