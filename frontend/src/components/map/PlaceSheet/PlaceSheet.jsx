@@ -8,8 +8,8 @@ const LoadingSpinner = () => <Spinner>Loading...</Spinner>;
 
 const CompactContent = ({ place, onViewDetails, onLike }) => {
   const compactHeartIconSrc = place?.isFavorite
-    ? "/public/icons/map/compact-heart-on.png"
-    : "/public/icons/map/compact-heart-off.png";
+    ? "/icons/map/compact-heart-on.png"
+    : "/icons/map/compact-heart-off.png";
 
   return (
     <CompactWrapper>
