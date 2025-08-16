@@ -437,14 +437,14 @@ const ExpandedWrapper = styled.div`
   display: flex;
   flex-direction: column;
   background-color: #fff;
-  padding: 13px 30px 0 40px;
+  padding: 13px 0 0 0;
 `;
 
 const ExpandedHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 12px;
+  padding: 8px 30px;
   position: sticky; /* 스크롤 시 상단에 고정 */
   top: 0;
   background: #fff;
@@ -495,7 +495,7 @@ const ContentArea = styled.div`
 `;
 
 const TitleSection = styled.div`
-  padding: 16px 20px;
+  padding: 16px 30px;
 `;
 
 const MainTitle = styled.h1`
@@ -515,7 +515,7 @@ const SubInfo = styled.div`
 const PhotoSection = styled.div`
   display: flex;
   gap: 8px;
-  padding: 0 20px 16px;
+  padding: 0 0 30px 30px;
   overflow-x: auto; /* 사진이 많아지면 가로 스크롤 */
   /* 스크롤바 숨기기 */
   &::-webkit-scrollbar {
