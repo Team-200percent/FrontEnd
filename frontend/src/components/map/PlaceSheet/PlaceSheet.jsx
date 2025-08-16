@@ -535,7 +535,6 @@ const PlaceholderPhoto = styled.div`
 const TabNav = styled.nav`
   display: flex;
   border-bottom: 1px solid #eee;
-  position: sticky; /* 스크롤 시 탭도 상단에 고정 */
   top: 52px; /* 헤더 높이만큼 띄우기 */
   background: #fff;
   z-index: 9;
