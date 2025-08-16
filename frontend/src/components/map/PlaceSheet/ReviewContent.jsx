@@ -473,8 +473,8 @@ const Tag = styled.span`
   color: #0092c7;
 
   img {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
   }
 `;
 const ReviewDate = styled.time`
