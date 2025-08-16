@@ -12,7 +12,7 @@ import CategoryChips from "../../components/map/CategoryChips";
 import PlaceSheet from "../../components/map/PlaceSheet/PlaceSheet";
 import FavoriteGroupsSheet from "../../components/map/FavoriteGroupsSheet";
 
-import "../../styles/map.css";
+import "../../styles/Map.css";
 
 const KAKAO_APP_KEY = import.meta.env.VITE_KAKAO_APP_KEY;
 const SDK_URL = `https://dapi.kakao.com/v2/maps/sdk.js?autoload=false&appkey=${KAKAO_APP_KEY}`;
