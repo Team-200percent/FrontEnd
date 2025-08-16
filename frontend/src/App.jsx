@@ -15,6 +15,7 @@ import Splash from "./pages/Splash";
 import Recommend from "./pages/Recommend";
 import Login from "./pages/Login";
 import MapSearch from "./pages/map/MapSearch";
+import WeeklyMission from "./pages/home/WeeklyMission";
 
 function AppInner() {
   const location = useLocation(); // 현재 URL 전체 정보를 주는 React Hook
@@ -40,6 +41,7 @@ function AppInner() {
         <Route path="/mypage" element={<MyPage />} />
 
         {/* Sub Pages */}
+        <Route path="/weekly-mission" element={<WeeklyMission />} />
         <Route path="/map-search" element={<MapSearch />} />
       </Routes>
       {!shouldHideNav && <NavBar />}
