@@ -1,16 +1,20 @@
 // src/pages/Home.jsx
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import styled from "styled-components";
 import { LEVELS } from "../../data/DummyLevel";
 import LevelSelector from "../../components/home/LevelSelector";
 import WeeklyMissionBox from "../../components/home/WeeklyMissionBox"; // ✅ 추가
+import LevelDropdown from "../../components/home/LevelDropdown";
 
 const MissionTooltip = ({ stageData, onClose }) => {
   const tooltipRef = useRef(null); // 말풍선 DOM 요소를 가리킬 ref
 
-  // 1. 위치 계산: 아이콘 아래에 나타나도록 top 값을 더해줍니다.
-  const topPosition = `calc(${stageData.top} + 35px)`;
+  // 1. 위치 계산: 아이콘 아래에 나타나도록 top 값을 더하기
+
+  const topPosition = stageData.tooltipTop;
+  const anchor = stageData.tooltipAnchor || "center";
+  const anchorDirection = stageData.tooltipAnchorDirection || "top";
 
   // 3. 외부 클릭 감지 로직
   useEffect(() => {
@@ -31,13 +35,16 @@ const MissionTooltip = ({ stageData, onClose }) => {
   return (
     <TooltipWrapper
       ref={tooltipRef}
-      style={{ top: topPosition, left: stageData.left }}
+      style={{ top: topPosition }}
+      $anchor={anchor}
+      $anchorDirection={anchorDirection}
+      $status={stageData.status}
     >
       <TooltipContent>
         <span>{stageData.missionDetail.title}</span>
         <strong>+{stageData.missionDetail.xp} XP</strong>
       </TooltipContent>
-      <StartButton>미션 시작</StartButton>
+      <StartButton $status={stageData.status}>미션 시작</StartButton>
     </TooltipWrapper>
   );
 };
@@ -104,16 +111,15 @@ const MissionProgress = ({ mission }) => {
 
 export default function Home() {
   const [currentLevel, setCurrentLevel] = useState(1);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [activeStageIndex, setActiveStageIndex] = useState(null);
 
-  const handleStageClick = (index) => {
-    // 이미 열려있는 아이콘을 다시 클릭하면 닫습니다.
-    if (activeStageIndex === index) {
-      setActiveStageIndex(null);
-    } else {
-      setActiveStageIndex(index);
-    }
+  const handleLevelChange = (level) => {
+    setCurrentLevel(level);
+    setIsDropdownOpen(false);
   };
+
+
 
   return (
     <Wrapper>
@@ -125,13 +131,23 @@ export default function Home() {
         {LEVELS.filter((level) => level.level === currentLevel).map(
           (levelData) => (
             <LevelBlock key={levelData.level}>
-              <LevelHeader $imageUrl={levelData.headerImage}>
+              <LevelHeader
+                $imageUrl={levelData.headerImage}
+                onClick={() => setIsDropdownOpen((prev) => !prev)}
+              >
                 <span>LEVEL {levelData.level}</span>
                 <TitleWrap>
                   <h1>{levelData.title}</h1>
                   <p>{levelData.subtitle}</p>
                 </TitleWrap>
               </LevelHeader>
+
+              <LevelDropdown
+                isOpen={isDropdownOpen}
+                levels={LEVELS}
+                currentLevel={currentLevel}
+                onLevelChange={setCurrentLevel}
+              />
 
               <MissionProgress mission={levelData.mission} />
 
@@ -166,14 +182,6 @@ export default function Home() {
   );
 }
 
-/* ===== 기존 스타일(변경 없음) ===== */
-
-// Wrapper, Content, TitleWrap, LevelBlock, LevelHeader, ProgressWrapper, ProgressInfoText,
-// ProgressBarContainer, ProgressBarFill, ProgressLabel, GameMapContainer, GameMapBackGround, StageIcon
-// 👉 네가 보낸 코드 그대로 유지 (WeeklyMissionBox/Bubble/Character styled는 삭제)
-
-// --- 전체 스타일링 ---
-
 const Wrapper = styled.div`
   width: min(100vw, 430px);
   min-height: 100vh;
@@ -206,6 +214,7 @@ const TitleWrap = styled.div`
 
 const LevelBlock = styled.section`
   width: 100%;
+  position: relative;
 `;
 
 const LevelHeader = styled.div`
@@ -308,6 +317,7 @@ const ProgressLabel = styled.p`
 `;
 
 const GameMapContainer = styled.div`
+  margin-top: 15%;
   width: 100%;
   height: 500px;
   position: relative;
@@ -364,29 +374,44 @@ const StageIcon = styled.button`
 
 const TooltipWrapper = styled.div`
   position: absolute;
+  left: 50%;
   transform: translateX(-50%);
-  width: 280px;
-  background-color: #1dc3ff;
+  width: 90%;
+  background-color: ${({ $status }) =>
+    $status === "completed" ? "#1DC3FF" : "#bbbcc4"};
   border-radius: 16px;
-  padding: 16px;
+  padding: 30px;
   color: #fff;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   z-index: 10;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 24px;
+  transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
 
   &::after {
     content: "";
     position: absolute;
-    top: -8px; /* 꼬리를 위쪽으로 이동 */
-    left: 50%;
     transform: translateX(-50%);
     width: 0;
     height: 0;
     border-left: 10px solid transparent;
     border-right: 10px solid transparent;
-    border-bottom: 10px solid #1dc3ff; /* border-top 대신 border-bottom 사용 */
+    left: ${({ $anchor }) => $anchor};
+
+    ${({ $anchorDirection, $status }) => {
+      const color = $status === "completed" ? "#1DC3FF" : "#BDBDBD";
+      if ($anchorDirection === "bottom") {
+        return `
+          bottom: -8px;
+          border-top: 10px solid ${color};
+        `;
+      }
+      return `
+        top: -8px;
+        border-bottom: 10px solid ${color};
+      `;
+    }}
   }
 `;
 
@@ -400,14 +425,14 @@ const TooltipContent = styled.div`
     font-weight: 500;
   }
   strong {
-    font-size: 14px;
+    font-size: 16px;
     font-weight: 700;
   }
 `;
 
 const StartButton = styled.button`
   width: 100%;
-  padding: 12px;
+  padding: 10px;
   border: none;
   background-color: #fff;
   color: #1dc3ff;
