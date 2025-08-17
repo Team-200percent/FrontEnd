@@ -80,7 +80,10 @@ export default function Map() {
           name: simpleInfo.name,
           address: simpleInfo.address,
           hours: simpleInfo.business_hours,
-          isFavorite: simpleInfo.is_favorite,
+          type: simpleInfo.type,
+          rating: simpleInfo.avg_rating, 
+          isOpen: simpleInfo.is_open, 
+          isFavorite: simpleInfo.is_favorite, 
           lat,
           lng,
         });
@@ -137,8 +140,8 @@ export default function Map() {
 
         const el = document.createElement("div");
         el.className = "my-location-dot";
-        
-        if (!myLocationRef.current)  {
+
+        if (!myLocationRef.current) {
           myLocationRef.current = new window.kakao.maps.CustomOverlay({
             position: pos,
             content: el,
