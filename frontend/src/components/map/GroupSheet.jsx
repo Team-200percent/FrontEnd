@@ -9,8 +9,8 @@ const DUMMY_GROUPS = [
   { id: 3, name: "회식 장소" },
 ];
 
-export default function GroupSheet({ open, onClose, onCloseAll, placeName }) {
-  const [selectedGroups, setSelectedGroups] = useState(new Set([2])); // '타코' 그룹을 기본 선택
+export default function GroupSheet({ open, onClose, onCloseAll, placeName, }) {
+  const [selectedGroups, setSelectedGroups] = useState(new Set()); // '타코' 그룹을 기본 선택
   const [isAddGroupSheetOpen, setIsAddGroupSheetOpen] = useState(false);
 
   // 그룹 클릭 시 선택 상태를 토글하는 함수

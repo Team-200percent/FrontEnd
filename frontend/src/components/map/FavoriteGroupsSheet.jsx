@@ -1,13 +1,8 @@
-import React, { useState, useRef } from "react";
+import React, { useRef, useState, useEffect, useMemo, use } from "react";
 import styled from "styled-components";
 import AddGroupSheet from "./AddGroupSheet";
-
-// 실제로는 API로 받아올 그룹 데이터 (임시 더미 데이터)
-const DUMMY_GROUPS = [
-  { id: 1, name: "기본 그룹" },
-  { id: 2, name: "타코" },
-  { id: 3, name: "회식 장소" },
-];
+import axios from "axios";
+import FavoriteGroupDetail from "../../pages/map/FavoriteGroupDetail";
 
 export default function FavoriteGroupsSheet({
   open,
@@ -18,9 +13,52 @@ export default function FavoriteGroupsSheet({
   onViewModeChange,
 }) {
   const sheetRef = useRef(null);
+  const dragInfo = useRef({ startY: 0, isDragging: false }); // 드래그 로직 (간소화 버전)
 
-  // 드래그 로직 (간소화 버전)
-  const dragInfo = useRef({ startY: 0, isDragging: false });
+  const [groups, setGroups] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState("");
+
+  const [selectedGroups, setSelectedGroups] = useState(new Set([2])); // '타코' 그룹을 기본 선택
+  const [isAddGroupSheetOpen, setIsAddGroupSheetOpen] = useState(false);
+
+  const [sortMode, setSortMode] = useState("createdAt"); // 기본 정렬 모드: 생성순
+  const [isSortOpen, setIsSortOpen] = useState(false);
+  const sortMenuRef = useRef(null);
+
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [detailGroup, setDetailGroup] = useState(null);
+
+  useEffect(() => {
+    if (!isSortOpen) return;
+    const onDown = (e) => {
+      if (!sortMenuRef.current) return;
+      if (!sortMenuRef.current.contains(e.target)) setIsSortOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [isSortOpen]);
+
+  useEffect(() => {
+    if (!open) return;
+    const fetchGroups = async () => {
+      setLoading(true);
+      setLoadError("");
+      try {
+        const res = await axios.get(
+          "https://200percent.p-e.kr/market/favoritegroup/"
+        );
+        // 서버가 배열로 응답 (명세 참고)
+        setGroups(Array.isArray(res.data) ? res.data : []);
+      } catch (e) {
+        console.error(e);
+        setLoadError("그룹을 불러오지 못했어요.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchGroups();
+  }, [open]);
 
   const onDragStart = (e) => {
     dragInfo.current = {
@@ -41,25 +79,29 @@ export default function FavoriteGroupsSheet({
     dragInfo.current.isDragging = false;
   };
 
-  const [selectedGroups, setSelectedGroups] = useState(new Set([2])); // '타코' 그룹을 기본 선택
-  const [isAddGroupSheetOpen, setIsAddGroupSheetOpen] = useState(false);
-
-  if (!open) return null; // open이 false면 아무것도 렌더링하지 않음
-
-  // 그룹 클릭 시 선택 상태를 토글하는 함수
-  const handleGroupClick = (groupId) => {
-    setSelectedGroups((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(groupId)) {
-        newSet.delete(groupId);
-      } else {
-        newSet.add(groupId);
-      }
-      return newSet;
-    });
+  const handleCreated = (newGroup) => {
+    setGroups((prev) => [newGroup, ...prev]);
   };
 
-  if (!open) return null;
+  const sortedGroups = useMemo(() => {
+    if (!groups) return [];
+    if (sortMode === "latest") {
+      return [...groups].sort(
+        (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+      );
+    }
+    // 등록순 (오래된 순)
+    return [...groups].sort(
+      (a, b) => new Date(a.createdAt) - new Date(b.createdAt)
+    );
+  }, [groups, sortMode]);
+
+  const openDetail = (group) => {
+    setDetailGroup(group);
+    setIsDetailOpen(true);
+  };
+
+  if (!open) return null; // open이 false면 아무것도 렌더링하지 않음
 
   return (
     <>
@@ -76,38 +118,91 @@ export default function FavoriteGroupsSheet({
           <SubHeader>
             <TextWrap>
               <span>그룹</span>
-              <span style={{ color: "#1dc3ff" }}>{DUMMY_GROUPS.length}</span>
+              <span style={{ color: "#1dc3ff" }}>{sortedGroups.length}</span>
             </TextWrap>
             <Divider />
-            <SortButton>
-              <span>등록순</span>
-              <img src="icons/map/mapdetail/dropdownarrow.png"></img>
-            </SortButton>
+            <SortWrap ref={sortMenuRef}>
+              <SortButton
+                onClick={() => setIsSortOpen((v) => !v)}
+                aria-haspopup="menu"
+                aria-expanded={isSortOpen}
+              >
+                <span>{sortMode === "createdAt" ? "등록순" : "최신순"}</span>
+                <img src="icons/map/mapdetail/dropdownarrow.png" alt="" />
+              </SortButton>
+              {isSortOpen && (
+                <SortMenu role="menu">
+                  <SortItem
+                    role="menuitemradio"
+                    aria-checked={sortMode === "createdAt"}
+                    onClick={() => {
+                      setSortMode("createdAt");
+                      setIsSortOpen(false);
+                    }}
+                    $active={sortMode === "createdAt"}
+                  >
+                    등록순
+                  </SortItem>
+                  <SortItem
+                    role="menuitemradio"
+                    aria-checked={sortMode === "latest"}
+                    onClick={() => {
+                      setSortMode("latest");
+                      setIsSortOpen(false);
+                    }}
+                    $active={sortMode === "latest"}
+                  >
+                    최신순
+                  </SortItem>
+                </SortMenu>
+              )}
+            </SortWrap>
           </SubHeader>
 
           <InfoBanner>
             즐겨찾기는 그룹 당 <strong>100개까지 저장</strong>할 수 있습니다.
           </InfoBanner>
 
-          <GroupList>
-            {DUMMY_GROUPS.map((group) => (
-              <GroupItem
-                key={group.id}
-                onClick={() => handleGroupClick(group.id)}
+          {/* 로딩/에러/빈 상태 */}
+          {loading && <StateText>불러오는 중…</StateText>}
+          {loadError && (
+            <StateRow>
+              <StateText>{loadError}</StateText>
+              <RetryBtn
+                onClick={() =>
+                  setLoadError("") ||
+                  setLoading(true) ||
+                  axios
+                    .get("https://200percent.p-e.kr/market/favoritegroup/")
+                    .then((r) => setGroups(Array.isArray(r.data) ? r.data : []))
+                    .catch(() => setLoadError("그룹을 불러오지 못했어요."))
+                    .finally(() => setLoading(false))
+                }
               >
+                다시 시도
+              </RetryBtn>
+            </StateRow>
+          )}
+          {!loading && !loadError && groups.length === 0 && (
+            <StateText>아직 생성된 그룹이 없어요.</StateText>
+          )}
+
+          <GroupList>
+            {sortedGroups.map((group) => (
+              <GroupItem key={group.id} onClick={() => openDetail(group)}>
                 <img
                   className="folder-icon"
-                  src="icons/map/mapdetail/folder/folder-sky.png"
-                  alt="폴더 아이콘"
+                  src={`/icons/map/mapdetail/folder/folder-${group.color}.png`}
+                  alt={`${group.color} 폴더`}
                 />
 
                 <GroupWrapper>
                   <GroupName>{group.name}</GroupName>
                   <GroupTextWrap>
-                    <span>개수 {group.count}/100</span>
+                    <span>개수 {group.count ?? 0}/100</span>
                     <MetaDivider />
 
-                    {group.isPrivate ? (
+                    {group.visibility ? (
                       <PrivacyWrap>
                         <img
                           src="/icons/map/mapdetail/locked.svg"
@@ -142,10 +237,17 @@ export default function FavoriteGroupsSheet({
         </Footer>
       </SheetContainer>
 
+      <FavoriteGroupDetail
+        open={isDetailOpen}
+        group={detailGroup}
+        onClose={() => setIsDetailOpen(false)}
+      />
+
       <AddGroupSheet
         open={isAddGroupSheetOpen}
         onClose={() => setIsAddGroupSheetOpen(false)}
         onCloseAll={onCloseAll}
+        onCreated={handleCreated}
       />
     </>
   );
@@ -195,11 +297,6 @@ const Header = styled.header`
   }
 `;
 
-const Title = styled.h2`
-  font-size: 18px;
-  font-weight: 600;
-`;
-
 const Content = styled.div`
   padding: 16px 20px;
   flex: 1;
@@ -228,6 +325,45 @@ const Divider = styled.div`
   height: 13px;
   margin-bottom: 2px;
   background: #e5e7eb;
+`;
+
+const SortWrap = styled.div`
+  position: relative; /* 드롭다운 기준점 */
+`;
+
+const SortMenu = styled.div`
+  position: absolute;
+  top: 28px;
+  right: 30;
+  min-width: 80px;
+  padding: 6px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  z-index: 10;
+`;
+
+const SortItem = styled.button`
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  background: ${({ $active }) =>
+    $active ? "rgba(29,195,255,0.12)" : "transparent"};
+  border-radius: 8px;
+  text-align: left;
+  font-size: 14px;
+  color: #111;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  span {
+    color: #888;
+    font-size: 12px;
+  }
+  &:hover {
+    background: rgba(0, 0, 0, 0.04);
+  }
 `;
 
 const SortButton = styled.button`
@@ -310,12 +446,12 @@ const PrivacyWrap = styled.div`
   gap: 4px;
 
   img {
-    height: 12px; 
+    height: 12px;
     width: auto;
   }
   span {
     font-size: 12px;
-    margin-top: 4px; 
+    margin-top: 4px;
   }
 `;
 const GroupName = styled.span`
@@ -353,5 +489,25 @@ const AddNewGroupButton = styled.button`
   color: #1dc3ff;
   font-size: 16px;
   font-weight: 600;
+  cursor: pointer;
+`;
+
+const StateText = styled.div`
+  color: #666;
+  font-size: 14px;
+  padding: 8px 2px;
+`;
+
+const StateRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+`;
+
+const RetryBtn = styled.button`
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  border-radius: 8px;
+  padding: 6px 10px;
   cursor: pointer;
 `;

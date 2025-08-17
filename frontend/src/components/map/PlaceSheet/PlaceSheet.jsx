@@ -3,6 +3,7 @@ import styled from "styled-components";
 import axios from "axios";
 import GroupSheet from "../GroupSheet";
 import ReviewContent from "./ReviewContent";
+import WriteReview from "../../../pages/map/WriteReview";
 
 const LoadingSpinner = () => <Spinner>Loading...</Spinner>;
 
@@ -21,8 +22,8 @@ const CompactContent = ({ place, onViewDetails, onLike }) => {
       </CompactHeader>
       <Address>{place?.address ?? "주소 정보 없음"}</Address>
       <InfoRow>
-        <HoursInfo>{place?.hours ? "영업중" : ""}</HoursInfo>
-        <span>{place?.hours?.replace("운영중 ", "") ?? "정보 없음"}</span>
+        <HoursInfo $isOpen={place?.isOpen}>{place?.isOpen ? "영업중" : "영업종료"}</HoursInfo>
+        <span>{place?.hours ?? "정보 없음"}</span>
         <RatingContainer>
           <span style={{ fontWeight: "600" }}>
             {place?.rating?.toFixed(1) ?? "N/A"}
@@ -47,6 +48,7 @@ const ExpandedContent = ({
   onCloseAll,
   activeTab,
   onTabClick,
+  onWriteReview
 }) => {
   const expandedHeartIconSrc = place?.isFavorite
     ? "/icons/map/expanded-heart-on.png"
@@ -148,7 +150,9 @@ const ExpandedContent = ({
             </InfoItem>
           </InfoList>
         )}
-        {activeTab === "review" && <ReviewContent place={place} />}
+        {activeTab === "review" && (
+          <ReviewContent place={place} onWriteReview={onWriteReview} />
+        )}
       </ContentArea>
     </ExpandedWrapper>
   );
@@ -166,6 +170,7 @@ export default function PlaceSheet({
   onGroupSheetToggle,
 }) {
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+  const [isWritingReview, setIsWritingReview] = useState(false);
   const [activeTab, setActiveTab] = useState("home");
   const sheetRef = useRef(null);
   const dragInfo = useRef({ startY: 0, isDragging: false });
@@ -261,6 +266,7 @@ export default function PlaceSheet({
             onCloseAll={onCloseAll}
             activeTab={activeTab} // ✅ 현재 활성 탭 state 전달
             onTabClick={setActiveTab} // ✅ 탭을 변경하는 함수 전달
+            onWriteReview={() => setIsWritingReview(true)}
           />
         )}
       </SheetContainer>
@@ -270,6 +276,10 @@ export default function PlaceSheet({
         onCloseAll={onCloseAll}
         placeName={place?.name}
       />
+
+      {isWritingReview && (
+        <WriteReview place={place} onClose={() => setIsWritingReview(false)} />
+      )}
     </>
   );
 }

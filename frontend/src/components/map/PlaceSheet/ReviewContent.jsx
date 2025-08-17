@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import styled from "styled-components";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
 
 // API 키와 UI 텍스트/아이콘을 매핑하는 객체
 const TAG_MAP = {
@@ -26,63 +25,43 @@ const TAG_MAP = {
     text: "매장이 청결해요",
   },
   date_count: {
-    icon: "/icons/map/review/date-white.png",
+    icon: "/icons/map/review/date-white.svg",
     text: "데이트하기 좋아요",
   },
 };
 
 const LoadingSpinner = () => <p>리뷰를 불러오는 중...</p>;
 
-export default function ReviewContent({ place }) {
+export default function ReviewContent({ place, onWriteReview }) {
   const [reviewData, setReviewData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const navigate = useNavigate();
+  const [isKeywordsExpanded, setIsKeywordsExpanded] = useState(false);
+  const [isReviewsExpanded, setIsReviewsExpanded] = useState(false);
 
   const handleWriteReviewClick = () => {
-    navigate("/write-review", { state: { placeName: place.name } });
+    setIsWritingReview(true);
   };
 
   useEffect(() => {
-    // ✅ 실제 API를 호출하여 데이터를 합산하는 함수
-    const fetchAndAggregateReviews = async () => {
+    // API 호출에 필요한 lat, lng가 없으면 실행하지 않음 (안전장치)
+    if (!place || !place.lat || !place.lng) {
+      setIsLoading(false);
+      return;
+    }
+
+    const fetchReviews = async () => {
       setIsLoading(true);
-      const marketIds = [1, 2, 3]; // 데이터를 가져올 ID 목록
-
       try {
-        // ✅ 1. ID 목록을 기반으로 여러 API 요청을 동시에 보냅니다.
-        const requests = marketIds.map((id) =>
-          axios.get(`https://200percent.p-e.kr/review/${id}/`)
-        );
-        const responses = await Promise.all(requests);
-
-        // ✅ 2. 모든 응답이 오면 데이터를 합산합니다.
-        const allReviews = [];
-        const totalTagSum = {
-          taste_count: 0,
-          cost_count: 0,
-          solo_count: 0,
-          fresh_count: 0,
-          clean_count: 0,
-          date_count: 0,
-        };
-
-        responses.forEach((response) => {
-          const data = response.data;
-          if (data) {
-            for (const key in data.tag_sum) {
-              if (totalTagSum.hasOwnProperty(key)) {
-                totalTagSum[key] += data.tag_sum[key];
-              }
-            }
-            allReviews.push(...data.reviews);
-          }
+        // ✅ 1. ID 대신 lat, lng를 쿼리 파라미터로 사용하여 API 호출
+        const response = await axios.get(`https://200percent.p-e.kr/review/`, {
+          params: {
+            lat: place.lat,
+            lng: place.lng,
+          },
         });
 
-        // ✅ 3. 합산된 데이터로 상태를 업데이트합니다.
-        setReviewData({
-          tag_sum: totalTagSum,
-          reviews: allReviews,
-        });
+        // ✅ 2. 응답 데이터 전체를 state에 저장
+        setReviewData(response.data);
       } catch (error) {
         console.error("리뷰 정보를 불러오는 데 실패했습니다.", error);
       } finally {
@@ -90,16 +69,23 @@ export default function ReviewContent({ place }) {
       }
     };
 
-    fetchAndAggregateReviews();
-  }, [place.id]); // place.id가 변경될 때마다 다시 실행 (테스트용)
+    fetchReviews();
+  }, [place.lat, place.lng]); // ✅ 의존성 배열을 lat, lng로 변경
 
-  const topKeywords = useMemo(() => {
+  const sortedKeywords = useMemo(() => {
     if (!reviewData?.tag_sum) return [];
     return Object.entries(reviewData.tag_sum)
       .map(([key, count]) => ({ key, count, ...TAG_MAP[key] }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 3);
+      .sort((a, b) => b.count - a.count);
   }, [reviewData]);
+
+  const displayedKeywords = isKeywordsExpanded
+    ? sortedKeywords
+    : sortedKeywords.slice(0, 3);
+
+  const displayedReviews = isReviewsExpanded
+    ? reviewData?.reviews
+    : reviewData?.reviews.slice(0, 1);
 
   if (isLoading) return <LoadingSpinner />;
   if (!reviewData) return <p>리뷰 정보가 없습니다.</p>;
@@ -111,7 +97,7 @@ export default function ReviewContent({ place }) {
           <strong>동작구 주민</strong>이 작성한 신뢰 리뷰
         </SectionTitle>
         <KeywordGrid>
-          {topKeywords.map((keyword, index) => (
+          {displayedKeywords.map((keyword, index) => (
             <BubbleWrap>
               <img
                 src="/icons/map/review/reviewpeopleicon.png"
@@ -127,7 +113,10 @@ export default function ReviewContent({ place }) {
             </BubbleWrap>
           ))}
         </KeywordGrid>
-        <ExpandButton>
+        <ExpandButton
+          onClick={() => setIsKeywordsExpanded((prev) => !prev)}
+          $isExpanded={isKeywordsExpanded}
+        >
           <img src="/icons/map/review/expandarrow.png" alt="Expand" />
         </ExpandButton>
       </KeywordReviewSection>
@@ -138,9 +127,7 @@ export default function ReviewContent({ place }) {
         <SectionTitle>
           <strong>{place.name}</strong> 리뷰를 남겨보세요!
         </SectionTitle>
-        <WriteReviewButton onClick={handleWriteReviewClick}>
-          리뷰 쓰기
-        </WriteReviewButton>
+        <WriteReviewButton onClick={onWriteReview}>리뷰 쓰기</WriteReviewButton>
       </WriteReviewSection>
 
       <Divider />
@@ -162,57 +149,79 @@ export default function ReviewContent({ place }) {
         <SectionTitle>
           <strong>상세</strong> 리뷰
         </SectionTitle>
-        <ReviewHeader>
-          <UserProfile>
-            <img src="/icons/map/review/usericon.png" alt="User Icon" />
-          </UserProfile>
-          <UserInfo>
-            <span>hometownflower</span>
-            <small>리뷰 425 · 팔로워 36</small>
-          </UserInfo>
-          <FollowButton>팔로우</FollowButton>
-        </ReviewHeader>
-        <StarsWrapper>
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Star key={i} $filled={i < Math.round(place?.rating ?? 0)} />
-          ))}
-        </StarsWrapper>{" "}
-        <PhotoSection>
-          <PlaceholderPhoto />
-          <PlaceholderPhoto />
-          <PlaceholderPhoto />
-        </PhotoSection>
-        <ReviewDescription>
-          동작구에 오래 살았는데 여기는 다른 지점보다 특히 더 맛있어요. 신제품이
-          고구마치즈 돈까스의 햄버거 버전이라 생각합니다. 그리고 확실히 음식이
-          나왔을 때 바로 먹으니 치즈도 쭉쭉 늘어나고 더 맛있었어요!
-        </ReviewDescription>
-        <ReviewDate>2025.7.10.목</ReviewDate>
-        <ReviewTags>
-          <Tag>
-            <img src="/icons/map/review/taste-sky.png" alt="" />
-            음식이 맛있어요
-          </Tag>
-          <Tag>
-            <img src="/icons/map/review/solo-sky.png" alt="" />
-            혼밥하기 좋아요
-          </Tag>
-        </ReviewTags>
-        {reviewData.reviews.map((review) => (
+
+        {displayedReviews.map((review) => (
           <UserReviewItem key={review.created}>
-            <p>{review.description}</p>
+            <ReviewHeader>
+              <UserProfile>
+                <img src="/icons/map/review/usericon.png" alt="User Icon" />
+                <UserInfo>
+                  {/* nickname이 구현되면 review.nickname으로 변경 */}
+                  <span>{review.nickname ?? `user_${review.user}`}</span>
+                  <small>리뷰 {review.review_count}· 팔로워 36</small>
+                </UserInfo>
+              </UserProfile>
+              <FollowButton>팔로우</FollowButton>
+            </ReviewHeader>
+
+            <StarsWrapper>
+              {/* ✅ 개별 리뷰의 rating을 사용합니다. */}
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Star key={i} $filled={i < Math.round(review.rating ?? 0)} />
+              ))}
+            </StarsWrapper>
+
+            <PhotoSection>
+              {/* 나중에 review.photos 같은 데이터로 교체 */}
+              <PlaceholderPhoto />
+              <PlaceholderPhoto />
+              <PlaceholderPhoto />
+            </PhotoSection>
+
+            {/* ✅ 개별 리뷰의 description을 사용합니다. */}
+            <ReviewDescription>{review.description}</ReviewDescription>
+
+            <ReviewDate>
+              {new Date(review.created).toLocaleDateString()}
+            </ReviewDate>
+
+            <ReviewTags>
+              {/* ✅ 개별 리뷰의 tags 배열을 사용합니다. */}
+              {review.tags.map((tagText) => {
+                // TAG_MAP에서 tagText와 일치하는 항목을 찾습니다.
+                const tagInfo = Object.values(TAG_MAP).find(
+                  (t) => t.text === tagText
+                );
+                return (
+                  <Tag key={tagText}>
+                    <img src={tagInfo?.icon.replace("-white", "-sky")} alt="" />
+                    {tagText}
+                  </Tag>
+                );
+              })}
+            </ReviewTags>
           </UserReviewItem>
         ))}
-        <DetailReviewExpandButton>
-          펼쳐서 더보기{" "}
-          <img src="/icons/map/review/expandarrow2.png" alt="Expand" />
-        </DetailReviewExpandButton>
+
+        {!isReviewsExpanded && reviewData.reviews.length > 1 && (
+          <DetailReviewExpandButton onClick={() => setIsReviewsExpanded(true)}>
+            펼쳐서 더보기{" "}
+            <img src="/icons/map/review/expandarrow2.png" alt="Expand" />
+          </DetailReviewExpandButton>
+        )}
       </UserReviewSection>
     </ReviewWrapper>
   );
 }
 
-const BUBBLE_COLORS = ["#1DC3FF", "#1DC3FFB2", "#1DC3FF66"];
+const BUBBLE_COLORS = [
+  "#0BF",
+  "#1DC3FF",
+  "#3DCBFF",
+  "#72D9FF",
+  "#9BE4FF",
+  "#B8ECFF",
+];
 
 // --- ReviewContent 전용 스타일 ---
 const ReviewWrapper = styled.div`
@@ -306,6 +315,9 @@ const ExpandButton = styled.button`
   img {
     width: 32px;
     height: 32px;
+    transition: transform 0.3s ease;
+    transform: ${({ $isExpanded }) =>
+      $isExpanded ? "rotate(180deg)" : "rotate(0deg)"};
   }
 `;
 
@@ -393,7 +405,7 @@ const UserProfile = styled.div`
 const UserInfo = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   margin-right: 130px;
   span {
     font-weight: 600;
@@ -415,16 +427,16 @@ const FollowButton = styled.button`
   cursor: pointer;
 `;
 const StarsWrapper = styled.div`
-  margin-top: -18px;
-  margin-left: 62px;
+  margin-left: 55px;
+  margin-bottom: 10px;
   display: flex;
   gap: 2px;
 `;
 
 const Star = styled.span`
   display: inline-block;
-  width: 16px;
-  height: 16px;
+  width: 13px;
+  height: 13px;
   mask: url("/icons/map/star.svg") no-repeat center;
   background-color: ${({ $filled }) => ($filled ? "#ffc107" : "#e0e0e0")};
 `;
@@ -445,11 +457,12 @@ const PlaceholderPhoto = styled.div`
   flex-shrink: 0; /* 줄어들지 않도록 */
   width: 197px;
   height: 197px;
-  background: #f0f2f5;
-  border-radius: 12px;
+  background: #d9d9d9;
+  border-radius: 20px;
 `;
 
 const ReviewDescription = styled.p`
+  margin-top: 15px;
   padding: 0px 13px;
   font-size: 12px;
   line-height: 1.6;
@@ -459,13 +472,13 @@ const ReviewTags = styled.div`
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  padding: 0px 12px;
+  padding: 0px 10px;
 `;
 const Tag = styled.span`
   border-radius: 30px;
   background: #c6f0ff;
-  padding: 8px 12px;
-  font-size: 12px;
+  padding: 4px 8px;
+  font-size: 8px;
   color: #555;
   display: flex;
   align-items: center;
