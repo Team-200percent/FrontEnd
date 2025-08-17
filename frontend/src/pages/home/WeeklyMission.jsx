@@ -100,7 +100,7 @@ const Title = styled.h1`
   text-align: center;
   font-size: 23px;
   font-weight: 600;
-  color: #fff;
+  color: #000;
 `;
 
 const Hero = styled.div`
@@ -156,10 +156,9 @@ const Left = styled.div`
 `;
 
 const Badge = styled.div`
- 
   img {
-    width: 44px;           
-    display: block;          /* inline 여백 제거 */
+    width: 44px;
+    display: block; /* inline 여백 제거 */
   }
 `;
 
