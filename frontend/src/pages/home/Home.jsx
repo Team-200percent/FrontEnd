@@ -119,7 +119,14 @@ export default function Home() {
     setIsDropdownOpen(false);
   };
 
-
+  const handleStageClick = (index) => {
+    // 이미 열려있는 아이콘을 다시 클릭하면 닫습니다.
+    if (activeStageIndex === index) {
+      setActiveStageIndex(null);
+    } else {
+      setActiveStageIndex(index);
+    }
+  };
 
   return (
     <Wrapper>
