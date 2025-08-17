@@ -1,10 +1,6 @@
-// src/pages/WriteReview.jsx
-
 import React, { useRef, useState } from "react";
 import styled from "styled-components";
-import { useNavigate, useLocation } from "react-router-dom";
-
-// src/pages/WriteReview.jsx
+import axios from "axios";
 
 const KEYWORD_TAGS = [
   {
@@ -38,11 +34,7 @@ const KEYWORD_TAGS = [
     icon_off: "/icons/map/review/date-sky.png",
   },
 ];
-export default function WriteReview(place) {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { placeName } = location.state || { placeName: "가게 이름" };
-
+export default function WriteReview({ place, onClose }) {
   // ⭐ 별점 상태
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
@@ -53,12 +45,75 @@ export default function WriteReview(place) {
 
   // 태그 선택
   const [selectedTags, setSelectedTags] = useState(new Set());
+  const [description, setDescription] = useState("");
+
   const toggleTag = (tag) => {
     setSelectedTags((prev) => {
       const next = new Set(prev);
       next.has(tag) ? next.delete(tag) : next.add(tag);
       return next;
     });
+  };
+
+  const handleSubmit = async () => {
+    // 필수 항목 유효성 검사
+    if (rating === 0) {
+      alert("별점을 매겨주세요!");
+      return;
+    }
+    if (selectedTags.size === 0) {
+      alert("좋았던 점을 하나 이상 선택해주세요!");
+      return;
+    }
+
+    // 1. 태그 데이터를 API 형식에 맞게 변환
+    const tagData = {};
+    KEYWORD_TAGS.forEach((tag) => {
+      tagData[tag.key] = selectedTags.has(tag.text);
+    });
+
+    // 2. 최종적으로 서버에 보낼 Body 데이터 구성
+    const reviewPayload = {
+      user: 1, // 🔴 TODO: 실제 로그인된 유저 ID로 교체해야 합니다.
+      rating: parseInt(rating),
+      description: description,
+      ...tagData,
+    };
+
+    try {
+      const accessToken = localStorage.getItem("accessToken");
+
+      if (!accessToken) {
+        alert("로그인이 필요합니다.");
+        // 로그인 페이지로 보내는 로직 추가 가능
+        // navigate('/login');
+        return;
+      }
+
+      // 3. axios.post로 API 요청
+      const response = await axios.post(
+        "https://200percent.p-e.kr/review/",
+        reviewPayload,
+        {
+          // Query Parameter로 lat, lng 전달
+          params: {
+            lat: place.lat,
+            lng: place.lng,
+          },
+          headers: {
+            // Headers
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      console.log("리뷰 등록 성공:", response.data);
+      alert("리뷰가 성공적으로 등록되었습니다.");
+      navigate(-1); // 이전 페이지로 돌아가기
+    } catch (error) {
+      console.error("리뷰 등록 실패:", error);
+      alert("리뷰 등록에 실패했습니다. 다시 시도해주세요.");
+    }
   };
 
   // 사진 추가 핸들러
@@ -84,21 +139,10 @@ export default function WriteReview(place) {
     });
   };
 
-  // 제출 예시 (rating, selectedTags, photos 포함)
-  const handleSubmit = () => {
-    const payload = {
-      rating, // 숫자 별점 값
-      tags: Array.from(selectedTags), // 선택 태그 배열
-      images: photos.map((p) => p.file), // 실제 파일들 (FormData로 전송)
-    };
-    console.log("submit payload", payload);
-    // TODO: FormData 구성해서 백엔드로 업로드
-  };
-
   return (
     <Wrapper>
       <Header>
-        <BackButton onClick={() => navigate(-1)}>
+        <BackButton onClick={onClose}>
           <img src="/icons/map/leftarrow.svg" alt="뒤로가기" />
         </BackButton>
         <TitleSection>
@@ -218,12 +262,16 @@ export default function WriteReview(place) {
           <SectionTitle>
             더 자세히 <strong>설명해주세요!</strong> <Badge>선택</Badge>
           </SectionTitle>
-          <TextArea placeholder="이 가게에 대한 리뷰를 남겨주세요." />
+          <TextArea
+            placeholder="이 가게에 대한 리뷰를 남겨주세요."
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
         </Section>
       </Content>
 
       <Footer>
-        <SubmitButton>완료</SubmitButton>
+        <SubmitButton onClick={handleSubmit}>완료</SubmitButton>
       </Footer>
     </Wrapper>
   );
@@ -231,12 +279,18 @@ export default function WriteReview(place) {
 
 // --- 전체 스타일링 ---
 const Wrapper = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   width: min(100vw, 430px);
   margin: 0 auto;
   min-height: 100vh;
   background: #fff;
   display: flex;
   flex-direction: column;
+  z-index: 10000;
 `;
 const Header = styled.header`
   display: flex;
