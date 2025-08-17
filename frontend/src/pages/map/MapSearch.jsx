@@ -1,9 +1,9 @@
 // pages/map/MapSearch.jsx
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import styled from "styled-components";
 import SearchBar from "../../components/map/SearchBar";
 import CategoryChips from "../../components/map/CategoryChips";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 const recentPlaces = [
   { id: 1, name: "다솜문화공간" },
@@ -12,8 +12,10 @@ const recentPlaces = [
 
 export default function MapSearch() {
   const location = useLocation();
+  const navigate = useNavigate();
   const activeCategory = location.state?.activeCategory || null;
   const searchInputRef = useRef(null); // SearchBar의 input을 가리킬 ref 생성
+  const [keyword, setKeyword] = useState(""); // 검색어 상태 관리
 
   useEffect(() => {
     if (searchInputRef.current) {
@@ -21,14 +23,30 @@ export default function MapSearch() {
     }
   }, []);
 
+  const onSubmit = (q) => {
+    const query = (q ?? keyword).trim();
+    if (!query) return;
+    // /map으로 검색어 전달 → Map에서 자동 처리
+    navigate("/map", { state: { searchQuery: query } });
+  };
+
   return (
     <Wrapper>
-      <SearchBar mode="input" ref={searchInputRef} />
+      <SearchBar
+        mode="input"
+        ref={searchInputRef}
+        value={keyword}
+        onChange={setKeyword}
+        onSubmit={onSubmit}
+        placeholder="장소, 가게, 음식점 등을 검색하세요"
+      />
       <CategoryChips layout="flow" defaultActive={activeCategory} />
 
       <BottomContainer>
         <Line />
-        <AdBanner><img src="/images/mapsearchad.png" alt="Ad Banner" /></AdBanner>
+        <AdBanner>
+          <img src="/images/mapsearchad.png" alt="Ad Banner" />
+        </AdBanner>
 
         <Content>
           <SectionHeader>
@@ -37,7 +55,7 @@ export default function MapSearch() {
 
           <List>
             {recentPlaces.map((p) => (
-              <Item key={p.id}>
+              <Item key={p.id} onClick={() => onSubmit(p.name)}>
                 <Pin>
                   <img src="/icons/map/listicon.svg" alt="" />
                 </Pin>
@@ -85,7 +103,7 @@ const AdBanner = styled.div`
   display: grid;
   place-items: center;
   font-size: 18px;
-  
+
   img {
     width: 100%;
     height: 100%;

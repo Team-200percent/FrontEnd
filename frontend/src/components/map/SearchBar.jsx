@@ -1,55 +1,92 @@
 import styled from "styled-components";
 import { useNavigate } from "react-router-dom";
-import { forwardRef } from "react";
-import { useState } from "react";
+import { forwardRef, useState } from "react";
 
-const SearchBar = forwardRef(({ mode = "display" }, ref) => {
-  const [query, setQuery] = useState(""); // 검색어 상태
-  const navigate = useNavigate();
-  const isMapPage = location.pathname === "/map";
+const SearchBar = forwardRef(
+  (
+    {
+      mode = "display",
+      placeholder = "장소를 검색해보세요",
+      defaultValue = "",
+      onSubmit, // (선택) 직접 제출 핸들러를 쓰고 싶을 때
+    },
+    ref
+  ) => {
+    const [query, setQuery] = useState(defaultValue);
+    const navigate = useNavigate();
 
-  const handleBoxClick = () => {
-    if (mode === "display") navigate("/map-search");
-  };
+    const submit = () => {
+      const q = query.trim();
+      if (!q) return;
+      if (onSubmit) {
+        onSubmit(q);
+      } else {
+        // 기본 동작: /map 으로 검색어 전달
+        navigate("/map", { state: { searchQuery: q } });
+      }
+    };
 
-  return (
-    <Wrapper>
-      <Row>
-        <SearchBox onClick={() => navigate("/map-search")}>
-          {/* 뒤로가기 아이콘 */}
-          <LeftIcon
-            onClick={isMapPage ? undefined : () => navigate(-1)} // 지도에선 클릭 비활성화
-          >
-            {isMapPage ? (
+    const handleBoxClick = () => {
+      if (mode === "display") navigate("/map-search");
+    };
+
+    return (
+      <Wrapper>
+        <Row>
+          <SearchBox onClick={handleBoxClick}>
+            {/* 좌측 아이콘 */}
+            <LeftIcon>
               <img src="/icons/map/search.svg" alt="돋보기" />
-            ) : (
-              <img src="/icons/map/leftarrow.svg" alt="왼쪽 화살표" />
-            )}
-          </LeftIcon>
+            </LeftIcon>
 
-          {mode === "input" ? (
-            <Input
-              ref={ref}
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="장소를 검색해보세요"
-            />
-          ) : (
-            <Placeholder>서울 동작구 상도동</Placeholder>
-          )}
-          <RightIcon aria-label="음성 입력">
-            {/* 마이크 아이콘 */}
-            <img src="/icons/map/microphone.svg" alt="음성검색 마이크 아이콘" />
-          </RightIcon>
-        </SearchBox>
-      </Row>
-    </Wrapper>
-  );
-});
+            {mode === "input" ? (
+              <Input
+                ref={ref}
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={placeholder}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.stopPropagation();
+                    submit();
+                  }
+                }}
+                // display 모드에서는 박스 클릭이 페이지 이동이므로,
+                // input 모드일 때만 박스 클릭 전파 막기
+                onClick={(e) => e.stopPropagation()}
+              />
+            ) : (
+              <Placeholder>서울 동작구 상도동</Placeholder>
+            )}
+
+            {mode === "input" ? (
+              // 우측 버튼: 아이콘은 마이크 그대로 쓰되 클릭 시 검색 수행
+              <RightIcon
+                aria-label="검색"
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  submit();
+                }}
+              >
+                <img src="/icons/map/microphone.svg" alt="검색 실행" />
+              </RightIcon>
+            ) : (
+              <RightIcon aria-label="음성 입력" type="button">
+                <img src="/icons/map/microphone.svg" alt="음성검색 마이크 아이콘" />
+              </RightIcon>
+            )}
+          </SearchBox>
+        </Row>
+      </Wrapper>
+    );
+  }
+);
 
 export default SearchBar;
 
+/* styles */
 const Wrapper = styled.div`
   position: absolute;
   left: 50%;
@@ -76,16 +113,14 @@ const SearchBox = styled.div`
   border-radius: 14px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
   display: flex;
-  grid-template-columns: 36px 1fr 40px;
   align-items: center;
+  /* display 모드에서는 전체 박스 클릭 → /map-search */
+  cursor: pointer;
 `;
 
 const LeftIcon = styled.div`
   margin-left: 16px;
   margin-right: 10px;
-  opacity: ${({ $hidden }) => ($hidden ? 0 : 1)};
-  pointer-events: ${({ $hidden }) => ($hidden ? "none" : "auto")};
-  visibility: ${({ $hidden }) => ($hidden ? "hidden" : "visible")};
   img {
     width: 17px;
     height: 20px;
@@ -94,7 +129,7 @@ const LeftIcon = styled.div`
 
 const Placeholder = styled.div`
   flex: 1;
-  font-size: 18px;
+  font-size: 12px;
   font-weight: 400;
   line-height: 24px;
   color: #86858b;
@@ -112,6 +147,7 @@ const Input = styled.input`
   font-weight: 500;
   color: #333;
   outline: none;
+  cursor: text; /* 입력 모드에서는 텍스트 커서 */
 
   &::placeholder {
     color: #8b8585;
@@ -121,12 +157,18 @@ const Input = styled.input`
 const RightIcon = styled.button`
   background: #fff;
   border: none;
+  margin-right: 12px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+
   img {
     width: 32px;
     height: auto;
   }
 `;
 
+/* 추가로 쓰고 싶으면 유지 */
 const RouteBtn = styled.button`
   height: 56px;
   width: 52px;
@@ -135,7 +177,7 @@ const RouteBtn = styled.button`
   border-radius: 10px;
   background-color: #1dc3ff;
   font-weight: 700;
-  box-shadow: 0 0 3px 0 rgba(139, 133,133, 0.70);
+  box-shadow: 0 0 3px 0 rgba(139, 133, 133, 0.7);
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -149,12 +191,14 @@ const RouteBtn = styled.button`
     font-style: normal;
     font-weight: 500;
     line-height: normal;
+  }
 `;
 
 const RouteIcon = styled.span`
-  margin-left:7px;
+  margin-left: 7px;
 
   img {
     width: 18.5px;
     height: auto;
+  }
 `;
