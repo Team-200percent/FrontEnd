@@ -1,10 +1,35 @@
-// src/components/map/AddGroupSheet.jsx
-
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import React, { useMemo, useState } from "react";
 import styled from "styled-components";
+import { api } from "../../main";
+
+const getCookie = (name) => {
+  const m = document.cookie.match("(^|;)\\s*" + name + "\\s*=\\s*([^;]+)");
+  return m ? m.pop() : "";
+};
 
 const COLORS = ["#FF6b85", "#FA3", "#FFD555", "#7CD2C3", "#C3A1EF", "#FCA7C8"];
+
+const COLOR_NAME_MAP = {
+  "#FF6B85": "red",
+  "#FFAA33": "orange",
+  "#FFD555": "yellow",
+  "#7CD2C3": "green",
+  "#C3A1EF": "purple",
+  "#FCA7C8": "pink",
+};
+
+function normalizeHex(hex) {
+  if (!hex) return "";
+  let h = hex.toUpperCase();
+  if (/^#[0-9A-F]{3}$/.test(h)) {
+    const r = h[1],
+      g = h[2],
+      b = h[3];
+    h = `#${r}${r}${g}${g}${b}${b}`;
+  }
+  return h;
+}
 
 const PrivacyButton = ({ type, active, onClick }) => {
   let imgSrc = "";
@@ -28,11 +53,74 @@ const PrivacyButton = ({ type, active, onClick }) => {
   );
 };
 
-export default function AddGroupSheet({ open, onClose, onCloseAll }) {
+export default function AddGroupSheet({
+  open,
+  onClose,
+  onCloseAll,
+  onCreated,
+}) {
   const [groupName, setGroupName] = useState("");
-  const [selectedColor, setSelectedColor] = useState(COLORS[0]);
+  const [selectedColor, setSelectedColor] = useState(null);
   const [isPrivate, setIsPrivate] = useState(true);
-  const navigate = useNavigate();
+  const [description, setDescription] = useState("");
+  const [relatedUrl, setRelatedUrl] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const colorName = useMemo(() => {
+    if (!selectedColor) return null;
+    const key = normalizeHex(selectedColor);
+    return COLOR_NAME_MAP[key] ?? null;
+  }, [selectedColor]);
+
+  // 상단 폴더 아이콘 경로 (선택한 색에 맞춰 변경)
+  const folderIconSrc = useMemo(() => {
+    // 아이콘 파일은 folder-red.png, folder-orange.png … 형식이라고 가정
+    const c = colorName ?? "sky";
+    return `/icons/map/mapdetail/folder/folder-${c}.png`;
+  }, [colorName]);
+
+  const handleSubmit = async () => {
+    if (!groupName.trim()) {
+      alert("그룹명을 입력해주세요.");
+      return;
+    }
+
+    const key = normalizeHex(selectedColor);
+    const colorName = COLOR_NAME_MAP[key];
+    if (!colorName) {
+      alert("색상을 다시 선택해주세요.");
+      return;
+    }
+
+    const payload = {
+      name: groupName.trim(),
+      color: colorName, // ← 서버가 요구하는 문자열
+      visibility: !isPrivate, // ← 공개(true)/비공개(false)
+      description: description.trim(),
+      relatedUrl: relatedUrl.trim(),
+    };
+
+    try {
+      setSubmitting(true);
+
+      const csrf = getCookie("csrftoken");
+      const res = await api.post("/market/favoritegroup/", payload, {
+        withCredentials: true,
+        headers: { "Content-Type": "application/json" },
+      });
+      // 부모에 새 그룹 전달해서 리스트 즉시 반영
+      onCreated?.(res.data);
+      // 시트 닫기
+      onClose();
+    } catch (e) {
+      console.error("POST /market/favoritegroup/ 실패:", e);
+      console.log("request payload:", payload);
+      console.log("server response:", e.response?.status, e.response?.data);
+      alert("그룹 생성에 실패했어요. 잠시 후 다시 시도해주세요.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   if (!open) return null;
 
@@ -53,10 +141,7 @@ export default function AddGroupSheet({ open, onClose, onCloseAll }) {
         <Content>
           <InputSection>
             <FolderIcon>
-              <img
-                src="icons/map/mapdetail/folder/folder-sky.png"
-                alt="폴더 아이콘"
-              />
+              <img src={folderIconSrc} alt="폴더 아이콘" />
             </FolderIcon>
             <InputWrapper>
               <NameInput
@@ -80,8 +165,13 @@ export default function AddGroupSheet({ open, onClose, onCloseAll }) {
                   <ColorCircle
                     key={color}
                     $color={color}
-                    $selected={selectedColor === color}
+                    $selected={
+                      normalizeHex(selectedColor) === normalizeHex(color)
+                    }
                     onClick={() => setSelectedColor(color)}
+                    aria-label={`색상 ${
+                      COLOR_NAME_MAP[normalizeHex(color)] ?? color
+                    }`}
                   >
                     <InnerCircle $color={color} />
                   </ColorCircle>
@@ -113,12 +203,22 @@ export default function AddGroupSheet({ open, onClose, onCloseAll }) {
             <Label>
               상세 설명 <span>선택</span>
             </Label>
-            <TextArea placeholder="설명을 입력해 주세요." />
-            <TextArea placeholder="관련 URL을 추가해주세요." />
+            <TextArea
+              placeholder="설명을 입력해 주세요."
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+            <TextArea
+              placeholder="관련 URL을 추가해주세요."
+              value={relatedUrl}
+              onChange={(e) => setRelatedUrl(e.target.value)}
+            />
           </Section>
         </Content>
         <Footer>
-          <DoneButton>완료</DoneButton>
+          <DoneButton onClick={handleSubmit} disabled={submitting}>
+            {submitting ? "저장 중…" : "완료"}
+          </DoneButton>
         </Footer>
       </SheetContainer>
     </>
