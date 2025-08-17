@@ -20,7 +20,7 @@ import WriteReview from "./pages/map/WriteReview";
 
 function AppInner() {
   const location = useLocation(); // 현재 URL 전체 정보를 주는 React Hook
-  const hideNavPaths = ["/splash", "/onboarding", "/login", "/map-search", "/write-review"]; // 여기에 숨길 경로들 적기
+  const hideNavPaths = ["/splash", "/onboarding", "/login", "/map-search"]; // 여기에 숨길 경로들 적기
   const shouldHideNav = hideNavPaths.some((path) =>
     location.pathname.startsWith(path)
   );
@@ -44,7 +44,6 @@ function AppInner() {
         {/* Sub Pages */}
         <Route path="/weekly-mission" element={<WeeklyMission />} />
         <Route path="/map-search" element={<MapSearch />} />
-        <Route path="/write-review" element={<WriteReview />} />
       </Routes>
       {!shouldHideNav && <NavBar />}
     </Layout>
