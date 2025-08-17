@@ -30,8 +30,8 @@
 }
 
 .my-location-dot {
-  width: 14px;
-  height: 14px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   background: #1dc3ff; /* 파란 점 */
   border: 3px solid #fff; /* 흰 테두리 */
