@@ -1,39 +1,63 @@
 import { use, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import styled from "styled-components";
-import axios from 'axios';
+import axios from "axios";
 
 export default function Login() {
-
-  const [userId, setUserId] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
 
-    if (!userId || !password) {
+    if (!username || !password) {
       alert("아이디와 비밀번호를 입력해주세요.");
       return;
     }
 
     const loginData = {
-      user_id: userId,
+      username: username,
       password: password,
-    }
+    };
 
     try {
       const response = await axios.post(
-        'https://200percent.p-e.kr/account/',
+        "https://200percent.p-e.kr/account/login/",
         loginData
       );
 
-      console.log("로그인 성공:", response.data);
-      alert('로그인 성공!');
-      navigate('/home'); // 로그인 성공 후 홈으로 이동
+      const accessToken = response.data.token.access_token;
+      if (accessToken) {
+        localStorage.setItem("accessToken", accessToken);
+
+        // (선택사항) axios의 기본 헤더로 설정하면, 앞으로 모든 요청에 토큰이 자동으로 포함됩니다.
+        axios.defaults.headers.common[
+          "Authorization"
+        ] = `Bearer ${accessToken}`;
+
+        console.log("로그인 성공:", response.data);
+        alert("로그인에 성공했습니다!");
+        navigate("/home");
+      } else {
+        // 토큰이 없는 비정상적인 성공 응답 처리
+        alert("로그인에 실패했습니다. (토큰 없음)");
+      }
     } catch (error) {
       console.error("로그인 실패:", error);
-      alert('아이디와 비밀번호를 확인해주세요.');
+      // ✅ 2. 서버가 보내주는 에러 메시지를 사용자에게 표시
+      if (error.response && error.response.data) {
+        const errorMsg = error.response.data.non_field_errors?.[0];
+        if (errorMsg?.includes("User does not exist")) {
+          alert("존재하지 않는 아이디입니다.");
+        } else if (errorMsg?.includes("Wrong password")) {
+          alert("비밀번호가 일치하지 않습니다.");
+        } else {
+          alert("로그인에 실패했습니다. 다시 시도해주세요.");
+        }
+      } else {
+        alert("서버에 문제가 발생했습니다. 잠시 후 다시 시도해주세요.");
+      }
     }
   };
 
@@ -48,17 +72,22 @@ export default function Login() {
       <Form onSubmit={handleLogin}>
         <Field>
           <Label>아이디</Label>
-          <Input 
-          type="text"
-          placeholder="영어, 숫자 조합 4~10자 이내"
-          value={userId}
-          onChange={(e) => setUserId(e.target.value)}
+          <Input
+            type="text"
+            placeholder="영어, 숫자 조합 4~10자 이내"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
           />
         </Field>
 
         <Field>
           <Label>비밀번호</Label>
-          <Input type="password" placeholder="영어, 숫자 조합 8~15자 이내" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <Input
+            type="password"
+            placeholder="영어, 숫자 조합 8~15자 이내"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
         </Field>
 
         <Submit type="submit">로그인</Submit>
