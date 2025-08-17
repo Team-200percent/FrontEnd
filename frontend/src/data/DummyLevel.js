@@ -13,33 +13,146 @@ export const LEVELS = [
     },
     stages: [
       {
+        // 1
         type: "life",
         status: "completed",
         top: "17%",
         left: "12%",
+        tooltipTop: "27%",
+        tooltipAnchor: "8%",
+        tooltipAnchorDirection: "top",
+
         missionDetail: {
           title: "전입신고하러 주민센터 방문하기",
           xp: 20,
         },
       },
       {
+        // 2
         type: "stage",
         status: "completed",
         top: "17%",
         left: "41%",
+        tooltipTop: "27%",
+        tooltipAnchor: "41%",
+        tooltipAnchorDirection: "top",
         missionDetail: {
           title: "동네 마트에서 장보기",
           xp: 10,
         },
       },
-      { type: "stage", status: "locked", top: "17%", left: "70%" },
-      { type: "stage", status: "locked", top: "32%", left: "88%" },
-      { type: "stage", status: "locked", top: "49%", left: "70%" },
-      { type: "stage", status: "locked", top: "49%", left: "41%" },
-      { type: "stage", status: "locked", top: "65%", left: "12%" },
-      { type: "stage", status: "locked", top: "82%", left: "30%" },
-      { type: "stage", status: "locked", top: "82%", left: "59%" },
-      { type: "stage", status: "locked", top: "82%", left: "88%" },
+      {
+        // 3
+        type: "stage",
+        status: "locked",
+        top: "17%",
+        left: "70%",
+        tooltipTop: "27%",
+        tooltipAnchor: "72%",
+        tooltipAnchorDirection: "top",
+        missionDetail: {
+          title: "동네 카페에서 휴식",
+          xp: 10,
+        },
+      },
+      {
+        // 4
+        type: "stage",
+        status: "locked",
+        top: "32%",
+        left: "88%",
+        tooltipTop: "41%",
+        tooltipAnchor: "92%",
+        tooltipAnchorDirection: "top",
+        missionDetail: {
+          title: "전입신고하러 주민센터 방문하기",
+          xp: 20,
+        },
+      },
+      {
+        // 5
+        type: "stage",
+        status: "locked",
+        top: "49%",
+        left: "70%",
+        tooltipTop: "58%",
+        tooltipAnchor: "72%",
+        tooltipAnchorDirection: "top",
+        missionDetail: {
+          title: "전입신고하러 주민센터 방문하기",
+          xp: 20,
+        },
+      },
+      {
+        // 6
+        type: "stage",
+        status: "locked",
+        top: "49%",
+        left: "41%",
+        tooltipTop: "58%",
+        tooltipAnchor: "41%",
+        tooltipAnchorDirection: "top",
+        missionDetail: {
+          title: "전입신고하러 주민센터 방문하기",
+          xp: 20,
+        },
+      },
+      {
+        // 7
+        type: "stage",
+        status: "locked",
+        top: "65%",
+        left: "12%",
+        tooltipTop: "27%",
+        tooltipAnchor: "9%",
+        tooltipAnchorDirection: "bottom",
+        missionDetail: {
+          title: "전입신고하러 주민센터 방문하기",
+          xp: 20,
+        },
+      },
+      {
+        // 8
+        type: "stage",
+        status: "locked",
+        top: "82%",
+        left: "30%",
+        tooltipTop: "45%",
+        tooltipAnchor: "28%",
+        tooltipAnchorDirection: "bottom",
+        missionDetail: {
+          title: "전입신고하러 주민센터 방문하기",
+          xp: 20,
+        },
+      },
+      {
+        // 9
+        type: "stage",
+        status: "locked",
+        top: "82%",
+        left: "59%",
+        tooltipTop: "45%",
+        tooltipAnchor: "59%",
+        tooltipAnchorDirection: "bottom",
+        missionDetail: {
+          title: "전입신고하러 주민센터 방문하기",
+          xp: 20,
+        },
+      },
+      {
+        // 10
+        type: "stage",
+        status: "locked",
+        top: "82%",
+        left: "88%",
+        tooltipTop: "45%",
+        tooltipAnchor: "91%",
+        tooltipAnchorDirection: "bottom",
+        missionDetail: {
+          title: "전입신고하러 주민센터 방문하기",
+          xp: 20,
+        },
+      },
     ],
   },
   {
