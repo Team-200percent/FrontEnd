@@ -1,9 +1,9 @@
 // src/pages/map/Map.jsx
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import axios from "axios";
 import styled from "styled-components";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import LocateButton from "../../components/map/LocateButton";
 import FavoriteButton from "../../components/map/FavoriteButton";
@@ -34,11 +34,13 @@ function loadKakaoSdk() {
 export default function Map() {
   const boxRef = useRef(null);
   const mapRef = useRef(null);
+  const myLocationRef = useRef(null);
   const navigate = useNavigate();
+  const location = useLocation();
 
   // --- 상태 관리 ---
   const [isMapReady, setIsMapReady] = useState(false);
-  const [allMarkers, setAllMarkers] = useState([]);
+  const [allMarkets, setAllMarkets] = useState([]);
   const [selectedPlace, setSelectedPlace] = useState(null);
   const [infoWindow, setInfoWindow] = useState(null);
 
@@ -88,6 +90,77 @@ export default function Map() {
     }
   };
 
+  const focusAndOpenSheet = useCallback(
+    (lat, lng) => {
+      if (!mapRef.current) return;
+      const center = new window.kakao.maps.LatLng(
+        parseFloat(lat),
+        parseFloat(lng)
+      );
+      mapRef.current.setCenter(center);
+      // mapRef.current.setLevel(4);
+      handleMarkerClick(lat, lng);
+    },
+    [handleMarkerClick]
+  );
+
+  const handleSearchSubmit = useCallback(
+    (query) => {
+      const q = (query || "").trim();
+      if (!q) return;
+      if (!allMarkets.length) {
+        alert(
+          "아직 가게 데이터를 불러오는 중입니다. 잠시 후 다시 시도해주세요."
+        );
+        return;
+      }
+      const match =
+        allMarkets.find((m) => m.name === q) ||
+        allMarkets.find((m) => m.name.includes(q));
+      if (!match) {
+        alert("검색 결과가 없습니다.");
+        return;
+      }
+      focusAndOpenSheet(match.lat, match.lng);
+    },
+    [allMarkets, focusAndOpenSheet]
+  );
+
+  const centerToMyLocation = useCallback(() => {
+    if (!mapRef.current || !navigator.geolocation) return;
+
+    navigator.geolocation.getCurrentPosition(
+      ({ coords: { latitude, longitude } }) => {
+        const pos = new window.kakao.maps.LatLng(latitude, longitude);
+
+        mapRef.current.panTo(pos);
+
+        const el = document.createElement("div");
+        el.className = "my-location-dot";
+        
+        if (!myLocationRef.current)  {
+          myLocationRef.current = new window.kakao.maps.CustomOverlay({
+            position: pos,
+            content: el,
+            yAnchor: 2.5, // 마커의 세로 중앙에 위치하도록
+          });
+        } else {
+          myLocationRef.current.setPosition(pos);
+          myLocationRef.current.setContent(el);
+        }
+        myLocationRef.current.setMap(mapRef.current);
+      },
+      (err) => {
+        console.warn("위치 정보 접근 실패:", err);
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 60000,
+        timeout: 8000,
+      }
+    );
+  }, []);
+
   // --- 지도 초기화 및 마커 생성 ---
   useEffect(() => {
     const initMap = async () => {
@@ -100,9 +173,11 @@ export default function Map() {
       });
       mapRef.current = map;
       setIsMapReady(true);
+
+      centerToMyLocation();
     };
     initMap();
-  }, []);
+  }, [centerToMyLocation]);
 
   useEffect(() => {
     if (!isMapReady) return;
@@ -112,6 +187,7 @@ export default function Map() {
     const fetchAllMarketLocations = async () => {
       try {
         const response = await axios.get("https://200percent.p-e.kr/market/");
+        setAllMarkets(response.data);
         response.data.forEach((market) => {
           const markerPosition = new window.kakao.maps.LatLng(
             market.lat,
@@ -163,6 +239,16 @@ export default function Map() {
     fetchAllMarketLocations();
   }, [isMapReady, infoWindow]);
 
+  // --- 3) /map-search에서 넘어온 검색어 자동 처리 ---
+  useEffect(() => {
+    const incoming = location.state?.searchQuery;
+    if (incoming) {
+      handleSearchSubmit(incoming);
+      // 한 번 처리 후 state 비우기 (뒤로가기 시 재검색 방지)
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, location.pathname, navigate, handleSearchSubmit]);
+
   return (
     <div
       style={{
@@ -175,7 +261,7 @@ export default function Map() {
 
       {!isFavoriteSheetOpen && sheetViewMode !== "expanded" && (
         <>
-          <SearchBar mode="display" />
+          <SearchBar mode="display" onSubmit={handleSearchSubmit} />
           <CategoryChips
             onSelect={(key) =>
               navigate("/map-search", { state: { activeCategory: key } })
@@ -189,7 +275,7 @@ export default function Map() {
         $isSheetOpen={isPlaceSheetOpen}
         $viewMode={sheetViewMode}
       >
-        <LocateButton />
+        <LocateButton onClick={centerToMyLocation} />
       </LocateButtonWrapper>
 
       <PlaceSheet
