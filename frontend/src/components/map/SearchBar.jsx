@@ -35,8 +35,19 @@ const SearchBar = forwardRef(
         <Row>
           <SearchBox onClick={handleBoxClick}>
             {/* 좌측 아이콘 */}
-            <LeftIcon>
-              <img src="/icons/map/search.svg" alt="돋보기" />
+            <LeftIcon
+              onClick={(e) => {
+                e.stopPropagation();
+                if (mode === "input") {
+                  navigate(-1); // 뒤로가기
+                }
+              }}
+            >
+              {mode === "input" ? (
+                <img src="/icons/map/leftarrow.svg" alt="뒤로가기" />
+              ) : (
+                <img src="/icons/map/search.svg" alt="돋보기" />
+              )}
             </LeftIcon>
 
             {mode === "input" ? (
@@ -74,7 +85,10 @@ const SearchBar = forwardRef(
               </RightIcon>
             ) : (
               <RightIcon aria-label="음성 입력" type="button">
-                <img src="/icons/map/microphone.svg" alt="음성검색 마이크 아이콘" />
+                <img
+                  src="/icons/map/microphone.svg"
+                  alt="음성검색 마이크 아이콘"
+                />
               </RightIcon>
             )}
           </SearchBox>
@@ -129,7 +143,7 @@ const LeftIcon = styled.div`
 
 const Placeholder = styled.div`
   flex: 1;
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 400;
   line-height: 24px;
   color: #86858b;
