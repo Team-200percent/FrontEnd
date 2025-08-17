@@ -37,7 +37,6 @@ export default function Login() {
         ] = `Bearer ${accessToken}`;
 
         console.log("로그인 성공:", response.data);
-        alert("로그인에 성공했습니다!");
         navigate("/home");
       } else {
         // 토큰이 없는 비정상적인 성공 응답 처리
