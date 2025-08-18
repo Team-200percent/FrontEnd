@@ -38,6 +38,7 @@ export default function ReviewContent({ place, onWriteReview }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isKeywordsExpanded, setIsKeywordsExpanded] = useState(false);
   const [isReviewsExpanded, setIsReviewsExpanded] = useState(false);
+  const [photoReviews, setPhotoReviews] = useState([]);
 
   const handleWriteReviewClick = () => {
     setIsWritingReview(true);
@@ -63,6 +64,11 @@ export default function ReviewContent({ place, onWriteReview }) {
 
         // ✅ 2. 응답 데이터 전체를 state에 저장
         setReviewData(response.data);
+
+        const photoRes = await api.get(`/review/photo/`, {
+        params: { lat: place.lat, lng: place.lng },
+        });
+        setPhotoReviews(photoRes.data.images ?? []);
       } catch (error) {
         console.error("리뷰 정보를 불러오는 데 실패했습니다.", error);
       } finally {
@@ -136,11 +142,20 @@ export default function ReviewContent({ place, onWriteReview }) {
       <PhotoReviewSection>
         <SectionTitle>
           <strong>사진 / 영상</strong> 리뷰
-          <PhotoSection>
-            <PlaceholderPhoto />
-            <PlaceholderPhoto />
-            <PlaceholderPhoto />
-          </PhotoSection>
+          <PhotoGrid>
+            {photoReviews.length > 0 ? (
+              photoReviews.map((url, idx) => (
+                <Photo key={idx} src={url} alt={`리뷰 사진 ${idx + 1}`} />
+              ))
+            ) : (
+              <>
+                <PhotoPlaceholder />
+                <PhotoPlaceholder />
+                <PhotoPlaceholder />
+                <PhotoPlaceholder />
+              </>
+            )}
+          </PhotoGrid>
         </SectionTitle>
       </PhotoReviewSection>
 
@@ -173,11 +188,24 @@ export default function ReviewContent({ place, onWriteReview }) {
             </StarsWrapper>
 
             <PhotoSection>
-              {/* 나중에 review.photos 같은 데이터로 교체 */}
-              <PlaceholderPhoto />
-              <PlaceholderPhoto />
-              <PlaceholderPhoto />
+              {Array.isArray(review.images) && review.images.length > 0 ? (
+                review.images.map((url, idx) => (
+                  <ReviewPhoto
+                    key={`${review.created}-${idx}`}
+                    src={url}
+                    alt={`리뷰 사진 ${idx + 1}`}
+                    loading="lazy"
+                  />
+                ))
+              ) : (
+                <>
+                  <PlaceholderPhoto />
+                  <PlaceholderPhoto />
+                  <PlaceholderPhoto />
+                </>
+              )}
             </PhotoSection>
+ 
 
             {/* ✅ 개별 리뷰의 description을 사용합니다. */}
             <ReviewDescription>{review.description}</ReviewDescription>
@@ -497,4 +525,20 @@ const ReviewDate = styled.time`
   color: #86858b;
   text-align: right;
   margin-top: -8px;
+`;
+
+const Photo = styled.img`
+  flex-shrink: 0;
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 8px;
+`;
+
+const ReviewPhoto = styled.img`
+  flex-shrink: 0;
+  width: 197px;
+  height: 197px;
+  object-fit: cover;
+  border-radius: 20px;
 `;
