@@ -221,7 +221,7 @@ const Title = styled.div` font-size: 16px; font-weight: 500; color: #111; `;
 
 // 검색 결과 스타일
 const ResultsContainer = styled.div`
-  margin-top: 15px;
+  margin-top: 40%;
   padding: 20px;
   flex: 1;
   overflow-y: auto;
