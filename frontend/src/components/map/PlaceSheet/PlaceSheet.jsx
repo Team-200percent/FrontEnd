@@ -36,7 +36,11 @@ const CompactContent = ({ place, onViewDetails, onLike }) => {
         </RatingContainer>
       </InfoRow>
       <DetailButton onClick={onViewDetails}>자세히 보기</DetailButton>
-      <ImagePreview />
+      <ImagePreview
+      $src={
+          (place?.images?.[0]?.url || place?.images?.[0]?.image_url) ?? ""
+       }
+      />
     </CompactWrapper>
   );
 };
@@ -76,7 +80,7 @@ const ExpandedContent = ({
           <MainTitle>{place?.name ?? "장소명"}</MainTitle>
           <SubInfo>
             {/* 아래 데이터들은 추후 백엔드에서 추가될 경우 자동으로 표시됩니다. */}
-            <span>{place?.type ?? "카테고리"}</span>
+            <span>{place?.category ?? "카테고리"}</span>
             <span>·</span>
             <span>
               <img src="/icons/map/mapdetail/graystar.svg" alt="별점" />{" "}
@@ -88,9 +92,18 @@ const ExpandedContent = ({
         </TitleSection>
 
         <PhotoSection>
-          <PlaceholderPhoto />
-          <PlaceholderPhoto />
-          <PlaceholderPhoto />
+          {Array.isArray(place?.images) && place.images.length > 0 ? (
+            place.images.map((img) => {
+              const src = img.url || img.image_url; // 혹시 기존 형식도 들어오면 호환
+              return <Photo key={img.id ?? src} src={src} alt={place?.name ?? "사진"} />;
+            })
+          ) : (
+            <>
+              <PlaceholderPhoto />
+              <PlaceholderPhoto />
+              <PlaceholderPhoto />
+            </>
+          )}
         </PhotoSection>
 
         <TabNav>
@@ -132,7 +145,9 @@ const ExpandedContent = ({
               <span>
                 <img src="/icons/map/mapdetail/time.svg" alt="영업시간" />
               </span>
-              <p>{place?.hours ?? "영업시간 정보 없음"}</p>
+              <p>{place?.isOpen ? "영업중" : "영업종료"}</p>  
+              ·
+              <p>{place?.closeHour ? `${place.closeHour}에 영업종료` : "영업시간 정보 없음"}</p>
             </InfoItem>
             <InfoItem>
               <span>
@@ -205,11 +220,28 @@ export default function PlaceSheet({
       console.log("서버로부터 받은 상세 정보:", detailInfo);
 
       if (detailInfo) {
-        setPlace((prev) => {
-          const newState = { ...prev, ...detailInfo };
-          console.log("최종으로 합쳐진 place 상태:", newState);
-          return newState;
-        });
+        const mapped = {
+          isFavorite: detailInfo.is_favorite,
+          category: detailInfo.category ?? null,
+          address: detailInfo.address ?? null,
+          isOpen: detailInfo.is_open ?? null,
+          closeHour: detailInfo.close_hour ?? null,
+          phone: detailInfo.telephone ?? null,
+          website: detailInfo.url ?? null,
+          rating: detailInfo.avg_rating ?? null,
+          reviewCount: detailInfo.review_count ?? null,
+          // url 필드 통일: { id, url }
+          images: Array.isArray(detailInfo.images)
+           ? detailInfo.images.map((img) => ({
+               id: img.id,
+               url: img.image_url,
+               created: img.created,
+               market: img.market,
+             }))
+           : [],
+       };
+
+       setPlace((prev) => ({ ...prev, ...mapped }));
       }
     } catch (error) {
       console.error("상세 정보 로딩 실패:", error);
@@ -435,9 +467,13 @@ const DetailButton = styled.button`
 const ImagePreview = styled.div`
   margin-top: 16px;
   width: 100%;
-  height: 135px;
+  height: 200px;
   background-color: #f0f2f5;
   border-radius: 12px;
+  overflow: hidden;
+  background-image: ${({ $src }) => ($src ? `url(${$src})` : "none")};
+  background-size: cover;
+  background-position: center;
 `;
 
 // Expanded View 스타일
@@ -612,4 +648,13 @@ const Spinner = styled.div`
   justify-content: center;
   align-items: center;
   height: 100%;
+`;
+
+const Photo = styled.img`
+  flex-shrink: 0;
+  width: 197px;
+  height: 197px;
+  object-fit: cover;
+  border-radius: 12px;
+  background: #f0f2f5;
 `;

@@ -31,6 +31,9 @@ export default function FavoriteGroupsSheet({
 
   const [counts, setCounts] = useState({});
 
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState(null);
+
   const getAuthHeaders = () => {
     const t = localStorage.getItem("access_token");
     const valid = t && t !== "null" && t !== "undefined" && String(t).trim() !== "";
@@ -157,14 +160,8 @@ export default function FavoriteGroupsSheet({
     setIsDetailOpen(true);
   };
 
-  const handleDeleteGroup = async (groupId, e) => {
-    // 리스트 아이템 클릭(상세 열기)와 충돌 방지
-    if (e) e.stopPropagation();
-
-    const target = groups.find((g) => g.id === groupId);
-    const name = target?.name ? `‘${target.name}’` : "이 그룹";
-    if (!window.confirm(`${name}을(를) 삭제할까요?`)) return;
-
+  const handleDeleteGroup = async (groupId) => {
+    
     try {
       await api.delete(`/market/favoritegroup/${groupId}/`, {
         headers: getAuthHeaders(),
@@ -190,6 +187,18 @@ export default function FavoriteGroupsSheet({
         "그룹 삭제에 실패했어요. 잠시 후 다시 시도해주세요.";
       alert(msg);
     }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!pendingDelete) return;
+    await handleDeleteGroup(pendingDelete.id);
+    setConfirmOpen(false);
+    setPendingDelete(null);
+  };
+
+  const handleCancelDelete = () => {
+    setConfirmOpen(false);
+    setPendingDelete(null);
   };
 
   const handleGroupUpdated = (updated) => {
@@ -323,7 +332,16 @@ export default function FavoriteGroupsSheet({
                     )}
                   </GroupTextWrap>
                 </GroupWrapper>
-                <RemoveIcon role="button" title="그룹 삭제" aria-label="그룹 삭제" onClick={(e) => handleDeleteGroup(group.id, e)}>
+                <RemoveIcon
+                  role="button"
+                  title="그룹 삭제"
+                  aria-label="그룹 삭제"
+                  onClick={(e) => {
+                    e.stopPropagation();           
+                    setPendingDelete({ id: group.id, name: group.name });
+                    setConfirmOpen(true);
+                  }}
+                >
                   <img src="/icons/map/mapdetail/x.svg" alt="제거 아이콘" />
                 </RemoveIcon>
               </GroupItem>
@@ -338,6 +356,18 @@ export default function FavoriteGroupsSheet({
           </AddNewGroupButton>
         </Footer>
       </SheetContainer>
+
+      {confirmOpen && (
+        <ConfirmBackdrop onClick={handleCancelDelete}>
+          <ConfirmCard onClick={(e) => e.stopPropagation()}>
+            <ConfirmText>이 그룹을 삭제합니다</ConfirmText>
+            <ConfirmActions>
+              <ConfirmBtnGhost onClick={handleCancelDelete}>취소</ConfirmBtnGhost>
+              <ConfirmBtnDanger onClick={handleConfirmDelete}>삭제</ConfirmBtnDanger>
+            </ConfirmActions>
+          </ConfirmCard>
+        </ConfirmBackdrop>
+      )}
 
       <FavoriteGroupDetail
         open={isDetailOpen}
@@ -613,4 +643,50 @@ const RetryBtn = styled.button`
   border-radius: 8px;
   padding: 6px 10px;
   cursor: pointer;
+`;
+
+const ConfirmBackdrop = styled.div`
+   position: fixed;
+   inset: 0;
+   z-index: 5000;
+   background: rgba(0,0,0,0.45);
+   display: grid;
+   place-items: center;
+`;
+const ConfirmCard = styled.div`
+   width: calc(100% - 48px);
+   max-width: 360px;
+   background: #fff;
+   border-radius: 16px;
+   padding: 22px 20px 14px;
+   box-shadow: 0 12px 32px rgba(0,0,0,0.18);
+`;
+const ConfirmText = styled.div`
+   font-size: 16px;
+   line-height: 22px;
+   color: #111;
+   text-align: center;
+   padding: 8px 6px 18px;
+`;
+const ConfirmActions = styled.div`
+   display: flex;
+   justify-content: flex-end;
+   gap: 10px;
+`;
+const ConfirmBtnGhost = styled.button`
+   border: none;
+   background: transparent;
+   color: #666;
+   font-size: 14px;
+   padding: 8px 10px;
+   cursor: pointer;
+  `;
+const ConfirmBtnDanger = styled.button`
+   border: none;
+   background: transparent;
+   color: #1dc3ff;
+   font-weight: 600;
+   font-size: 14px;
+   padding: 8px 10px;
+   cursor: pointer;
 `;
