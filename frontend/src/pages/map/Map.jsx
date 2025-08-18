@@ -17,6 +17,8 @@ import "../../styles/Map.css";
 const KAKAO_APP_KEY = import.meta.env.VITE_KAKAO_APP_KEY;
 const SDK_URL = `https://dapi.kakao.com/v2/maps/sdk.js?autoload=false&appkey=${KAKAO_APP_KEY}`;
 
+let kakaoLoaderPromise = null;
+
 function loadKakaoSdk() {
   if (window.kakao?.maps) return Promise.resolve();
   if (kakaoLoaderPromise) return kakaoLoaderPromise;
@@ -81,9 +83,9 @@ export default function Map() {
           address: simpleInfo.address,
           hours: simpleInfo.business_hours,
           type: simpleInfo.type,
-          rating: simpleInfo.avg_rating, 
-          isOpen: simpleInfo.is_open, 
-          isFavorite: simpleInfo.is_favorite, 
+          rating: simpleInfo.avg_rating,
+          isOpen: simpleInfo.is_open,
+          isFavorite: simpleInfo.is_favorite,
           lat,
           lng,
         });

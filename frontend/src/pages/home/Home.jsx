@@ -7,6 +7,65 @@ import LevelSelector from "../../components/home/LevelSelector";
 import WeeklyMissionBox from "../../components/home/WeeklyMissionBox"; // ✅ 추가
 import LevelDropdown from "../../components/home/LevelDropdown";
 
+const CATEGORY_ICONS = {
+  heart: {
+    active_unpressed: "/icons/home/heart/active.png",
+    active_pressed: "/icons/home/heart/active-pressed.png",
+    inactive_unpressed: "/icons/home/heart/inactive.png",
+    inactive_pressed: "/icons/home/heart/inactive-pressed.png",
+  },
+  like: {
+    active_unpressed: "/icons/home/like/active.png",
+    active_pressed: "/icons/home/like/active-pressed.png",
+    inactive_unpressed: "/icons/home/like/inactive.png",
+    inactive_pressed: "/icons/home/like/inactive-pressed.png",
+  },
+  pencil: {
+    active_unpressed: "/icons/home/pencil/active.png",
+    active_pressed: "/icons/home/pencil/active-pressed.png",
+    inactive_unpressed: "/icons/home/pencil/inactive.png",
+    inactive_pressed: "/icons/home/pencil/inactive-pressed.png",
+  },
+  map: {
+    active_unpressed: "/icons/home/map/active.png",
+    active_pressed: "/icons/home/map/active-pressed.png",
+    inactive_unpressed: "/icons/home/map/inactive.png",
+    inactive_pressed: "/icons/home/map/inactive-pressed.png",
+  },
+  person: {
+    active_unpressed: "/icons/home/person/active.png",
+    active_pressed: "/icons/home/person/active-pressed.png",
+    inactive_unpressed: "/icons/home/person/inactive.png",
+    inactive_pressed: "/icons/home/person/inactive-pressed.png",
+  },
+  facility: {
+    active_unpressed: "/icons/home/facility/active.png",
+    active_pressed: "/icons/home/facility/active-pressed.png",
+    inactive_unpressed: "/icons/home/facility/inactive.png",
+    inactive_pressed: "/icons/home/facility/inactive-pressed.png",
+  },
+  _default: {
+    active_unpressed: "/icons/home/default/active.png",
+    active_pressed: "/icons/home/default/active-pressed.png",
+    inactive_unpressed: "/icons/home/default/inactive.png",
+    inactive_pressed: "/icons/home/default/inactive-pressed.png",
+  },
+};
+
+function StageIconImg({ category, status, pressed }) {
+  const set = CATEGORY_ICONS[category] || CATEGORY_ICONS._default;
+  const isActive = status === "active" || status === "completed"; // completed도 active 계열로 보고 싶으면 이렇게
+  const variant = isActive
+    ? pressed
+      ? "active_pressed"
+      : "active_unpressed"
+    : pressed
+    ? "inactive_pressed"
+    : "inactive_unpressed";
+
+  return <img src={set[variant]} alt={`${category}-${variant}`} />;
+}
+
 const MissionTooltip = ({ stageData, onClose }) => {
   const tooltipRef = useRef(null); // 말풍선 DOM 요소를 가리킬 ref
 
@@ -49,38 +108,20 @@ const MissionTooltip = ({ stageData, onClose }) => {
   );
 };
 
-const getStageIcon = (stage, isActive) => {
-  // 눌렸을 때(isActive)는 항상 눌린 이미지로 변경
-  if (isActive) {
-    if (stage.type === "stage") {
-      return <img src="/icons/home/heart-on-pressed.png" alt="시작" />;
-    }
-    if (stage.type === "life") {
-      return <img src="/icons/home/life-on-pressed.png" alt="시작" />;
-    }
-    if (stage.type === "milestone") {
-      return <img src="/icons/home/icon-egg-shell.svg" alt="중간 목표" />;
-    }
-    return <img src="/icons/home/heart-pressed.png" alt="스테이지 활성" />;
-  } else {
-    if (stage.status === "stage") {
-      return <img src="/icons/home/heart-on.png" alt="시작" />;
-    }
-    // 기본 상태 아이콘
-    if (stage.type === "life") {
-      return <img src="/icons/home/life-on.png" alt="시작" />;
-    }
-    if (stage.type === "milestone") {
-      return <img src="/icons/home/icon-egg-shell.svg" alt="중간 목표" />;
-    }
-  }
+function getStageIcon(stage, isPressed) {
+  const set = CATEGORY_ICONS[stage.category] || CATEGORY_ICONS._default;
 
-  const heartIcon =
-    stage.status === "completed"
-      ? "/icons/home/heart-on.png"
-      : "/icons/home/heart-off.png";
-  return <img src={heartIcon} alt="스테이지" />;
-};
+  const isActive = stage.status === "active"; // 또는 서버 규칙에 맞춰 조정
+  const variant = isActive
+    ? isPressed
+      ? "active_pressed"
+      : "active_unpressed"
+    : isPressed
+    ? "inactive_pressed"
+    : "inactive_unpressed";
+
+  return <img src={set[variant]} alt={`${stage.category} ${variant}`} />;
+}
 
 const MissionProgress = ({ mission }) => {
   const progress = (mission.completed / mission.total) * 100;
@@ -160,25 +201,23 @@ export default function Home() {
 
               <GameMapBackGround>
                 <GameMapContainer>
-                  {levelData.stages.map((stage, index) => (
+                  {stages.map((stage, i) => {
+                    const pressed = activeStageIndex === i;
                     <StageIcon
-                      key={index}
-                      $status={stage.status}
-                      $type={stage.type}
+                      key={i}
                       style={{ top: stage.top, left: stage.left }}
-                      onClick={() => handleStageClick(index)}
+                      onClick={() => setActiveStageIndex(pressed ? null : i)}
                     >
-                      {getStageIcon(stage, activeStageIndex === index)}
-                    </StageIcon>
-                  ))}
+                      {getStageIcon(stage, pressed)}
+                    </StageIcon>;
+                  })}
 
-                  {activeStageIndex !== null &&
-                    levelData.stages[activeStageIndex] && (
-                      <MissionTooltip
-                        stageData={levelData.stages[activeStageIndex]}
-                        onClose={() => setActiveStageIndex(null)}
-                      />
-                    )}
+                  {activeStageIndex !== null && stages[activeStageIndex] && (
+                    <MissionTooltip
+                      stageData={stages[activeStageIndex]}
+                      onClose={() => setActiveStageIndex(null)}
+                    />
+                  )}
                 </GameMapContainer>
               </GameMapBackGround>
             </LevelBlock>
