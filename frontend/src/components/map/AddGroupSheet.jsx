@@ -1,7 +1,7 @@
-import axios from "axios";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import styled from "styled-components";
-import { api } from "../../main";
+import api from "../../lib/api";
+
 
 const getCookie = (name) => {
   const m = document.cookie.match("(^|;)\\s*" + name + "\\s*=\\s*([^;]+)");
@@ -18,6 +18,21 @@ const COLOR_NAME_MAP = {
   "#C3A1EF": "purple",
   "#FCA7C8": "pink",
 };
+
+export const NAME_TO_HEX = {
+  red:    "#FF6B85",
+  orange: "#FFAA33",
+  yellow: "#FFD555",
+  green:  "#7CD2C3",
+  purple: "#C3A1EF",
+  pink:   "#FCA7C8",
+  // 기본값(선택 안 했을 때)
+  blue:   "#3B82F6", // 원하는 블루 HEX로 바꿔도 됩니다.
+};
+
+export const HEX_TO_NAME = Object.fromEntries(
+  Object.entries(NAME_TO_HEX).map(([name, hex]) => [hex.toUpperCase(), name])
+);
 
 function normalizeHex(hex) {
   if (!hex) return "";
@@ -58,6 +73,9 @@ export default function AddGroupSheet({
   onClose,
   onCloseAll,
   onCreated,
+  onUpdated,
+  mode = "create",
+  group = null,
 }) {
   const [groupName, setGroupName] = useState("");
   const [selectedColor, setSelectedColor] = useState(null);
@@ -66,29 +84,42 @@ export default function AddGroupSheet({
   const [relatedUrl, setRelatedUrl] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  useEffect(() => {
+    if (!open) return;
+    if (mode === "edit" && group) {
+      setGroupName(group.name ?? "");
+      setIsPrivate(!(group.visibility ?? false)); // visibility:true => 공개, UI는 isPrivate
+      setDescription(group.description ?? "");
+      setRelatedUrl(group.relatedUrl ?? "");
+      // 기존 색상을 팔레트에 대응되는 hex로 미리 선택(blue는 팔레트에 없으므로 null 유지만 아이콘은 표시됨)
+      const hex = NAME_TO_HEX[group.color ?? "blue"] || null;
+      setSelectedColor(hex);
+    } else if (mode === "create") {
+      // 새로 열릴 때 폼 초기화
+      setGroupName("");
+      setIsPrivate(true);
+      setDescription("");
+      setRelatedUrl("");
+      setSelectedColor(null); // 선택 안 하면 blue로 저장됨
+    }
+  }, [open, mode, group]);
+
   const colorName = useMemo(() => {
-    if (!selectedColor) return null;
-    const key = normalizeHex(selectedColor);
-    return COLOR_NAME_MAP[key] ?? null;
-  }, [selectedColor]);
+  // 선택 안 했으면 'blue'로 확정
+  if (!selectedColor) return "blue";
+  const key = normalizeHex(selectedColor);
+  return COLOR_NAME_MAP[key] ?? "blue";
+}, [selectedColor]);
 
   // 상단 폴더 아이콘 경로 (선택한 색에 맞춰 변경)
   const folderIconSrc = useMemo(() => {
-    // 아이콘 파일은 folder-red.png, folder-orange.png … 형식이라고 가정
-    const c = colorName ?? "sky";
-    return `/icons/map/mapdetail/folder/folder-${c}.png`;
-  }, [colorName]);
+  // colorName은 이미 'blue' 기본값을 가짐
+  return `/icons/map/mapdetail/folder/folder-${colorName}.png`;
+}, [colorName]);
 
   const handleSubmit = async () => {
     if (!groupName.trim()) {
       alert("그룹명을 입력해주세요.");
-      return;
-    }
-
-    const key = normalizeHex(selectedColor);
-    const colorName = COLOR_NAME_MAP[key];
-    if (!colorName) {
-      alert("색상을 다시 선택해주세요.");
       return;
     }
 
@@ -103,20 +134,34 @@ export default function AddGroupSheet({
     try {
       setSubmitting(true);
 
-      const csrf = getCookie("csrftoken");
-      const res = await api.post("/market/favoritegroup/", payload, {
-        withCredentials: true,
-        headers: { "Content-Type": "application/json" },
-      });
-      // 부모에 새 그룹 전달해서 리스트 즉시 반영
-      onCreated?.(res.data);
-      // 시트 닫기
+      const accessToken = localStorage.getItem("accessToken");
+      const headers =
+        accessToken &&
+        accessToken !== "undefined" &&
+        accessToken !== "null" &&
+        String(accessToken).trim() !== ""
+          ? { Authorization: `Bearer ${accessToken}` }
+          : {};
+
+      const isEdit = mode === "edit" && group?.id;
+      const url = isEdit
+        ? `/market/favoritegroup/${group.id}/`
+        : `/market/favoritegroup/`;
+      const res = isEdit
+        ? await api.put(url, payload, { headers })
+        : await api.post(url, payload, { headers });
+
+      if (isEdit) {
+        onUpdated?.(res.data);
+      } else {
+        onCreated?.(res.data);
+      }
       onClose();
     } catch (e) {
-      console.error("POST /market/favoritegroup/ 실패:", e);
-      console.log("request payload:", payload);
-      console.log("server response:", e.response?.status, e.response?.data);
-      alert("그룹 생성에 실패했어요. 잠시 후 다시 시도해주세요.");
+      console.error(`${mode === "edit" ? "PUT" : "POST"} /market/favoritegroup/ 실패:`, e);
+      alert(
+        `그룹 ${mode === "edit" ? "수정" : "생성"}에 실패했어요. 잠시 후 다시 시도해주세요.`
+      );
     } finally {
       setSubmitting(false);
     }
@@ -230,7 +275,7 @@ export default function AddGroupSheet({
 const Backdrop = styled.div`
   position: fixed;
   inset: 0;
-  z-index: 3000;
+  z-index: 5000;
   background: rgba(0, 0, 0, 0.3);
 `;
 const SheetContainer = styled.div`
@@ -246,7 +291,7 @@ const SheetContainer = styled.div`
   background: #fff;
   border-top-left-radius: 20px;
   border-top-right-radius: 20px;
-  z-index: 3001;
+  z-index: 5001;
   box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;

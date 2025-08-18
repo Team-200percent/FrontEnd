@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import styled from "styled-components";
-import axios from "axios";
+import api from "../../../lib/api";
+
 
 // API 키와 UI 텍스트/아이콘을 매핑하는 객체
 const TAG_MAP = {
@@ -53,7 +54,7 @@ export default function ReviewContent({ place, onWriteReview }) {
       setIsLoading(true);
       try {
         // ✅ 1. ID 대신 lat, lng를 쿼리 파라미터로 사용하여 API 호출
-        const response = await axios.get(`https://200percent.p-e.kr/review/`, {
+        const response = await api.get(`/review/`, {
           params: {
             lat: place.lat,
             lng: place.lng,

@@ -1,9 +1,9 @@
 import React, { useState, useRef } from "react";
 import styled from "styled-components";
-import axios from "axios";
 import GroupSheet from "../GroupSheet";
 import ReviewContent from "./ReviewContent";
 import WriteReview from "../../../pages/map/WriteReview";
+import api from "../../../lib/api";
 
 const LoadingSpinner = () => <Spinner>Loading...</Spinner>;
 
@@ -188,8 +188,8 @@ export default function PlaceSheet({
 
     try {
       // 1. API 주소를 '/market/detail/'로 변경
-      const response = await axios.get(
-        "https://200percent.p-e.kr/market/detail/",
+      const response = await api.get(
+        "/market/detail/",
         {
           // 2. params 옵션을 사용해 lat과 lng를 전달
           params: {
@@ -274,7 +274,7 @@ export default function PlaceSheet({
         open={isGroupSheetOpen}
         onClose={() => onGroupSheetToggle(false)}
         onCloseAll={onCloseAll}
-        placeName={place?.name}
+        place={place}
       />
 
       {isWritingReview && (

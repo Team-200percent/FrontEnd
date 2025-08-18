@@ -1,6 +1,8 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import styled from "styled-components";
-import axios from "axios";
+import api from "../../lib/api";
+import AddGroupSheet from "../../components/map/AddGroupSheet";
+
 
 const HEART_ICON_BY_COLOR = {
   red: "/icons/map/favorite/heart-red.png",
@@ -9,46 +11,141 @@ const HEART_ICON_BY_COLOR = {
   green: "/icons/map/favorite/heart-green.png",
   purple: "/icons/map/favorite/heart-purple.png",
   pink: "/icons/map/favorite/heart-pink.png",
-  // fallback
-  sky: "/icons/map/favorite/heart-sky.png", // default color로 응답올지 sky로 올지 몰라서 일단 sky
-};
+  blue: "/icons/map/favorite/heart-blue.png", 
+}
 
-const DUMMY_ITEMS = [
-  { id: 101, name: "꿰레", distanceKm: 1.8, address: "서울 동작구 상도1동" },
-  { id: 102, name: "꿰레", distanceKm: 1.8, address: "서울 동작구 상도1동" },
-  { id: 103, name: "꿰레", distanceKm: 1.8, address: "서울 동작구 상도1동" },
-  { id: 104, name: "꿰레", distanceKm: 1.8, address: "서울 동작구 상도1동" },
-];
+const HEART_ICON_BY_COLOR_MAP = {
+  red: "/icons/map/favorite/inmap/heart-red.png",
+  orange: "/icons/map/favorite/inmap/heart-orange.png",
+  yellow: "/icons/map/favorite/inmap/heart-yellow.png",
+  green: "/icons/map/favorite/inmap/heart-green.png",
+  purple: "/icons/map/favorite/inmap/heart-purple.png",
+  pink: "/icons/map/favorite/inmap/heart-pink.png",
+  blue: "/icons/map/favorite/inmap/heart-blue.png", 
+}
 
-export default function FavoriteGroupDetail({ open, group, onClose }) {
+
+
+export default function FavoriteGroupDetail({ open, group, onClose, onGroupUpdated }) {
   const [rows, setRows] = useState([]);
+  const [editOpen, setEditOpen] = useState(false);
+  const [curGroup, setCurGroup] = useState(group ?? null);
+
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState("");
-  const [items, setItems] = useState([]); // [{id, userId, favoriteGroupId, marketId}]
+  const [deletingId, setDeletingId] = useState(null);
+
+  const [showMap, setShowMap] = useState(false);
+  const mapRef = useRef(null);
+
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState(null);
 
   const heartIcon = useMemo(() => {
-    const key = group?.color ?? "sky";
-    return HEART_ICON_BY_COLOR[key] ?? HEART_ICON_BY_COLOR.sky;
-  }, [group]);
+    const key = curGroup?.color ?? "blue";
+    return HEART_ICON_BY_COLOR[key] ?? HEART_ICON_BY_COLOR.blue;
+  }, [curGroup]);
 
   useEffect(() => {
-    if (!open || !group) return;
+    if (group) setCurGroup(group);
+  }, [group]);
+
+  // 컴포넌트 내부에 util 추가
+const loadKakao = () =>
+  new Promise((resolve, reject) => {
+    if (window.kakao && window.kakao.maps) return resolve();
+    const appKey = import.meta.env.VITE_KAKAO_APP_KEY;
+    if (!appKey) return reject(new Error("Kakao APP KEY 없음"));
+
+    const script = document.createElement("script");
+    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?autoload=false&appkey=${appKey}`;
+    script.async = true;
+    script.onload = () => {
+      window.kakao.maps.load(() => resolve());
+    };
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
+
+// showMap 이 켜지고 rows가 있을 때 지도 생성
+useEffect(() => {
+  if (!open || !group || !showMap) return;
+  if (!rows || rows.length === 0) return;
+
+  let map;
+  let markers = [];
+
+  loadKakao()
+    .then(() => {
+      const { kakao } = window;
+
+      // 지도 인스턴스
+      map = new kakao.maps.Map(mapRef.current, {
+        center: new kakao.maps.LatLng(rows[0].lat, rows[0].lng),
+        level: 6,
+      });
+
+      // 마커 이미지 (그룹 색상의 하트)
+      const imgSrc = HEART_ICON_BY_COLOR_MAP[group.color ?? "blue"] || HEART_ICON_BY_COLOR_MAP.blue;
+      const imageSize = new kakao.maps.Size(26, 26);
+      const imageOption = { offset: new kakao.maps.Point(13, 13) };
+      const markerImage = new kakao.maps.MarkerImage(imgSrc, imageSize, imageOption);
+
+      // bounds로 모든 마커 화면에 맞추기
+      const bounds = new kakao.maps.LatLngBounds();
+
+      rows.forEach((it) => {
+        const pos = new kakao.maps.LatLng(it.lat, it.lng);
+        const marker = new kakao.maps.Marker({
+          position: pos,
+          image: markerImage,
+          clickable: true,
+        });
+        marker.setMap(map);
+        markers.push(marker);
+        bounds.extend(pos);
+
+        // 간단한 인포윈도우
+        const iw = new kakao.maps.InfoWindow({
+          content: `<div style="padding:6px 10px; font-size:12px">${it.name || `가게 #${it.marketId}`}</div>`,
+        });
+        kakao.maps.event.addListener(marker, "click", () => {
+          iw.open(map, marker);
+        });
+      });
+
+      if (rows.length > 1) {
+        map.setBounds(bounds);
+      }
+    })
+    .catch((err) => {
+      console.error("Kakao 지도 로딩 실패:", err);
+      alert("지도를 불러오지 못했어요. 잠시 후 다시 시도해주세요.");
+      setShowMap(false);
+    });
+
+  // cleanup
+  return () => {
+    markers = [];
+    map = null;
+  };
+}, [open, group, showMap, rows]);
+
+  useEffect(() => {
+    if (!open || !curGroup) return;
+
     const fetchItems = async () => {
       setLoading(true);
       setLoadError("");
       try {
-        // 명세: GET /market/favoritegroup/  → [{ id, userId, favoriteGroupId, marketId }]
-        const res = await axios.get(
-          "https://200percent.p-e.kr/market/favoritegroup/",
+        const res = await api.get(
+          `/market/favoriteitem/${curGroup.id}/`,
           {
-            params: { favoriteGroupId: group.id },
             withCredentials: true
           }
         );
-        const list = Array.isArray(res.data) ? res.data : [];
-        // 쿼리 파라미터 명세가 없어서 프론트에서 필터
-        const mine = list.filter((r) => r.favoriteGroupId === group.id);
-        setRows(mine);
+        const list = Array.isArray(res.data?.results) ? res.data.results : [];
+        setRows(list);
       } catch (e) {
         console.error(e);
         setLoadError("목록을 불러오지 못했어요.");
@@ -58,6 +155,63 @@ export default function FavoriteGroupDetail({ open, group, onClose }) {
     };
     fetchItems();
   }, [open, group?.id]);
+
+  // const handleRemove = async (item) => {
+  // if (!group?.id) return;
+  // if (!window.confirm(`이 장소를 ‘${group.name}’에서 삭제할까요?`)) return;
+
+  // try {
+  //   setDeletingId(item.id);
+  //   await api.delete(`/market/favoriteitem/${group.id}/`, {
+  //     params: { lat: item.lat, lng: item.lng },   // ✅ 명세에 맞게 쿼리로 전송
+  //     withCredentials: true,
+  //   });
+  //   // 성공하면 화면에서 즉시 제거
+  //   setRows((prev) => prev.filter((r) => r.id !== item.id));
+  // } catch (e) {
+  //   console.error("삭제 실패:", e?.response || e);
+  //   const msg =
+  //     e?.response?.data?.detail || "삭제에 실패했어요. 잠시 후 다시 시도해주세요.";
+  //   alert(msg);
+  // } finally {
+  //   setDeletingId(null);
+  // }
+  // };
+
+  // 삭제 버튼을 눌렀을 때 모달 오픈
+const askDelete = (item) => {
+  setPendingDelete(item);     // rows 안의 한 항목 (id, lat, lng, name 포함)
+  setConfirmOpen(true);
+};
+
+// 실제 삭제 호출
+const handleConfirmDelete = async () => {
+  if (!pendingDelete || !group?.id) return;
+
+  try {
+    // 명세: DELETE /market/favoriteitem/<group_id>/?lat=..&lng=..
+    await api.delete(`/market/favoriteitem/${group.id}/`, {
+      params: { lat: pendingDelete.lat, lng: pendingDelete.lng },
+      withCredentials: true,
+    });
+
+    // 목록에서 제거
+    setRows((prev) => prev.filter((r) => r.id !== pendingDelete.id));
+  } catch (e) {
+    console.error(e);
+    const msg = e?.response?.data?.detail || "삭제에 실패했어요. 잠시 후 다시 시도해주세요.";
+    alert(msg);
+  } finally {
+    setConfirmOpen(false);
+    setPendingDelete(null);
+  }
+};
+
+// 모달 취소
+const handleCancelDelete = () => {
+  setConfirmOpen(false);
+  setPendingDelete(null);
+};
 
   // (선택) 조회수 등 표시용
   const total = rows.length;
@@ -73,7 +227,7 @@ export default function FavoriteGroupDetail({ open, group, onClose }) {
               <img src="/icons/map/leftarrow-white.svg" alt="" />
             </IconBtn>
             <TopRight>
-              <MapBtn>
+              <MapBtn onClick={() => setShowMap((v) => !v)}>
                 <img src="/icons/map/watchmap.svg" alt="" />
               </MapBtn>
               <DotBtn>
@@ -83,7 +237,7 @@ export default function FavoriteGroupDetail({ open, group, onClose }) {
           </Top>
 
           <TitleArea>
-            <GroupTitle>{group.name}</GroupTitle>
+            <GroupTitle>{curGroup?.name ?? ""}</GroupTitle>
             <SubMeta>
               <span>
                 조회 <strong>{total}</strong>
@@ -92,18 +246,20 @@ export default function FavoriteGroupDetail({ open, group, onClose }) {
               <LockWrap>
                 <img
                   src={
-                    group.visibility
+                    group?.visibility
                       ? "/icons/map/public.svg"
                       : "/icons/map/private.svg"
                   }
-                  alt={group.visibility ? "공개" : "비공개"}
+                  alt={curGroup?.visibility ? "공개" : "비공개"}
                 />
-                <span>{group.visibility ? "공개" : "비공개"}</span>
+                <span>{curGroup?.visibility ? "공개" : "비공개"}</span>
               </LockWrap>
             </SubMeta>
             <BtnMeta>
               <UrlBtn>공유</UrlBtn>
-              <ModifyBtn>수정</ModifyBtn>
+              <ModifyBtn as="button" type="button" onClick={() => setEditOpen(true)}>
+                수정
+              </ModifyBtn>
             </BtnMeta>
           </TitleArea>
           <IconBtn aria-hidden />
@@ -112,55 +268,26 @@ export default function FavoriteGroupDetail({ open, group, onClose }) {
         <Banner>
           <TextWrap>
             <span>전체</span>
-            <span style={{ color: "#fff", fontWeight: 700 }}>7</span>
+            <span style={{ color: "#fff", fontWeight: 700 }}>{rows.length}</span>
           </TextWrap>
           <SortWrap>등록순</SortWrap>
-          {/* <SortWrap ref={sortMenuRef}>
-            <SortButton
-              onClick={() => setIsSortOpen((v) => !v)}
-              aria-haspopup="menu"
-              aria-expanded={isSortOpen}
-            >
-              <span>{sortMode === "createdAt" ? "등록순" : "최신순"}</span>
-              <img src="icons/map/mapdetail/dropdownarrow.png" alt="" />
-            </SortButton>
-            {isSortOpen && (
-              <SortMenu role="menu">
-                <SortItem
-                  role="menuitemradio"
-                  aria-checked={sortMode === "createdAt"}
-                  onClick={() => {
-                    setSortMode("createdAt");
-                    setIsSortOpen(false);
-                  }}
-                  $active={sortMode === "createdAt"}
-                >
-                  등록순
-                </SortItem>
-                <SortItem
-                  role="menuitemradio"
-                  aria-checked={sortMode === "latest"}
-                  onClick={() => {
-                    setSortMode("latest");
-                    setIsSortOpen(false);
-                  }}
-                  $active={sortMode === "latest"}
-                >
-                  최신순
-                </SortItem>
-              </SortMenu>
-            )}
-          </SortWrap> */}
         </Banner>
 
+        {showMap ? (
+            <MapBox ref={mapRef} />
+          ) : (
+        <>
         <Body>
+
+         
           <InfoBanner>
             즐겨찾기는 그룹 당 <strong>100개까지 저장</strong>할 수 있습니다.
           </InfoBanner>
 
+
           {loading && <State>불러오는 중…</State>}
           {loadError && <State>{loadError}</State>}
-          {!loading && !loadError && items.length === 0 && (
+          {!loading && !loadError && rows.length === 0 && (
             <State>아직 저장된 장소가 없어요.</State>
           )}
 
@@ -172,17 +299,31 @@ export default function FavoriteGroupDetail({ open, group, onClose }) {
                     <img src={heartIcon} alt="" />
                   </Heart>
                   <TextCol>
-                    {/* 🧩 이름/주소/거리 API 나오면 여기 채우기 */}
-                    <Primary>가게 #{it.marketId}</Primary>
-                    <Secondary>1.8km · 서울 동작구 상도1동</Secondary>
+                      <Primary>{it.name || "미상"}</Primary>
+                      <Secondary>{it.address || ""}</Secondary>
                   </TextCol>
                 </Left>
-                <RemoveBtn aria-label="삭제">
-                  <img src="/icons/map/mapdetail/x.svg" alt="" />
+                <RemoveBtn
+                  aria-label="삭제"
+                  onClick={() => askDelete(it)}
+                >
+                  <img src="/icons/map/mapdetail/x.svg" alt="삭제" />
                 </RemoveBtn>
               </Row>
             ))}
           </List>
+          
+          {confirmOpen && (
+  <ConfirmBackdrop onClick={handleCancelDelete}>
+    <ConfirmCard onClick={(e) => e.stopPropagation()}>
+      <ConfirmText>이 장소를 그룹에서 삭제합니다</ConfirmText>
+      <ConfirmActions>
+        <ConfirmBtnGhost onClick={handleCancelDelete}>취소</ConfirmBtnGhost>
+        <ConfirmBtnDanger onClick={handleConfirmDelete}>삭제</ConfirmBtnDanger>
+      </ConfirmActions>
+    </ConfirmCard>
+  </ConfirmBackdrop>
+)}
         </Body>
 
         <Footer>
@@ -191,10 +332,26 @@ export default function FavoriteGroupDetail({ open, group, onClose }) {
             &nbsp;즐겨찾기 추가
           </AddBtn>
         </Footer>
+        </>
+          )}
       </Modal>
+
+      <AddGroupSheet
+        open={editOpen}
+        mode="edit"
+        group={curGroup}
+        onClose={() => setEditOpen(false)}
+        onCloseAll={() => { setEditOpen(false); onClose?.(); }}
+        onUpdated={(updated) => {
+          setCurGroup((prev) => ({ ...prev, ...updated }))
+          onGroupUpdated?.(updated);
+          setEditOpen(false);
+        }}
+      />
     </>
   );
-}
+};
+  
 
 const Modal = styled.div`
   position: fixed;
@@ -325,6 +482,8 @@ const ModifyBtn = styled.div`
   padding: 10px 21px;
   align-items: center;
   border-radius: 215px;
+  border: 2px solid #1dc3ff;
+  cursor: pointer;
 `;
 
 const Banner = styled.div`
@@ -413,8 +572,8 @@ const SortButton = styled.button`
 
 const Body = styled.div`
   flex: 1;
-  overflow-y: auto;
-  padding: 12px 16px 0;
+  overflow-y: ${({ $showMap }) => ($showMap ? "hidden" : "auto")};
+  padding: ${({ $showMap }) => ($showMap ? "0" : "14px 16px 0")};
 `;
 
 const InfoBanner = styled.div`
@@ -504,4 +663,62 @@ const State = styled.div`
   color: #666;
   font-size: 16px;
   text-align: center;
+`;
+
+const MapBox = styled.div`
+  width: 100%;
+  height: calc(100vh - 280px); /* 헤더/배너 높이에 맞게 원하는 값으로 */
+  overflow: hidden;
+  background: #eee;
+`;
+
+const ConfirmBackdrop = styled.div`
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  background: rgba(0,0,0,0.45);
+  display: grid;
+  place-items: center;
+`;
+
+const ConfirmCard = styled.div`
+  width: calc(100% - 48px);
+  max-width: 360px;
+  background: #fff;
+  border-radius: 16px;
+  padding: 22px 20px 14px;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.18);
+`;
+
+const ConfirmText = styled.div`
+  font-size: 16px;
+  line-height: 22px;
+  color: #111;
+  text-align: center;
+  padding: 8px 6px 18px;
+`;
+
+const ConfirmActions = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+`;
+
+const ConfirmBtnGhost = styled.button`
+  border: none;
+  background: transparent;
+  color: #666;
+  font-size: 14px;
+  padding: 8px 10px;
+  cursor: pointer;
+`;
+
+const ConfirmBtnDanger = styled.button`
+  border: none;
+  background: transparent;
+  color: #1dc3ff;
+  font-weight: 600;
+  font-size: 14px;
+  padding: 8px 10px;
+  cursor: pointer;
 `;

@@ -2,6 +2,8 @@ import { use, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import axios from "axios";
+import api from "../lib/api";
+
 
 export default function Login() {
   const [username, setUsername] = useState("");
@@ -22,26 +24,26 @@ export default function Login() {
     };
 
     try {
-      const response = await axios.post(
-        "https://200percent.p-e.kr/account/login/",
+      const response = await api.post(
+        "/account/login/",
         loginData
       );
 
-      const accessToken = response.data.token.access_token;
+      const accessToken = response.data?.token?.access_token;
       if (accessToken) {
-        localStorage.setItem("accessToken", accessToken);
+  // 1) 저장 키를 'access_token' 으로 통일
+  localStorage.setItem("access_token", accessToken);
 
-        // (선택사항) axios의 기본 헤더로 설정하면, 앞으로 모든 요청에 토큰이 자동으로 포함됩니다.
-        axios.defaults.headers.common[
-          "Authorization"
-        ] = `Bearer ${accessToken}`;
+  // 2) (선택) 인스턴스에도 바로 붙여두기 — 새로고침하면 사라지니 인터셉터도 함께 쓰는게 안전
+  api.defaults.headers.common.Authorization = `Bearer ${accessToken}`;
+  // 만약 인스턴스가 아니라 전역 axios만 쓴다면 아래 줄:
+  // axios.defaults.headers.common.Authorization = `Bearer ${accessToken}`;
 
-        console.log("로그인 성공:", response.data);
-        navigate("/home");
-      } else {
-        // 토큰이 없는 비정상적인 성공 응답 처리
-        alert("로그인에 실패했습니다. (토큰 없음)");
-      }
+  console.log("로그인 성공:", response.data);
+  navigate("/home");
+} else {
+  alert("로그인에 실패했습니다. (토큰 없음)");
+}
     } catch (error) {
       console.error("로그인 실패:", error);
       // ✅ 2. 서버가 보내주는 에러 메시지를 사용자에게 표시

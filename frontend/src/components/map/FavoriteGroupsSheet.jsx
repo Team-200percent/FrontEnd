@@ -1,8 +1,8 @@
-import React, { useRef, useState, useEffect, useMemo, use } from "react";
+import React, { useRef, useState, useEffect, useMemo, } from "react";
 import styled from "styled-components";
 import AddGroupSheet from "./AddGroupSheet";
-import axios from "axios";
 import FavoriteGroupDetail from "../../pages/map/FavoriteGroupDetail";
+import api from "../../lib/api";
 
 export default function FavoriteGroupsSheet({
   open,
@@ -29,6 +29,14 @@ export default function FavoriteGroupsSheet({
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [detailGroup, setDetailGroup] = useState(null);
 
+  const [counts, setCounts] = useState({});
+
+  const getAuthHeaders = () => {
+    const t = localStorage.getItem("access_token");
+    const valid = t && t !== "null" && t !== "undefined" && String(t).trim() !== "";
+    return valid ? { Authorization: `Bearer ${t}` } : {};
+  };
+
   useEffect(() => {
     if (!isSortOpen) return;
     const onDown = (e) => {
@@ -45,8 +53,8 @@ export default function FavoriteGroupsSheet({
       setLoading(true);
       setLoadError("");
       try {
-        const res = await axios.get(
-          "https://200percent.p-e.kr/market/favoritegroup/"
+        const res = await api.get(
+          "/market/favoritegroup/"
         );
         // 서버가 배열로 응답 (명세 참고)
         setGroups(Array.isArray(res.data) ? res.data : []);
@@ -59,6 +67,52 @@ export default function FavoriteGroupsSheet({
     };
     fetchGroups();
   }, [open]);
+
+  useEffect(() => {
+    if (!open || groups.length === 0) {
+      setCounts({});
+      return;
+    }
+    let aborted = false;
+
+    const fetchCounts = async () => {
+      try {
+        const reqs = groups.map((g) => api.get(`/market/favoriteitem/${g.id}/`));
+        const results = await Promise.allSettled(reqs);
+
+        const map = {};
+        results.forEach((r, idx) => {
+          const gid = groups[idx].id;
+          if (r.status === "fulfilled") {
+            const data = r.value?.data;
+            // 명세: { count, results: [...] }
+            const c = Number(
+              data?.count ??
+                (Array.isArray(data?.results) ? data.results.length : 0)
+            );
+            map[gid] = isNaN(c) ? 0 : c;
+          } else {
+            map[gid] = 0; // 실패한 그룹은 0으로 처리(원하면 null 표시도 가능)
+          }
+        });
+
+        if (!aborted) setCounts(map);
+      } catch (err) {
+        if (!aborted) console.error("count 로딩 실패:", err);
+      }
+    };
+
+    fetchCounts();
+    return () => {
+      aborted = true;
+    };
+  }, [open, groups]);
+
+  const totalItems = useMemo(
+    () => groups.reduce((sum, g) => sum + (counts[g.id] || 0), 0),
+    [groups, counts]
+  );
+
 
   const onDragStart = (e) => {
     dragInfo.current = {
@@ -81,6 +135,8 @@ export default function FavoriteGroupsSheet({
 
   const handleCreated = (newGroup) => {
     setGroups((prev) => [newGroup, ...prev]);
+    setCounts((prev) => ({ ...prev, [newGroup.id]: 0 }));
+
   };
 
   const sortedGroups = useMemo(() => {
@@ -100,6 +156,52 @@ export default function FavoriteGroupsSheet({
     setDetailGroup(group);
     setIsDetailOpen(true);
   };
+
+  const handleDeleteGroup = async (groupId, e) => {
+    // 리스트 아이템 클릭(상세 열기)와 충돌 방지
+    if (e) e.stopPropagation();
+
+    const target = groups.find((g) => g.id === groupId);
+    const name = target?.name ? `‘${target.name}’` : "이 그룹";
+    if (!window.confirm(`${name}을(를) 삭제할까요?`)) return;
+
+    try {
+      await api.delete(`/market/favoritegroup/${groupId}/`, {
+        headers: getAuthHeaders(),
+      });
+
+      // 목록/선택 상태에서 제거
+      setGroups((prev) => prev.filter((g) => g.id !== groupId));
+      setSelectedGroups((prev) => {
+        const next = new Set(prev);
+        next.delete(groupId);
+        return next;
+      });
+
+      // 상세가 이 그룹이면 닫기
+      if (detailGroup?.id === groupId) {
+        setIsDetailOpen(false);
+        setDetailGroup(null);
+      }
+    } catch (err) {
+      console.error("그룹 삭제 실패:", err?.response || err);
+      const msg =
+        err?.response?.data?.detail ||
+        "그룹 삭제에 실패했어요. 잠시 후 다시 시도해주세요.";
+      alert(msg);
+    }
+  };
+
+  const handleGroupUpdated = (updated) => {
+    setGroups((prev) =>
+      prev.map((g) => (g.id === updated.id ? { ...g, ...updated } : g))
+  );
+
+  setDetailGroup((prev) =>
+    prev && prev.id === updated.id ? { ...prev, ...updated } : prev
+  );
+
+};
 
   if (!open) return null; // open이 false면 아무것도 렌더링하지 않음
 
@@ -172,8 +274,8 @@ export default function FavoriteGroupsSheet({
                 onClick={() =>
                   setLoadError("") ||
                   setLoading(true) ||
-                  axios
-                    .get("https://200percent.p-e.kr/market/favoritegroup/")
+                  api
+                    .get("/market/favoritegroup/")
                     .then((r) => setGroups(Array.isArray(r.data) ? r.data : []))
                     .catch(() => setLoadError("그룹을 불러오지 못했어요."))
                     .finally(() => setLoading(false))
@@ -199,7 +301,7 @@ export default function FavoriteGroupsSheet({
                 <GroupWrapper>
                   <GroupName>{group.name}</GroupName>
                   <GroupTextWrap>
-                    <span>개수 {group.count ?? 0}/100</span>
+                    <span>개수 {counts[group.id] ?? 0}/100</span>
                     <MetaDivider />
 
                     {group.visibility ? (
@@ -221,7 +323,7 @@ export default function FavoriteGroupsSheet({
                     )}
                   </GroupTextWrap>
                 </GroupWrapper>
-                <RemoveIcon $selected={selectedGroups.has(group.id)}>
+                <RemoveIcon role="button" title="그룹 삭제" aria-label="그룹 삭제" onClick={(e) => handleDeleteGroup(group.id, e)}>
                   <img src="/icons/map/mapdetail/x.svg" alt="제거 아이콘" />
                 </RemoveIcon>
               </GroupItem>
@@ -241,6 +343,7 @@ export default function FavoriteGroupsSheet({
         open={isDetailOpen}
         group={detailGroup}
         onClose={() => setIsDetailOpen(false)}
+        onGroupUpdated={handleGroupUpdated}
       />
 
       <AddGroupSheet
