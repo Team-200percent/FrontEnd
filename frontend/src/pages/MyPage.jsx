@@ -3,6 +3,39 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import styled from "styled-components";
 import { useNavigate } from "react-router-dom";
 
+const LEVEL_ASSETS = {
+  1: {
+    level: "/icons/mypage/level/1.png",
+    num: "/icons/mypage/levelnum/1.png",
+    effect: "/icons/mypage/effect/bronze-effect.png",
+    badge: "/icons/mypage/badge/bronze.png",
+  },
+  2: {
+    level: "/icons/mypage/level/2.png",
+    num: "/icons/mypage/levelnum/2.png",
+    effect: "/icons/mypage/effect/silver-effect.png",
+    badge: "/icons/mypage/badge/silver.png",
+  },
+  3: {
+    level: "/icons/mypage/level/3.png",
+    num: "/icons/mypage/levelnum/3.png",
+    effect: "/icons/mypage/effect/gold-effect.png",
+    badge: "/icons/mypage/badge/gold.png",
+  },
+  4: {
+    level: "/icons/mypage/level/4.png",
+    num: "/icons/mypage/levelnum/4.png",
+    effect: "/icons/mypage/effect/purple-effect.png",
+    badge: "/icons/mypage/badge/purple.png",
+  },
+  5: {
+    level: "/icons/mypage/level/5.png",
+    num: "/icons/mypage/levelnum/5.png",
+    effect: "/icons/mypage/effect/black-effect.png",
+    badge: "/icons/mypage/badge/black.png",
+  },
+};
+
 const SHEET = { COLLAPSED: "COLLAPSED", EXPANDED: "EXPANDED" };
 
 function LevelProgressBar({ level }) {
@@ -45,6 +78,11 @@ export default function MyPage() {
   const drag = useRef({ startY: 0, dragging: false, delta: 0 });
 
   const THRESHOLD = 80; // 스냅 임계값(px)
+
+  const assets = React.useMemo(
+    () => LEVEL_ASSETS[level] ?? LEVEL_ASSETS[1],
+    [level]
+  );
 
   const onDragStart = (e) => {
     const y = e.touches ? e.touches[0].clientY : e.clientY;
@@ -131,25 +169,19 @@ export default function MyPage() {
     <Page>
       <Hero>
         <TopWrap>
-          <BackBtn onClick={handleBackButton}>
-            <img src="/icons/mypage/leftarrow.svg" alt="back" />
-          </BackBtn>
           <TitleRow>
             <h1>마이페이지</h1>
           </TitleRow>
-          <CloseBtn onClick={() => nav(-1)}>
-            <img src="/icons/mypage/x.svg" alt="close" />
-          </CloseBtn>
         </TopWrap>
 
         <Level>
-          <img src="/images/mypage/LEVEL.png" alt="LEVEL" />
+          <img src={assets.level} alt="LEVEL" />
         </Level>
         <LevelNum>
-          <img src="/images/mypage/1.png" alt="LEVEL_NUM" />
+          <img src={assets.num} alt="LEVEL_NUM" />
         </LevelNum>
         <Effect>
-          <img src="/images/mypage/effect.png" alt="effect" />
+          <img src={assets.effect} alt="effect" />
         </Effect>
         <Shadow>
           <img src="/images/mypage/shadow.svg" alt="shadow" />
@@ -158,7 +190,7 @@ export default function MyPage() {
           <img src="/images/mypage/character.png" alt="duck" />
         </Mascot>
         <LevelBadge>
-          <img src="/images/mypage/bronze.png" alt="level badge" />
+          <img src={assets.badge} alt="level badge" />
         </LevelBadge>
       </Hero>
 
@@ -299,7 +331,7 @@ const TopWrap = styled.div`
   margin-top: 10%;
   padding: 0 30px;
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
   height: 56px;
   z-index: 10;
@@ -347,7 +379,7 @@ const LevelNum = styled.div`
   left: 10%;
   top: 27%;
   img {
-    width: 32px;
+    width: 52px;
     height: 60px;
   }
 `;
