@@ -1,94 +1,57 @@
-// src/pages/Home.jsx
-
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import styled from "styled-components";
+import api from "../../lib/api";
 import { LEVELS } from "../../data/DummyLevel";
 import LevelSelector from "../../components/home/LevelSelector";
-import WeeklyMissionBox from "../../components/home/WeeklyMissionBox"; // ✅ 추가
+import WeeklyMissionBox from "../../components/home/WeeklyMissionBox";
 import LevelDropdown from "../../components/home/LevelDropdown";
+import { CATEGORY_ICONS, LEVEL_META } from "../../data/HomeData";
 
-const CATEGORY_ICONS = {
-  heart: {
-    active_unpressed: "/icons/home/heart/active.png",
-    active_pressed: "/icons/home/heart/active-pressed.png",
-    inactive_unpressed: "/icons/home/heart/inactive.png",
-    inactive_pressed: "/icons/home/heart/inactive-pressed.png",
-  },
-  like: {
-    active_unpressed: "/icons/home/like/active.png",
-    active_pressed: "/icons/home/like/active-pressed.png",
-    inactive_unpressed: "/icons/home/like/inactive.png",
-    inactive_pressed: "/icons/home/like/inactive-pressed.png",
-  },
-  pencil: {
-    active_unpressed: "/icons/home/pencil/active.png",
-    active_pressed: "/icons/home/pencil/active-pressed.png",
-    inactive_unpressed: "/icons/home/pencil/inactive.png",
-    inactive_pressed: "/icons/home/pencil/inactive-pressed.png",
-  },
-  map: {
-    active_unpressed: "/icons/home/map/active.png",
-    active_pressed: "/icons/home/map/active-pressed.png",
-    inactive_unpressed: "/icons/home/map/inactive.png",
-    inactive_pressed: "/icons/home/map/inactive-pressed.png",
-  },
-  person: {
-    active_unpressed: "/icons/home/person/active.png",
-    active_pressed: "/icons/home/person/active-pressed.png",
-    inactive_unpressed: "/icons/home/person/inactive.png",
-    inactive_pressed: "/icons/home/person/inactive-pressed.png",
-  },
-  facility: {
-    active_unpressed: "/icons/home/facility/active.png",
-    active_pressed: "/icons/home/facility/active-pressed.png",
-    inactive_unpressed: "/icons/home/facility/inactive.png",
-    inactive_pressed: "/icons/home/facility/inactive-pressed.png",
-  },
-  _default: {
-    active_unpressed: "/icons/home/default/active.png",
-    active_pressed: "/icons/home/default/active-pressed.png",
-    inactive_unpressed: "/icons/home/default/inactive.png",
-    inactive_pressed: "/icons/home/default/inactive-pressed.png",
-  },
+const API_BASE = import.meta.env.VITE_API_BASE;
+
+const getAuthHeaders = () => {
+  const token = localStorage.getItem("access_token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
-function StageIconImg({ category, status, pressed }) {
-  const set = CATEGORY_ICONS[category] || CATEGORY_ICONS._default;
-  const isActive = status === "active" || status === "completed"; // completed도 active 계열로 보고 싶으면 이렇게
-  const variant = isActive
-    ? pressed
-      ? "active_pressed"
-      : "active_unpressed"
-    : pressed
-    ? "inactive_pressed"
-    : "inactive_unpressed";
+const resolveCategory = (stage) => {
+  if (stage.category) return stage.category; // 서버 응답 우선
+  if (stage.type === "life") return "facility";
+  if (stage.type === "stage") return "heart";
+  if (stage.type === "milestone") return "like";
+  if (stage.type === "start") return "map";
+  return "heart";
+};
 
-  return <img src={set[variant]} alt={`${category}-${variant}`} />;
-}
+const attachMission = (baseStage, apiData) => {
+  return {
+    ...baseStage,
+    category: apiData?.category ?? baseStage.category,
+    requireverification: apiData?.requireverification ?? false,
+    missionDetail: {
+      title: apiData?.title ?? baseStage?.missionDetail?.title ?? "미션",
+      xp: apiData?.xp ?? baseStage?.missionDetail?.xp ?? 0,
+      description: apiData?.description ?? null,
+      requirements: apiData?.requirements ?? null,
+    },
+  };
+};
 
 const MissionTooltip = ({ stageData, onClose }) => {
-  const tooltipRef = useRef(null); // 말풍선 DOM 요소를 가리킬 ref
-
-  // 1. 위치 계산: 아이콘 아래에 나타나도록 top 값을 더하기
+  const tooltipRef = useRef(null);
 
   const topPosition = stageData.tooltipTop;
   const anchor = stageData.tooltipAnchor || "center";
   const anchorDirection = stageData.tooltipAnchorDirection || "top";
 
-  // 3. 외부 클릭 감지 로직
   useEffect(() => {
     const handleClickOutside = (event) => {
-      // ref가 있고, 클릭된 곳이 말풍선 내부가 아닐 때
       if (tooltipRef.current && !tooltipRef.current.contains(event.target)) {
-        onClose(); // 닫기 함수 호출
+        onClose();
       }
     };
-    // 이벤트 리스너 등록
     document.addEventListener("mousedown", handleClickOutside);
-    // 컴포넌트가 사라질 때 이벤트 리스너 제거 (메모리 누수 방지)
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [onClose]);
 
   return (
@@ -110,8 +73,7 @@ const MissionTooltip = ({ stageData, onClose }) => {
 
 function getStageIcon(stage, isPressed) {
   const set = CATEGORY_ICONS[stage.category] || CATEGORY_ICONS._default;
-
-  const isActive = stage.status === "active"; // 또는 서버 규칙에 맞춰 조정
+  const isActive = stage.status === "active"; // 규칙에 맞게 조정 가능
   const variant = isActive
     ? isPressed
       ? "active_pressed"
@@ -119,14 +81,11 @@ function getStageIcon(stage, isPressed) {
     : isPressed
     ? "inactive_pressed"
     : "inactive_unpressed";
-
   return <img src={set[variant]} alt={`${stage.category} ${variant}`} />;
 }
 
 const MissionProgress = ({ mission }) => {
   const progress = (mission.completed / mission.total) * 100;
-
-  // ✅ 드래그 경계용 부모 ref
   const areaRef = useRef(null);
 
   return (
@@ -143,8 +102,6 @@ const MissionProgress = ({ mission }) => {
         <strong>미션</strong>을 <strong>수행</strong>하고{" "}
         <strong>레벨업</strong> 해보세요!
       </ProgressLabel>
-
-      {/* ✅ 분리된 컴포넌트 사용: 부모 ref 전달 */}
       <WeeklyMissionBox initialX={-80} initialY={45} boundsRef={areaRef} />
     </ProgressWrapper>
   );
@@ -155,73 +112,155 @@ export default function Home() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [activeStageIndex, setActiveStageIndex] = useState(null);
 
+  // 서버에서 합쳐진 스테이지
+  const [serverStages, setServerStages] = useState([]);
+  const [loadingStages, setLoadingStages] = useState(false);
+  const [stageError, setStageError] = useState(null);
+
+  const levelData = useMemo(
+    () => LEVELS.find((l) => l.level === currentLevel),
+    [currentLevel]
+  );
+  const meta = LEVEL_META[currentLevel] ?? LEVEL_META[1];
+
+  useEffect(() => {
+    if (!levelData?.stages?.length) {
+      setServerStages([]);
+      return;
+    }
+
+    const controller = new AbortController(); 
+    const fetchStages = async () => {
+      try {
+        setLoadingStages(true);
+        setStageError(null);
+
+        // 인덱스는 1부터
+        const promises = levelData.stages.map((_, i) =>
+          api
+            .get(
+              `/mission/levelmission/${currentLevel}/${i + 1}/`,
+              {
+                headers: { ...getAuthHeaders() },
+                signal: controller.signal,
+              }
+            )
+            .then((res) => res.data)
+            .catch(() => null) // 한 개 실패해도 전체는 유지
+        );
+
+        const results = await Promise.all(promises);
+
+        const merged = levelData.stages.map((st, i) =>
+          attachMission(
+            { ...st, category: resolveCategory(st) },
+            results[i]
+          )
+        );
+
+        setServerStages(merged);
+      } catch (e) {
+        if (api.isCancel?.(e)) return;
+        setStageError(e.message || "스테이지 로딩 실패");
+        // 실패 시에도 로컬 데이터에 기본 미션 텍스트는 세팅
+        setServerStages(
+          levelData.stages.map((st) => ({
+            ...st,
+            category: resolveCategory(st),
+            missionDetail: st.missionDetail ?? { title: "미션", xp: 0 },
+          }))
+        );
+      } finally {
+        setLoadingStages(false);
+      }
+    };
+
+    fetchStages();
+    return () => controller.abort();
+  }, [currentLevel, levelData]);
+
   const handleLevelChange = (level) => {
     setCurrentLevel(level);
     setIsDropdownOpen(false);
   };
 
   const handleStageClick = (index) => {
-    // 이미 열려있는 아이콘을 다시 클릭하면 닫습니다.
-    if (activeStageIndex === index) {
-      setActiveStageIndex(null);
-    } else {
-      setActiveStageIndex(index);
-    }
+    setActiveStageIndex((prev) => (prev === index ? null : index));
   };
 
   return (
     <Wrapper>
-      <LevelSelector
-        currentLevel={currentLevel}
-        onLevelChange={setCurrentLevel}
-      />
+      <LevelSelector currentLevel={currentLevel} onLevelChange={setCurrentLevel} />
+
       <Content>
-        {LEVELS.filter((level) => level.level === currentLevel).map(
-          (levelData) => (
-            <LevelBlock key={levelData.level}>
-              <LevelHeader
-                $imageUrl={levelData.headerImage}
-                onClick={() => setIsDropdownOpen((prev) => !prev)}
-              >
-                <span>LEVEL {levelData.level}</span>
-                <TitleWrap>
-                  <h1>{levelData.title}</h1>
-                  <p>{levelData.subtitle}</p>
-                </TitleWrap>
-              </LevelHeader>
+        {!!levelData && (
+          <LevelBlock>
+            {/* 헤더: LEVEL_META 사용 */}
+            <LevelHeader
+              $imageUrl={meta.headerImage}
+              onClick={() => setIsDropdownOpen((prev) => !prev)}
+            >
+              <span>LEVEL {currentLevel}</span>
+              <TitleWrap>
+                <h1>{meta.title}</h1>
+                <p>{meta.subtitle}</p>
+              </TitleWrap>
+            </LevelHeader>
 
-              <LevelDropdown
-                isOpen={isDropdownOpen}
-                levels={LEVELS}
-                currentLevel={currentLevel}
-                onLevelChange={setCurrentLevel}
-              />
+            <LevelDropdown
+              isOpen={isDropdownOpen}
+              levels={LEVELS}
+              currentLevel={currentLevel}
+              onLevelChange={setCurrentLevel}
+            />
 
-              <MissionProgress mission={levelData.mission} />
+            <MissionProgress mission={levelData.mission} />
 
-              <GameMapBackGround>
-                <GameMapContainer>
-                  {stages.map((stage, i) => {
-                    const pressed = activeStageIndex === i;
+            <GameMapBackGround>
+              <GameMapContainer>
+                {loadingStages && (
+                  <div style={{ padding: 8, fontSize: 12, color: "#888" }}>
+                    미션 불러오는 중…
+                  </div>
+                )}
+                {stageError && (
+                  <div style={{ padding: 8, fontSize: 12, color: "#d00" }}>
+                    미션 불러오기 실패
+                  </div>
+                )}
+
+                {serverStages.map((stage, i) => {
+                  const pressed = activeStageIndex === i;
+                  return (
                     <StageIcon
                       key={i}
+                      $status={stage.status}
+                      $type={stage.type}
                       style={{ top: stage.top, left: stage.left }}
-                      onClick={() => setActiveStageIndex(pressed ? null : i)}
+                      onClick={() => handleStageClick(i)}
+                      disabled={loadingStages}
                     >
                       {getStageIcon(stage, pressed)}
-                    </StageIcon>;
-                  })}
+                    </StageIcon>
+                  );
+                })}
 
-                  {activeStageIndex !== null && stages[activeStageIndex] && (
-                    <MissionTooltip
-                      stageData={stages[activeStageIndex]}
-                      onClose={() => setActiveStageIndex(null)}
-                    />
-                  )}
-                </GameMapContainer>
-              </GameMapBackGround>
-            </LevelBlock>
-          )
+                {activeStageIndex !== null && serverStages[activeStageIndex] && (
+                  <MissionTooltip
+                    stageData={{
+                      ...serverStages[activeStageIndex],
+                      missionDetail:
+                        serverStages[activeStageIndex].missionDetail ?? {
+                          title: "미션 정보 없음",
+                          xp: 0,
+                        },
+                    }}
+                    onClose={() => setActiveStageIndex(null)}
+                  />
+                )}
+              </GameMapContainer>
+            </GameMapBackGround>
+          </LevelBlock>
         )}
       </Content>
     </Wrapper>
