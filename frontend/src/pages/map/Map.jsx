@@ -1,7 +1,6 @@
 // src/pages/map/Map.jsx
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import axios from "axios";
 import styled from "styled-components";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -13,6 +12,7 @@ import PlaceSheet from "../../components/map/PlaceSheet/PlaceSheet";
 import FavoriteGroupsSheet from "../../components/map/FavoriteGroupsSheet";
 
 import "../../styles/Map.css";
+import api from "../../lib/api";
 
 const KAKAO_APP_KEY = import.meta.env.VITE_KAKAO_APP_KEY;
 const SDK_URL = `https://dapi.kakao.com/v2/maps/sdk.js?autoload=false&appkey=${KAKAO_APP_KEY}`;
@@ -70,8 +70,8 @@ export default function Map() {
     setSelectedPlace(null);
     setSheetViewMode("compact");
     try {
-      const response = await axios.get(
-        "https://200percent.p-e.kr/market/simple/",
+      const response = await api.get(
+        "/market/simple/",
         {
           params: { lat, lng },
         }
@@ -191,7 +191,7 @@ export default function Map() {
 
     const fetchAllMarketLocations = async () => {
       try {
-        const response = await axios.get("https://200percent.p-e.kr/market/");
+        const response = await api.get("/market/");
         setAllMarkets(response.data);
         response.data.forEach((market) => {
           const markerPosition = new window.kakao.maps.LatLng(

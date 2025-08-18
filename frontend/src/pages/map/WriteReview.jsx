@@ -1,6 +1,7 @@
 import React, { useRef, useState } from "react";
 import styled from "styled-components";
-import axios from "axios";
+import api from "../../lib/api";
+
 
 const KEYWORD_TAGS = [
   {
@@ -90,9 +91,9 @@ export default function WriteReview({ place, onClose }) {
         return;
       }
 
-      // 3. axios.post로 API 요청
-      const response = await axios.post(
-        "https://200percent.p-e.kr/review/",
+      // 3. api.post로 API 요청
+      const response = await api.post(
+        "/review/",
         reviewPayload,
         {
           // Query Parameter로 lat, lng 전달
