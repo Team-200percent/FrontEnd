@@ -1,32 +1,77 @@
 // pages/map/MapSearch.jsx
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import styled from "styled-components";
 import SearchBar from "../../components/map/SearchBar";
 import CategoryChips from "../../components/map/CategoryChips";
 import { useLocation, useNavigate } from "react-router-dom";
+import { MAP_ICONS } from "../../data/MapData";
+import api from "../../lib/api";
 
+
+// 최근 항목 더미 데이터
 const recentPlaces = [
   { id: 1, name: "다솜문화공간" },
-  { id: 2, name: "다솜문화공간" },
+  { id: 2, name: "흑석커피" },
 ];
 
 export default function MapSearch() {
   const location = useLocation();
   const navigate = useNavigate();
-  const activeCategory = location.state?.activeCategory || null;
-  const searchInputRef = useRef(null); // SearchBar의 input을 가리킬 ref 생성
-  const [keyword, setKeyword] = useState(""); // 검색어 상태 관리
+  
+  const [keyword, setKeyword] = useState("");
+  const [activeCategory, setActiveCategory] = useState(location.state?.activeCategory || null);
+  const [searchResults, setSearchResults] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const searchInputRef = useRef(null);
 
   useEffect(() => {
     if (searchInputRef.current) {
-      searchInputRef.current.focus(); // 컴포넌트가 마운트되면 검색창에 포커스
+      searchInputRef.current.focus();
     }
   }, []);
 
+  useEffect(() => {
+    if (!activeCategory) {
+      setSearchResults([]); // 선택된 카테고리가 없으면 검색 결과 비우기
+      return;
+    }
+    const fetchCategoryResults = async () => {
+      setIsLoading(true);
+      try {
+        const response = await api.get("/market/category/", {
+          params: { type: activeCategory }
+        });
+        setSearchResults(response.data);
+      } catch (error) {
+        console.error("카테고리 검색 실패:", error);
+        setSearchResults([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchCategoryResults();
+  }, [activeCategory]);
+
+  const handleCategorySelect = (key) => {
+    const selected = MAP_ICONS.find(icon => icon.key === key);
+    if (selected) {
+      setKeyword(selected.label);
+    }
+    // 이미 선택된 칩을 다시 누르면 선택 해제 (null)
+    setActiveCategory(prev => prev === key ? null : key);
+  };
+  
+  const handleItemClick = (item) => {
+    if (item.lat && item.lng) {
+      navigate('/map', { state: { centerTo: { lat: item.lat, lng: item.lng } } });
+    } else {
+      console.warn("아이템에 위치 정보(lat, lng)가 없습니다.");
+    }
+  };
+  
   const onSubmit = (q) => {
     const query = (q ?? keyword).trim();
     if (!query) return;
-    // /map으로 검색어 전달 → Map에서 자동 처리
     navigate("/map", { state: { searchQuery: query } });
   };
 
@@ -40,39 +85,65 @@ export default function MapSearch() {
         onSubmit={onSubmit}
         placeholder="장소, 가게, 음식점 등을 검색하세요"
       />
-      <CategoryChips layout="flow" defaultActive={activeCategory} />
+      <CategoryChips
+        defaultActive={activeCategory}
+        onSelect={handleCategorySelect}
+      />
 
-      <BottomContainer>
-        <Line />
-        <AdBanner>
-          <img src="/images/mapsearchad.png" alt="Ad Banner" />
-        </AdBanner>
-
-        <Content>
-          <SectionHeader>
-            <Pill>최근</Pill>
-          </SectionHeader>
-
-          <List>
-            {recentPlaces.map((p) => (
-              <Item key={p.id} onClick={() => onSubmit(p.name)}>
-                <Pin>
-                  <img src="/icons/map/listicon.svg" alt="" />
-                </Pin>
-                <Title>{p.name}</Title>
-              </Item>
-            ))}
-          </List>
-        </Content>
-      </BottomContainer>
+      {/* ✅ activeCategory 값에 따라 조건부 렌더링 */}
+      {activeCategory ? (
+        // 카테고리가 선택되었을 때: API 검색 결과 표시
+        <ResultsContainer>
+          {isLoading ? (
+            <p>검색 중...</p>
+          ) : searchResults.length > 0 ? (
+            <ResultList>
+              {searchResults.map((item, index) => (
+                <ResultItem key={index} onClick={() => handleItemClick(item)}>
+                  <Thumbnail src={item.images[0]?.image_url || '/images/placeholder.png'} alt={item.name} />
+                  <ItemInfo>
+                    <ItemTitle>{item.name}</ItemTitle>
+                    <ItemCategory>{item.category}</ItemCategory>
+                    <ItemStats>
+                      <span>⭐ {item.avg_rating?.toFixed(1) ?? 'N/A'}</span>
+                      <span>리뷰 {item.review_count}</span>
+                      <Status $isOpen={item.is_open}>{item.is_open ? '영업중' : '영업종료'}</Status>
+                    </ItemStats>
+                  </ItemInfo>
+                </ResultItem>
+              ))}
+            </ResultList>
+          ) : (
+            <p>검색 결과가 없습니다.</p>
+          )}
+        </ResultsContainer>
+      ) : (
+        // 카테고리가 선택되지 않았을 때: '최근' 항목 표시
+        <BottomContainer>
+          <Line />
+          <AdBanner>
+            <img src="/images/mapsearchad.png" alt="Ad Banner" />
+          </AdBanner>
+          <Content>
+            <SectionHeader>
+              <Pill>최근</Pill>
+            </SectionHeader>
+            <List>
+              {recentPlaces.map((p) => (
+                <Item key={p.id} onClick={() => onSubmit(p.name)}>
+                  <Pin><img src="/icons/map/listicon.svg" alt="" /></Pin>
+                  <Title>{p.name}</Title>
+                </Item>
+              ))}
+            </List>
+          </Content>
+        </BottomContainer>
+      )}
     </Wrapper>
   );
 }
 
-const BottomContainer = styled.div`
-  margin-top: 140px;
-`;
-
+// --- 전체 스타일링 ---
 const Wrapper = styled.div`
   width: min(100vw, 430px);
   margin: 0 auto;
@@ -83,7 +154,10 @@ const Wrapper = styled.div`
   flex-direction: column;
 `;
 
-/* 검색박스(56px) + 위 여백 + 칩(대략 48~56px) 공간만큼 아래에서 시작 */
+const BottomContainer = styled.div`
+  margin-top: 140px;
+`;
+
 const Content = styled.div`
   padding: 20px; /* 필요하면 120~140px 사이로 미세조정 */
 `;
@@ -135,31 +209,72 @@ const List = styled.div`
   gap: 10px;
 `;
 
-const Item = styled.div`
-  display: grid;
-  grid-template-columns: 28px 1fr;
-  align-items: center;
-  column-gap: 10px;
-  padding: 10px 6px 14px;
-  border-bottom: 1px solid #eee;
-`;
 
-const Pin = styled.div`
-  width: 22px;
-  height: 22px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: #eee;
-  img {
-    width: 100%;
-    height: 100%;
-    display: block;
+const Item = styled.div`
+  display: grid; grid-template-columns: 28px 1fr;
+  align-items: center; column-gap: 10px;
+  padding: 10px 6px 14px; border-bottom: 1px solid #eee;
+  cursor: pointer;
+`;
+const Pin = styled.div` /* ... */ `;
+const Title = styled.div` font-size: 16px; font-weight: 500; color: #111; `;
+
+// 검색 결과 스타일
+const ResultsContainer = styled.div`
+  margin-top: 15px;
+  padding: 20px;
+  flex: 1;
+  overflow-y: auto;
+`;
+const ResultList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+`;
+const ResultItem = styled.div`
+  display: flex;
+  gap: 16px;
+  padding: 12px;
+  border-radius: 8px;
+  background-color: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  cursor: pointer;
+  transition: transform 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
   }
 `;
-
-const Title = styled.div`
+const Thumbnail = styled.img`
+  width: 90px;
+  height: 90px;
+  border-radius: 8px;
+  object-fit: cover;
+  background-color: #f0f2f5;
+`;
+const ItemInfo = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+`;
+const ItemTitle = styled.h3`
   font-size: 16px;
-  font-weight: 500;
-  color: #111;
+  font-weight: 700;
+`;
+const ItemCategory = styled.p`
+  font-size: 12px;
+  color: #888;
+  margin: 4px 0;
+`;
+const ItemStats = styled.div`
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #555;
+`;
+const Status = styled.span`
+  font-weight: 600;
+  color: ${({ $isOpen }) => $isOpen ? '#1DC3FF' : '#E33150'};
 `;
