@@ -82,7 +82,7 @@ export default function Map() {
           name: simpleInfo.name,
           address: simpleInfo.address,
           hours: simpleInfo.business_hours,
-          type: simpleInfo.type,
+          category: simpleInfo.category,
           rating: simpleInfo.avg_rating,
           isOpen: simpleInfo.is_open,
           isFavorite: simpleInfo.is_favorite,
