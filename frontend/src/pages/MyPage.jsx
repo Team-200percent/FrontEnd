@@ -38,6 +38,12 @@ const LEVEL_ASSETS = {
 
 const SHEET = { COLLAPSED: "COLLAPSED", EXPANDED: "EXPANDED" };
 
+const getAuthHeaders = () => {
+  const token =
+    localStorage.getItem("access_token") || localStorage.getItem("accessToken");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
 function LevelProgressBar({ level }) {
   const levels = [1, 2, 3, 4, 5]; // 레벨 라벨
   const segments = levels.length - 1; // 점 개수 = 라벨 개수 - 1
@@ -71,6 +77,10 @@ function LevelProgressBar({ level }) {
 export default function MyPage() {
   const [level, setLevel] = useState(1);
   const [progress, setProgress] = useState(0.4); // 예시로 50% 진행
+
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(null);
 
   const nav = useNavigate();
   const [sheetState, setSheetState] = useState(SHEET.COLLAPSED);
@@ -141,6 +151,45 @@ export default function MyPage() {
     }
   };
 
+  useEffect(() => {
+  let alive = true;
+  (async () => {
+    try {
+      setLoading(true);
+      setFetchError(null);
+      const res = await api.get("/account/mypage/", {
+        headers: { ...getAuthHeaders() },
+      });
+      if (!alive) return;
+
+      const data = res.data || {};
+      setProfile(data);
+
+      // 레벨/진행도 반영
+      setLevel(Number(data.user_level ?? 1));
+
+      // 진행률 계산 로직이 정해지지 않았으면 0으로 두거나, 임시로 XP/100 사용
+      // setProgress(Math.max(0, Math.min(1, (data.user_xp ?? 0) / 100)));
+    } catch (e) {
+      if (!alive) return;
+      // 401 처리
+      if (e?.response?.status === 401) {
+        alert("로그인이 필요합니다.");
+        // 로그인 페이지 라우트가 /login 이라면:
+        // nav("/login");
+      } else {
+        console.error("마이페이지 조회 실패:", e);
+        setFetchError(e?.message || "마이페이지 조회 실패");
+      }
+    } finally {
+      if (alive) setLoading(false);
+    }
+  })();
+  return () => {
+    alive = false;
+  };
+}, []);
+
   // 브라우저/안드 ‘뒤로가기’: 펼쳐져 있으면 접기
   useEffect(() => {
     const onPop = () => setSheetState(SHEET.COLLAPSED);
@@ -209,30 +258,29 @@ export default function MyPage() {
         <Handle />
         <SheetInner $expanded={sheetState === SHEET.EXPANDED}>
           <DisplayName>
-            중앙대김동작
-            <EditBtn>내 정보 수정</EditBtn>
+            {profile?.nickname || profile?.username || "사용자"}
           </DisplayName>
 
           <LevelProgressBar level={level} progress={progress} />
 
-          <StatsGrid>
-            <StatItem>
-              <StatValue>0</StatValue>
-              <StatLabel>리뷰</StatLabel>
-            </StatItem>
-            <StatItem>
-              <StatValue>0</StatValue>
-              <StatLabel>팔로잉</StatLabel>
-            </StatItem>
-            <StatItem>
-              <StatValue>0</StatValue>
-              <StatLabel>팔로워</StatLabel>
-            </StatItem>
-            <StatItem>
-              <StatValue>0</StatValue>
-              <StatLabel>미션완료</StatLabel>
-            </StatItem>
-          </StatsGrid>
+<StatsGrid>
+  <StatItem>
+    <StatValue>{profile?.review_count ?? 0}</StatValue>
+    <StatLabel>리뷰</StatLabel>
+  </StatItem>
+  <StatItem>
+    <StatValue>{profile?.following_count ?? 0}</StatValue>
+    <StatLabel>팔로잉</StatLabel>
+  </StatItem>
+  <StatItem>
+    <StatValue>{profile?.follower_count ?? 0}</StatValue>
+    <StatLabel>팔로워</StatLabel>
+  </StatItem>
+  <StatItem>
+    <StatValue>{profile?.user_completedmissions ?? 0}</StatValue>
+    <StatLabel>미션완료</StatLabel>
+  </StatItem>
+</StatsGrid>
 
           <SettingsList>
             <SettingItem>
@@ -253,6 +301,7 @@ export default function MyPage() {
             <>
               <Section>
                 <h2>나의 취향</h2>
+                {/* <EditBtn>내 정보 수정</EditBtn> */}
                 <Tags>
                   {[
                     "조용한 카페",
