@@ -8,7 +8,9 @@ const SearchBar = forwardRef(
       mode = "display",
       placeholder = "장소를 검색해보세요",
       defaultValue = "",
-      onSubmit, // (선택) 직접 제출 핸들러를 쓰고 싶을 때
+      onSubmit,
+      value,
+      onChange
     },
     ref
   ) => {
@@ -16,7 +18,7 @@ const SearchBar = forwardRef(
     const navigate = useNavigate();
 
     const submit = () => {
-      const q = query.trim();
+      const q = (value ?? query).trim();
       if (!q) return;
       if (onSubmit) {
         onSubmit(q);
@@ -54,17 +56,10 @@ const SearchBar = forwardRef(
               <Input
                 ref={ref}
                 type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                value={value ?? query}
+                onChange={(e) => onChange ? onChange(e.target.value) : setQuery(e.target.value)}
                 placeholder={placeholder}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.stopPropagation();
-                    submit();
-                  }
-                }}
-                // display 모드에서는 박스 클릭이 페이지 이동이므로,
-                // input 모드일 때만 박스 클릭 전파 막기
+                onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); submit(); } }}
                 onClick={(e) => e.stopPropagation()}
               />
             ) : (
