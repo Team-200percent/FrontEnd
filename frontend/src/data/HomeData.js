@@ -1,3 +1,16 @@
+export const STAGE_POSITIONS = [
+  { top: "17%", left: "12%", tooltipTop: "27%", tooltipAnchor: "8%", tooltipAnchorDirection: "top" },
+  { top: "17%", left: "41%", tooltipTop: "27%", tooltipAnchor: "41%", tooltipAnchorDirection: "top" },
+  { top: "17%", left: "70%", tooltipTop: "27%", tooltipAnchor: "72%", tooltipAnchorDirection: "top" },
+  { top: "32%", left: "88%", tooltipTop: "41%", tooltipAnchor: "92%", tooltipAnchorDirection: "top" },
+  { top: "49%", left: "70%", tooltipTop: "58%", tooltipAnchor: "72%", tooltipAnchorDirection: "top" },
+  { top: "49%", left: "41%", tooltipTop: "58%", tooltipAnchor: "41%", tooltipAnchorDirection: "top" },
+  { top: "65%", left: "12%", tooltipTop: "27%", tooltipAnchor: "9%",  tooltipAnchorDirection: "bottom" },
+  { top: "82%", left: "30%", tooltipTop: "45%", tooltipAnchor: "28%", tooltipAnchorDirection: "bottom" },
+  { top: "82%", left: "59%", tooltipTop: "45%", tooltipAnchor: "59%", tooltipAnchorDirection: "bottom" },
+  { top: "82%", left: "88%", tooltipTop: "45%", tooltipAnchor: "91%", tooltipAnchorDirection: "bottom" },
+];
+
 export const LEVEL_META = {
   1: {
     title: "동네 초보",
@@ -43,7 +56,7 @@ export const CATEGORY_ICONS = {
     active_unpressed: "/icons/home/levelicon/pencil/active.png",
     active_pressed: "/icons/home/levelicon/pencil/active-pressed.png",
     inactive_unpressed: "/icons/home/levelicon/pencil/inactive.png",
-    inactive_pressed: "/icons/home/pencil/inactive-pressed.png",
+    inactive_pressed: "/icons/home/levelicon/pencil/inactive-pressed.png",
   },
   map: {
     active_unpressed: "/icons/home/levelicon/map/active.png",
