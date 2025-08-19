@@ -63,7 +63,7 @@ const SearchBar = forwardRef(
                 onClick={(e) => e.stopPropagation()}
               />
             ) : (
-              <Placeholder>서울 동작구 상도동</Placeholder>
+              <Placeholder>목적지를 입력하세요</Placeholder>
             )}
 
             {mode === "input" ? (
