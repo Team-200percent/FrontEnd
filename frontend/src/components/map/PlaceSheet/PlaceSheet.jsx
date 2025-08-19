@@ -52,7 +52,8 @@ const ExpandedContent = ({
   onCloseAll,
   activeTab,
   onTabClick,
-  onWriteReview
+  onWriteReview,
+  reviewsVersion,
 }) => {
   const expandedHeartIconSrc = place?.isFavorite
     ? "/icons/map/expanded-heart-on.png"
@@ -166,7 +167,7 @@ const ExpandedContent = ({
           </InfoList>
         )}
         {activeTab === "review" && (
-          <ReviewContent place={place} onWriteReview={onWriteReview} />
+          <ReviewContent place={place} onWriteReview={onWriteReview} refreshKey={reviewsVersion} />
         )}
       </ContentArea>
     </ExpandedWrapper>
@@ -186,16 +187,20 @@ export default function PlaceSheet({
 }) {
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
   const [isWritingReview, setIsWritingReview] = useState(false);
+  const [reviewsVersion, setReviewsVersion] = useState(0);
   const [activeTab, setActiveTab] = useState("home");
   const sheetRef = useRef(null);
   const dragInfo = useRef({ startY: 0, isDragging: false });
 
-  const handleExpand = async () => {
-    if (place && place.description) {
-      onViewModeChange("expanded");
-      return;
-    }
+  const handleReviewSubmitted = (newReview) => {
+    setIsWritingReview(false);
+    setActiveTab("review");
+    setPlace(prev => ({ ...prev, reviewCount: (prev?.reviewCount || 0) + 1 }));
+    setReviewsVersion(prev => prev + 1);
+  };
 
+  const handleExpand = async () => {
+   
     if (!place || !place.lat || !place.lng) return;
 
     onViewModeChange("expanded");
@@ -250,6 +255,41 @@ export default function PlaceSheet({
     }
   };
 
+  const fetchPlaceDetail = async () => {
+  if (!place?.lat || !place?.lng) return;
+
+  try {
+    const response = await api.get("/market/detail/", {
+      params: { lat: place.lat, lng: place.lng },
+    });
+    const detailInfo = response.data?.[0];
+    if (!detailInfo) return;
+
+    const mapped = {
+      isFavorite: detailInfo.is_favorite,
+      category: detailInfo.category ?? null,
+      address: detailInfo.address ?? null,
+      isOpen: detailInfo.is_open ?? null,
+      closeHour: detailInfo.close_hour ?? null,
+      phone: detailInfo.telephone ?? null,
+      website: detailInfo.url ?? null,
+      rating: detailInfo.avg_rating ?? null,
+      reviewCount: detailInfo.review_count ?? null,
+      images: Array.isArray(detailInfo.images)
+        ? detailInfo.images.map((img) => ({
+            id: img.id,
+            url: img.image_url,
+            created: img.created,
+            market: img.market,
+          }))
+        : [],
+    };
+    setPlace((prev) => ({ ...prev, ...mapped }));
+  } catch (e) {
+    console.error("상세 재조회 실패:", e);
+  }
+};
+
   const onDragStart = (e) => {
     dragInfo.current = {
       isDragging: true,
@@ -299,6 +339,7 @@ export default function PlaceSheet({
             activeTab={activeTab} // ✅ 현재 활성 탭 state 전달
             onTabClick={setActiveTab} // ✅ 탭을 변경하는 함수 전달
             onWriteReview={() => setIsWritingReview(true)}
+            reviewsVersion={reviewsVersion} // ✅ 리뷰 새로고침 키 전달
           />
         )}
       </SheetContainer>
@@ -307,10 +348,14 @@ export default function PlaceSheet({
         onClose={() => onGroupSheetToggle(false)}
         onCloseAll={onCloseAll}
         place={place}
+        onFavoriteSaved={(nextIsFav) => {
+          setPlace((prev) => ({ ...prev, isFavorite: !!nextIsFav }));
+          fetchPlaceDetail(); // ✅ 그룹 저장 후 상세 재조회
+        }}
       />
 
       {isWritingReview && (
-        <WriteReview place={place} onClose={() => setIsWritingReview(false)} />
+        <WriteReview place={place} onClose={() => setIsWritingReview(false)} onSubmitted={handleReviewSubmitted} />
       )}
     </>
   );

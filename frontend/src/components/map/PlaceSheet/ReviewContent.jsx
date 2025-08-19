@@ -33,7 +33,7 @@ const TAG_MAP = {
 
 const LoadingSpinner = () => <p>리뷰를 불러오는 중...</p>;
 
-export default function ReviewContent({ place, onWriteReview }) {
+export default function ReviewContent({ place, onWriteReview, refreshKey }) {
   const [reviewData, setReviewData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isKeywordsExpanded, setIsKeywordsExpanded] = useState(false);
@@ -77,7 +77,7 @@ export default function ReviewContent({ place, onWriteReview }) {
     };
 
     fetchReviews();
-  }, [place.lat, place.lng]); // ✅ 의존성 배열을 lat, lng로 변경
+  }, [place.lat, place.lng, refreshKey]); // ✅ 의존성 배열을 lat, lng로 변경
 
   const sortedKeywords = useMemo(() => {
     if (!reviewData?.tag_sum) return [];
