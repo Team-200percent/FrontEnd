@@ -23,7 +23,11 @@ function removeOldKakaoScript() {
     .querySelectorAll('script[src*="dapi.kakao.com"]')
     .forEach((el) => el.parentNode.removeChild(el));
   // 완전 초기화
-  try { delete window.kakao; } catch (_) { /* ignore */ }
+  try {
+    delete window.kakao;
+  } catch (_) {
+    /* ignore */
+  }
 }
 async function loadKakaoSdk() {
   // 이미 services까지 준비되어 있으면 끝
@@ -38,7 +42,7 @@ async function loadKakaoSdk() {
   if (!kakaoLoaderPromise) {
     kakaoLoaderPromise = new Promise((resolve, reject) => {
       const s = document.createElement("script");
-      s.src = SDK_URL;                      // ✅ 반드시 libraries=services 포함
+      s.src = SDK_URL; // ✅ 반드시 libraries=services 포함
       s.async = true;
       s.onload = resolve;
       s.onerror = () => reject(new Error("Kakao SDK load error"));
@@ -62,7 +66,6 @@ async function ensureKakaoReady() {
     await new Promise((res) => window.kakao.maps.load(res));
   }
 }
-
 
 export default function Map() {
   const boxRef = useRef(null);
@@ -88,94 +91,97 @@ export default function Map() {
 
   // 🔑 검색 통합 로직
   const handleSearchSubmit = useCallback(async (query) => {
-  const q = (query || "").trim();
-  if (!q) return;
+    const q = (query || "").trim();
+    if (!q) return;
 
-  try {
-    // ✅ SDK 준비 보장
-    await ensureKakaoReady();
+    try {
+      // ✅ SDK 준비 보장
+      await ensureKakaoReady();
 
-    const response = await api.get("/market/search/", { params: { name: q } });
-    const preload = response.data?.[0];
-    if (!preload) {
-      alert("검색 결과가 없습니다.");
-      return;
-    }
+      const response = await api.get("/market/search/", {
+        params: { name: q },
+      });
+      const preload = response.data?.[0];
+      if (!preload) {
+        alert("검색 결과가 없습니다.");
+        return;
+      }
 
-    if (!window.kakao.maps.services?.Geocoder) {
-      console.error("⚠️ Kakao services 로드 실패:", window.kakao.maps.services);
-      return;
-    }
+      if (!window.kakao.maps.services?.Geocoder) {
+        console.error(
+          "⚠️ Kakao services 로드 실패:",
+          window.kakao.maps.services
+        );
+        return;
+      }
 
-    const geocoder = new window.kakao.maps.services.Geocoder();
-    geocoder.addressSearch(preload.address, (result, status) => {
-      if (status === window.kakao.maps.services.Status.OK && result[0]) {
-        const lat = parseFloat(result[0].y);
-        const lng = parseFloat(result[0].x);
-        const pos = new window.kakao.maps.LatLng(lat, lng);
+      const geocoder = new window.kakao.maps.services.Geocoder();
+      geocoder.addressSearch(preload.address, (result, status) => {
+        if (status === window.kakao.maps.services.Status.OK && result[0]) {
+          const lat = parseFloat(result[0].y);
+          const lng = parseFloat(result[0].x);
+          const pos = new window.kakao.maps.LatLng(lat, lng);
 
-        
+          mapRef.current.setLevel(3);
+          mapRef.current.setCenter(pos);
 
-        mapRef.current.setLevel(3);
-        mapRef.current.setCenter(pos);
-
-        if (!searchMarkerRef.current) {
-  // 노란 원 마커 스타일 정의
-  const markerImage = new window.kakao.maps.MarkerImage(
-    "data:image/svg+xml;base64," +
-      btoa(`
+          if (!searchMarkerRef.current) {
+            // 노란 원 마커 스타일 정의
+            const markerImage = new window.kakao.maps.MarkerImage(
+              "data:image/svg+xml;base64," +
+                btoa(`
         <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30">
           <circle cx="15" cy="15" r="12" fill="#ffde00" stroke="white" stroke-width="4"/>
         </svg>
       `),
-    new window.kakao.maps.Size(30, 30), // 마커 크기
-    { offset: new window.kakao.maps.Point(15, 15) } // 중심점
-  );
+              new window.kakao.maps.Size(30, 30), // 마커 크기
+              { offset: new window.kakao.maps.Point(15, 15) } // 중심점
+            );
 
-  searchMarkerRef.current = new window.kakao.maps.Marker({
-    position: pos,
-    image: markerImage, // ✅ 여기서 이미지 지정
-  });
-  searchMarkerRef.current.setMap(mapRef.current);
-} else {
-  searchMarkerRef.current.setPosition(pos);
-}
+            searchMarkerRef.current = new window.kakao.maps.Marker({
+              position: pos,
+              image: markerImage, // ✅ 여기서 이미지 지정
+            });
+            searchMarkerRef.current.setMap(mapRef.current);
+          } else {
+            searchMarkerRef.current.setPosition(pos);
+          }
 
-if (searchLabelRef.current) {
-  searchLabelRef.current.setMap(null); // 이전 라벨 제거
-}
+          if (searchLabelRef.current) {
+            searchLabelRef.current.setMap(null); // 이전 라벨 제거
+          }
 
-// 마커 설정 후에 ↓↓↓ 라벨 처리 추가
-const labelEl = document.createElement("div");
-labelEl.className = "search-label";
-labelEl.textContent = preload.name || "장소";
+          // 마커 설정 후에 ↓↓↓ 라벨 처리 추가
+          const labelEl = document.createElement("div");
+          labelEl.className = "search-label";
+          labelEl.textContent = preload.name || "장소";
 
-if (!searchLabelRef.current) {
-  // 처음 생성
-  searchLabelRef.current = new window.kakao.maps.CustomOverlay({
-    position: pos,
-    content: labelEl,
-    xAnchor: 0.5,   // 가운데 정렬
-    yAnchor: 1.8,   // 마커 위로 띄우기 (값 키우면 더 위)
-    zIndex: 5,
-  });
-  searchLabelRef.current.setMap(mapRef.current);
-} else {
-  // 재사용: 텍스트/위치만 갱신
-  searchLabelRef.current.setContent(labelEl);
-  searchLabelRef.current.setPosition(pos);
-  searchLabelRef.current.setMap(mapRef.current);
-}
+          if (!searchLabelRef.current) {
+            // 처음 생성
+            searchLabelRef.current = new window.kakao.maps.CustomOverlay({
+              position: pos,
+              content: labelEl,
+              xAnchor: 0.5, // 가운데 정렬
+              yAnchor: 1.8, // 마커 위로 띄우기 (값 키우면 더 위)
+              zIndex: 5,
+            });
+            searchLabelRef.current.setMap(mapRef.current);
+          } else {
+            // 재사용: 텍스트/위치만 갱신
+            searchLabelRef.current.setContent(labelEl);
+            searchLabelRef.current.setPosition(pos);
+            searchLabelRef.current.setMap(mapRef.current);
+          }
 
-        setSelectedPlace({ ...preload, lat, lng });
-        setIsPlaceSheetOpen(true);
-        setSheetViewMode("compact");
-      }
-    });
-  } catch (err) {
-    console.error("검색 실패:", err);
-  }
-}, []);
+          setSelectedPlace({ ...preload, lat, lng });
+          setIsPlaceSheetOpen(true);
+          setSheetViewMode("compact");
+        }
+      });
+    } catch (err) {
+      console.error("검색 실패:", err);
+    }
+  }, []);
 
   // --- 지도 초기화 ---
   useEffect(() => {
@@ -192,6 +198,59 @@ if (!searchLabelRef.current) {
     initMap();
   }, []);
 
+  useEffect(() => {
+    (async () => {
+      await ensureKakaoReady();
+      if (!mapRef.current) return;
+
+      if (!("geolocation" in navigator)) {
+        console.warn("geolocation not supported");
+        return;
+      }
+
+      if (!window.isSecureContext) {
+        console.warn(
+          "Not a secure context (HTTPS). Permission prompt will not appear."
+        );
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const { latitude, longitude } = pos.coords;
+          const center = new window.kakao.maps.LatLng(latitude, longitude);
+
+          // 지도 이동
+          mapRef.current.setLevel(4);
+          mapRef.current.panTo(center);
+
+          // ✅ DOM element 생성
+          const dot = document.createElement("div");
+          dot.className = "my-location-dot"; // CSS에서 정의한 스타일 사용
+
+          // ✅ CustomOverlay 생성
+          if (myLocationRef.current) {
+            myLocationRef.current.setMap(null); // 기존거 지우기
+          }
+
+          myLocationRef.current = new window.kakao.maps.CustomOverlay({
+            position: center,
+            content: dot,
+            xAnchor: 0.5, // 중앙 정렬
+            yAnchor: 0.5,
+            zIndex: 10,
+          });
+
+          myLocationRef.current.setMap(mapRef.current);
+        },
+        (err) => {
+          console.error("geolocation error", err);
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    })();
+  }, [isMapReady]);
+
   // --- 전체 마커 로딩 ---
   useEffect(() => {
     if (!isMapReady) return;
@@ -203,7 +262,10 @@ if (!searchLabelRef.current) {
         const response = await api.get("/market/");
         setAllMarkets(response.data);
         response.data.forEach((market) => {
-          const markerPosition = new window.kakao.maps.LatLng(market.lat, market.lng);
+          const markerPosition = new window.kakao.maps.LatLng(
+            market.lat,
+            market.lng
+          );
           const markerContent = document.createElement("div");
           markerContent.className = "custom-marker";
 
@@ -254,33 +316,46 @@ if (!searchLabelRef.current) {
     if (incoming) {
       handleSearchSubmit(incoming);
       setTimeout(() => {
-  navigate(location.pathname, { replace: true, state: {} });
-}, 100);
+        navigate(location.pathname, { replace: true, state: {} });
+      }, 100);
     }
   }, [location.state, location.pathname, navigate, handleSearchSubmit]);
 
   useEffect(() => {
-  if (!searchLabelRef.current) return;
-  if (sheetViewMode === "expanded") {
-    searchLabelRef.current.setMap(null);
-  } else if (isPlaceSheetOpen) {
-    searchLabelRef.current.setMap(mapRef.current);
-  }
-}, [sheetViewMode, isPlaceSheetOpen]);
+    if (!searchLabelRef.current) return;
+    if (sheetViewMode === "expanded") {
+      searchLabelRef.current.setMap(null);
+    } else if (isPlaceSheetOpen) {
+      searchLabelRef.current.setMap(mapRef.current);
+    }
+  }, [sheetViewMode, isPlaceSheetOpen]);
 
   return (
-    <div style={{ width: "min(100vw, 430px)", margin: "0 auto", position: "relative" }}>
+    <div
+      style={{
+        width: "min(100vw, 430px)",
+        margin: "0 auto",
+        position: "relative",
+      }}
+    >
       <div ref={boxRef} style={{ width: "100%", height: "100dvh" }} />
 
       {!isFavoriteSheetOpen && sheetViewMode !== "expanded" && (
         <>
           <SearchBar mode="display" onSubmit={handleSearchSubmit} />
-          <CategoryChips onSelect={(key) => navigate("/map-search", { state: { activeCategory: key } })} />
+          <CategoryChips
+            onSelect={(key) =>
+              navigate("/map-search", { state: { activeCategory: key } })
+            }
+          />
           <FavoriteButton onClick={() => setIsFavoriteSheetOpen(true)} />
         </>
       )}
 
-      <LocateButtonWrapper $isSheetOpen={isPlaceSheetOpen} $viewMode={sheetViewMode}>
+      <LocateButtonWrapper
+        $isSheetOpen={isPlaceSheetOpen}
+        $viewMode={sheetViewMode}
+      >
         <LocateButton />
       </LocateButtonWrapper>
 
