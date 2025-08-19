@@ -5,9 +5,10 @@ import { LEVELS } from "../../data/DummyLevel";
 import LevelSelector from "../../components/home/LevelSelector";
 import WeeklyMissionBox from "../../components/home/WeeklyMissionBox";
 import LevelDropdown from "../../components/home/LevelDropdown";
-import { CATEGORY_ICONS, LEVEL_META } from "../../data/HomeData";
+import { CATEGORY_ICONS, LEVEL_META, STAGE_POSITIONS } from "../../data/HomeData";
+import { calcMissionProgress, getUnlockedLevel, XP_THRESHOLDS } from "../../data/Level";
 
-const API_BASE = import.meta.env.VITE_API_BASE;
+
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem("access_token");
@@ -30,19 +31,26 @@ const attachMission = (baseStage, apiData) => {
     requireverification: apiData?.requireverification ?? false,
     missionDetail: {
       title: apiData?.title ?? baseStage?.missionDetail?.title ?? "미션",
-      xp: apiData?.xp ?? baseStage?.missionDetail?.xp ?? 0,
+      xp: apiData?.reward_xp ?? baseStage?.missionDetail?.xp ?? 0,
       description: apiData?.description ?? null,
       requirements: apiData?.requirements ?? null,
     },
   };
 };
 
-const MissionTooltip = ({ stageData, onClose }) => {
+const MissionTooltip = ({ index, stageData, onClose, onStart, onComplete }) => {
   const tooltipRef = useRef(null);
 
-  const topPosition = stageData.tooltipTop;
-  const anchor = stageData.tooltipAnchor || "center";
-  const anchorDirection = stageData.tooltipAnchorDirection || "top";
+  const pos = STAGE_POSITIONS[index] ?? {};
+  const topPosition = pos.tooltipTop ?? "30%";
+  const anchor = pos.tooltipAnchor ?? "center";
+  const anchorDirection = pos.tooltipAnchorDirection ?? "top";
+
+  const isWaiting = stageData.status === "waiting";
+  const isInProgress = stageData.status === "in_progress";
+  const isCompleted = stageData.status === "completed";
+  const isNotAvailable = stageData.status === "not_available";
+
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -66,15 +74,30 @@ const MissionTooltip = ({ stageData, onClose }) => {
         <span>{stageData.missionDetail.title}</span>
         <strong>+{stageData.missionDetail.xp} XP</strong>
       </TooltipContent>
-      <StartButton $status={stageData.status}>미션 시작</StartButton>
+      <StartButton
+       $status={stageData.status}
+       disabled={stageData.status === "completed" || stageData.status === "not_available"}
+       onClick={() => {
+         if (isWaiting) onStart?.();
+         else if (isInProgress) onComplete?.();
+       }}
+     >
+       {isCompleted
+         ? "미션 완료됨"
+         : isInProgress
+         ? "미션 완료하기"
+         : stageData.status === "not_available"
+         ? "미션 불가"
+         : "미션 시작"}
+     </StartButton>
     </TooltipWrapper>
   );
 };
 
 function getStageIcon(stage, isPressed) {
   const set = CATEGORY_ICONS[stage.category] || CATEGORY_ICONS._default;
-  const isActive = stage.status === "active"; // 규칙에 맞게 조정 가능
-  const variant = isActive
+  const isActiveVisual = stage.status === "completed"; // ✅ 완료되면 active로 보이기
+  const variant = isActiveVisual
     ? isPressed
       ? "active_pressed"
       : "active_unpressed"
@@ -84,19 +107,46 @@ function getStageIcon(stage, isPressed) {
   return <img src={set[variant]} alt={`${stage.category} ${variant}`} />;
 }
 
-const MissionProgress = ({ mission }) => {
-  const progress = (mission.completed / mission.total) * 100;
+const MissionProgress = ({ userXp, currentLevel, levelTitle }) => {
   const areaRef = useRef(null);
+
+  const targetLevel = Math.min(currentLevel + 1, 5);
+  const nextLevelTitle = LEVEL_META[targetLevel]?.title || "다음 레벨";
+
+  const cap = XP_THRESHOLDS[currentLevel] ?? 0;
+
+  const isMaxLevel = currentLevel >= 5;
+  const remaining = isMaxLevel ? 0 : Math.max(cap - (userXp ?? 0), 0);
+  const denom = isMaxLevel ? cap : cap;
+
+  const percent = isMaxLevel
+    ? 100
+    : cap > 0
+    ? Math.min(100, Math.max(0, ((userXp ?? 0) / cap) * 100))
+    : 0;
+
+  if (isMaxLevel) {
+    return (
+      <ProgressWrapper ref={areaRef}>
+        <ProgressInfoText>
+          <strong className="sky">MAX</strong>
+        </ProgressInfoText>
+        <ProgressBarContainer>
+          <ProgressBarFill style={{ width: "100%" }} />
+        </ProgressBarContainer>
+      </ProgressWrapper>
+    );
+  }
 
   return (
     <ProgressWrapper ref={areaRef}>
       <ProgressInfoText>
-        <strong>{mission.nextLevelName}</strong>까지 남은 미션{" "}
-        <strong className="sky">{mission.completed}개</strong>
-        <strong>/{mission.total}개</strong>
+        <strong>{nextLevelTitle}</strong>까지 남은 XP{" "}
+        <strong className="sky">{remaining}</strong>
+        <strong>/{denom}</strong>
       </ProgressInfoText>
       <ProgressBarContainer>
-        <ProgressBarFill style={{ width: `${progress}%` }} />
+        <ProgressBarFill style={{ width: `${percent}%` }} />
       </ProgressBarContainer>
       <ProgressLabel>
         <strong>미션</strong>을 <strong>수행</strong>하고{" "}
@@ -109,6 +159,10 @@ const MissionProgress = ({ mission }) => {
 
 export default function Home() {
   const [currentLevel, setCurrentLevel] = useState(1);
+  const [unlockedLevel, setUnlockedLevel] = useState(1);
+  const isViewingLocked = currentLevel > unlockedLevel;
+  const [userXp, setUserXp] = useState(0);
+  const [allMissionStatus, setAllMissionStatus] = useState([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [activeStageIndex, setActiveStageIndex] = useState(null);
 
@@ -122,6 +176,30 @@ export default function Home() {
     [currentLevel]
   );
   const meta = LEVEL_META[currentLevel] ?? LEVEL_META[1];
+
+  useEffect(() => {
+    // ① 전체 미션 + user_xp 불러오기
+    const controller = new AbortController();
+    (async () => {
+      try {
+        const res = await api.get("/mission/levelmission/", {
+          headers: { ...getAuthHeaders() },
+          signal: controller.signal,
+        });
+        const { user_xp, all_missions } = res.data || {};
+        setUserXp(user_xp ?? 0);
+        setAllMissionStatus(Array.isArray(all_missions) ? all_missions : []);
+
+        const ul = getUnlockedLevel(user_xp ?? 0);
+        setUnlockedLevel(ul);
+        // 시작 레벨을 해금된 최댓값으로 맞추고 싶다면:
+        setCurrentLevel((prev) => Math.min(Math.max(prev, 1), ul));
+      } catch (e) {
+
+      }
+    })();
+    return () => controller.abort();
+  }, []);
 
   useEffect(() => {
     if (!levelData?.stages?.length) {
@@ -151,12 +229,46 @@ export default function Home() {
 
         const results = await Promise.all(promises);
 
-        const merged = levelData.stages.map((st, i) =>
-          attachMission(
-            { ...st, category: resolveCategory(st) },
-            results[i]
-          )
+        const missionStateById = new Map(
+          (allMissionStatus || []).map((m) => [m.levelmissionId, m])
         );
+
+        const merged = levelData.stages.map((st, i) => {
+          const pos = STAGE_POSITIONS[i] ?? {};
+  const base = { ...st, category: resolveCategory(st) };
+  const detail = results[i];
+  const withDetail = attachMission(base, detail);
+
+  const levelMissionId = detail?.id ?? null;            // ✅ 레벨미션 ID
+  const state = levelMissionId ? missionStateById.get(levelMissionId) : null;
+
+  const userMissionId = state?.id ?? null; // (선택) 사용자미션 ID 따로 보관
+
+  const isLevelUnlocked = currentLevel <= unlockedLevel;
+  const defaultStatus = isLevelUnlocked ? "waiting" : "not_available";
+
+  return {
+    ...withDetail,
+    missionId: levelMissionId ?? null,             // ✅ PUT에 쓸 ID
+    userMissionId,        // (선택) 사용자미션 ID 따로 보관
+    status: state?.status ?? defaultStatus,
+    requireverification:
+      state?.requireverification ?? withDetail.requireverification ?? false,
+    missionDetail: {
+      ...withDetail.missionDetail,
+      xp:
+        state?.reward_xp ??
+        detail?.reward_xp ??
+        withDetail.missionDetail?.xp ??
+        20,
+    },
+  };
+});
+
+
+
+
+
 
         setServerStages(merged);
       } catch (e) {
@@ -177,7 +289,12 @@ export default function Home() {
 
     fetchStages();
     return () => controller.abort();
-  }, [currentLevel, levelData]);
+  }, [currentLevel, levelData, allMissionStatus]);
+
+  useEffect(() => {
+  const ul = getUnlockedLevel(userXp ?? 0);
+  setUnlockedLevel(ul);
+  }, [userXp]);
 
   const handleLevelChange = (level) => {
     setCurrentLevel(level);
@@ -188,9 +305,112 @@ export default function Home() {
     setActiveStageIndex((prev) => (prev === index ? null : index));
   };
 
+  // 상태/XP 새로고침 (서버 진실원본 동기화)
+const refreshAllMissions = async () => {
+  try {
+    const res = await api.get("/mission/levelmission/", {
+      headers: { ...getAuthHeaders() },
+    });
+    const { user_xp, all_missions } = res.data || {};
+    setUserXp(user_xp ?? 0);
+    setAllMissionStatus(Array.isArray(all_missions) ? all_missions : []);
+  } catch (e) {
+    console.warn("미션 목록 갱신 실패:", e);
+  }
+};
+
+// 특정 스테이지 상태만 로컬 즉시 업데이트
+const updateStageStatus = (idx, newStatus, patch = {}) => {
+  setServerStages((prev) =>
+    prev.map((s, i) => (i === idx ? { ...s, status: newStatus, ...patch } : s))
+  );
+};
+
+const handleMissionStart = async (idx) => {
+  const stage = serverStages[idx];
+  let idToUse = stage?.userMissionId ?? stage?.missionId; // 우선 userMissionId
+
+  if (!idToUse) {
+    console.warn("미션 ID가 없습니다:", stage);
+    return;
+  }
+
+  try {
+    await api.put(`/mission/levelmission/${idToUse}/`, null, {
+      headers: { ...getAuthHeaders() },
+    });
+  } catch (e) {
+    // userMissionId가 안 먹는 백엔드일 경우 missionId로 재시도
+    if (stage?.missionId && idToUse !== stage.missionId) {
+      try {
+        await api.put(`/mission/levelmission/${stage.missionId}/`, null, {
+          headers: { ...getAuthHeaders() },
+        });
+      } catch (e2) {
+        console.error("미션 시작 실패:", e2);
+        return;
+      }
+    } else {
+      console.error("미션 시작 실패:", e);
+      return;
+    }
+  }
+
+  updateStageStatus(idx, "in_progress");
+  setActiveStageIndex(null); // 말풍선 닫기
+  refreshAllMissions();      // 서버와 동기화
+};
+
+const handleMissionComplete = async (idx) => {
+  const stage = serverStages[idx];
+  // 1순위: userMissionId, 없으면 level mission id
+  let idToUse = stage?.userMissionId ?? stage?.missionId;
+
+  if (!idToUse) {
+    console.warn("완료 호출에 사용할 미션 ID가 없습니다:", stage);
+    return;
+  }
+
+  try {
+    // ✅ path param으로 ID 붙여서 호출
+    const res = await api.post(`/mission/levelmissioncomplete/${idToUse}/`, null, {
+      headers: { ...getAuthHeaders() },
+    });
+
+    // XP 반영
+    if (typeof res.data?.user_xp === "number") {
+      setUserXp(res.data.user_xp);
+    }
+
+    updateStageStatus(idx, "completed");
+    setActiveStageIndex(null);
+    refreshAllMissions();
+  } catch (e) {
+    // 혹시 userMissionId로 404가 나면 level mission id로 재시도
+    if (stage?.missionId && idToUse !== stage.missionId) {
+      try {
+        const res2 = await api.post(`/mission/levelmissioncomplete/${stage.missionId}/`, null, {
+          headers: { ...getAuthHeaders() },
+        });
+        if (typeof res2.data?.user_xp === "number") {
+          setUserXp(res2.data.user_xp);
+        }
+        updateStageStatus(idx, "completed");
+        setActiveStageIndex(null);
+        refreshAllMissions();
+        return;
+      } catch (e2) {
+        console.error("미션 완료 실패(재시도 포함):", e2);
+      }
+    } else {
+      console.error("미션 완료 실패:", e);
+    }
+  }
+};
+
   return (
     <Wrapper>
-      <LevelSelector currentLevel={currentLevel} onLevelChange={setCurrentLevel} />
+      <LevelSelector currentLevel={currentLevel} onLevelChange={handleLevelChange} />
 
       <Content>
         {!!levelData && (
@@ -211,12 +431,19 @@ export default function Home() {
               isOpen={isDropdownOpen}
               levels={LEVELS}
               currentLevel={currentLevel}
-              onLevelChange={setCurrentLevel}
+              onLevelChange={handleLevelChange}
             />
 
-            <MissionProgress mission={levelData.mission} />
+           <MissionProgress
+           userXp={userXp}
+           currentLevel={currentLevel}
+          levelTitle={LEVEL_META[currentLevel]?.title || "다음 레벨"}
+           />
 
-            <GameMapBackGround>
+            <GameMapBackGround $locked={isViewingLocked}>
+              {isViewingLocked && (
+                <LockedBadge>이 레벨은 아직 잠금 상태예요. XP를 모아 해금해보세요!</LockedBadge>
+              )}
               <GameMapContainer>
                 {loadingStages && (
                   <div style={{ padding: 8, fontSize: 12, color: "#888" }}>
@@ -255,7 +482,10 @@ export default function Home() {
                           xp: 0,
                         },
                     }}
+                    index={activeStageIndex}
                     onClose={() => setActiveStageIndex(null)}
+                    onStart={() => handleMissionStart(activeStageIndex)}
+                    onComplete={() => handleMissionComplete(activeStageIndex)}
                   />
                 )}
               </GameMapContainer>
@@ -413,6 +643,24 @@ const GameMapContainer = styled.div`
 
   /* ✅ contain 대신 더 작게 */
   background-size: 320px 350px;
+
+  
+`;
+
+const LockedBadge = styled.div`
+  position: absolute;
+  text-align: center;
+  width: 80%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  background: rgba(0,0,0,0.7);
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+  pointer-events: none;
+  z-index: 100000000;
 `;
 
 const GameMapBackGround = styled.div`
@@ -421,8 +669,24 @@ const GameMapBackGround = styled.div`
   border-radius: 12px;
   background-color: #e6f8ff;
   position: relative;
-  top: -30px;
+  top: -40px;
   z-index: 1000;
+
+  /* 🔒 잠금 레벨이면 검정 반투명 필터 */
+  ${({ $locked }) =>
+    $locked &&
+    `
+      &::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: 12px;
+        background: rgba(0,0,0,0.45);
+        pointer-events: none; /* 클릭 통과 */
+        z-index: 200;
+      }
+    `}
+
 `;
 
 const StageIcon = styled.button`
@@ -463,7 +727,7 @@ const TooltipWrapper = styled.div`
   transform: translateX(-50%);
   width: 90%;
   background-color: ${({ $status }) =>
-    $status === "completed" ? "#1DC3FF" : "#bbbcc4"};
+  $status === "completed" || $status === "in_progress" ? "#1DC3FF" : "#bbbcc4"};
   border-radius: 16px;
   padding: 30px;
   color: #fff;
@@ -485,7 +749,8 @@ const TooltipWrapper = styled.div`
     left: ${({ $anchor }) => $anchor};
 
     ${({ $anchorDirection, $status }) => {
-      const color = $status === "completed" ? "#1DC3FF" : "#BDBDBD";
+        const color =
+        $status === "completed" || $status === "in_progress" ? "#1DC3FF" : "#BDBDBD";
       if ($anchorDirection === "bottom") {
         return `
           bottom: -8px;
@@ -520,7 +785,8 @@ const StartButton = styled.button`
   padding: 10px;
   border: none;
   background-color: #fff;
-  color: #1dc3ff;
+  color: ${({ $status }) =>
+  $status === "completed" || $status === "in_progress" ? "#1DC3FF" : "#bbbcc4"};
   border-radius: 12px;
   font-size: 16px;
   font-weight: 700;
