@@ -5,37 +5,43 @@ import api from "../../lib/api";
 
 const KEYWORD_TAGS = [
   {
+    key: "taste_tag",
     text: "음식이 맛있어요",
     icon_on: "/icons/map/review/taste-white.png",
     icon_off: "/icons/map/review/taste-sky.png",
   },
   {
+    key: "cost_tag",
     text: "가성비가 좋아요",
     icon_on: "/icons/map/review/cost-white.png",
     icon_off: "/icons/map/review/cost-sky.png",
   },
   {
+    key: "solo_tag",
     text: "혼밥하기 좋아요",
     icon_on: "/icons/map/review/solo-white.png",
     icon_off: "/icons/map/review/solo-sky.png",
   },
   {
+    key: "fresh_tag",
     text: "재료가 신선해요",
     icon_on: "/icons/map/review/fresh-white.png",
     icon_off: "/icons/map/review/fresh-sky.png",
   },
   {
+    key: "clean_tag",
     text: "매장이 청결해요",
     icon_on: "/icons/map/review/clean-white.png",
     icon_off: "/icons/map/review/clean-sky.png",
   },
   {
+    key: "date_tag",
     text: "데이트하기 좋아요",
     icon_on: "/icons/map/review/date-white.png",
     icon_off: "/icons/map/review/date-sky.png",
   },
 ];
-export default function WriteReview({ place, onClose }) {
+export default function WriteReview({ place, onClose, onSubmitted }) {
   // ⭐ 별점 상태
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
@@ -47,6 +53,7 @@ export default function WriteReview({ place, onClose }) {
   // 태그 선택
   const [selectedTags, setSelectedTags] = useState(new Set());
   const [description, setDescription] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const toggleTag = (tag) => {
     setSelectedTags((prev) => {
@@ -57,63 +64,56 @@ export default function WriteReview({ place, onClose }) {
   };
 
   const handleSubmit = async () => {
-    // 필수 항목 유효성 검사
-    if (rating === 0) {
-      alert("별점을 매겨주세요!");
-      return;
-    }
-    if (selectedTags.size === 0) {
-      alert("좋았던 점을 하나 이상 선택해주세요!");
-      return;
-    }
+    if (submitting) return;             // ✅ 더블클릭 방지
+    if (rating === 0) return alert("별점을 매겨주세요!");
+    if (selectedTags.size === 0) return alert("좋았던 점을 하나 이상 선택해주세요!");
 
-    // 1. 태그 데이터를 API 형식에 맞게 변환
+    // 태그 변환
     const tagData = {};
     KEYWORD_TAGS.forEach((tag) => {
       tagData[tag.key] = selectedTags.has(tag.text);
     });
 
-    // 2. 최종적으로 서버에 보낼 Body 데이터 구성
     const reviewPayload = {
-      user: 1, // 🔴 TODO: 실제 로그인된 유저 ID로 교체해야 합니다.
-      rating: parseInt(rating),
-      description: description,
+      user: 1, // TODO: 실제 유저 id (또는 아예 빼고 토큰으로 식별)
+      rating: parseInt(rating, 10),
+      description: description || "",
       ...tagData,
     };
 
     try {
-      const accessToken = localStorage.getItem("accessToken");
+      setSubmitting(true);
 
+      const accessToken = localStorage.getItem("accessToken");
       if (!accessToken) {
         alert("로그인이 필요합니다.");
-        // 로그인 페이지로 보내는 로직 추가 가능
-        // navigate('/login');
         return;
       }
 
-      // 3. api.post로 API 요청
-      const response = await api.post(
-        "/review/",
-        reviewPayload,
-        {
-          // Query Parameter로 lat, lng 전달
-          params: {
-            lat: place.lat,
-            lng: place.lng,
-          },
-          headers: {
-            // Headers
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
+      const form = new FormData();
+      Object.entries(reviewPayload).forEach(([k, v]) =>
+        form.append(k, typeof v === "boolean" ? (v ? "true" : "false") : String(v))
       );
+      photos.forEach(({ file }) => form.append("image", file));
 
-      console.log("리뷰 등록 성공:", response.data);
+      const response = await api.post("/review/", form, {
+        params: { lat: place.lat, lng: place.lng },
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+
+      // ✅ onSubmitted에서 에러가 나도 사용자에겐 실패 alert 안 띄우도록 별도 try
+      try {
+        await onSubmitted?.(response.data);
+      } catch (cbErr) {
+        console.warn("onSubmitted 콜백 에러:", cbErr);
+      }
+
       alert("리뷰가 성공적으로 등록되었습니다.");
-      navigate(-1); // 이전 페이지로 돌아가기
     } catch (error) {
       console.error("리뷰 등록 실패:", error);
       alert("리뷰 등록에 실패했습니다. 다시 시도해주세요.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
