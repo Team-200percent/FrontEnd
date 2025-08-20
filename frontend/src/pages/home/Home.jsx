@@ -5,10 +5,23 @@ import { LEVELS } from "../../data/DummyLevel";
 import LevelSelector from "../../components/home/LevelSelector";
 import WeeklyMissionBox from "../../components/home/WeeklyMissionBox";
 import LevelDropdown from "../../components/home/LevelDropdown";
-import { CATEGORY_ICONS, LEVEL_META, STAGE_POSITIONS } from "../../data/HomeData";
-import { calcMissionProgress, getUnlockedLevel, XP_THRESHOLDS } from "../../data/Level";
+import {
+  CATEGORY_ICONS,
+  LEVEL_META,
+  STAGE_POSITIONS,
+} from "../../data/HomeData";
+import {
+  getUnlockedLevel,
+  XP_THRESHOLDS,
+} from "../../data/Level";
 
-
+const LEVEL_COLORS = {
+  1: "#1DC3FF", // 레벨 1 색상
+  2: "#0092C7", // 레벨 2 색상
+  3: "#0086B7", // 레벨 3 색상
+  4: "#00658A", // 레벨 4 색상
+  5: "#00425A", // 레벨 5 색상
+};
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem("access_token");
@@ -49,8 +62,6 @@ const MissionTooltip = ({ index, stageData, onClose, onStart, onComplete }) => {
   const isWaiting = stageData.status === "waiting";
   const isInProgress = stageData.status === "in_progress";
   const isCompleted = stageData.status === "completed";
-  const isNotAvailable = stageData.status === "not_available";
-
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -75,39 +86,53 @@ const MissionTooltip = ({ index, stageData, onClose, onStart, onComplete }) => {
         <strong>+{stageData.missionDetail.xp} XP</strong>
       </TooltipContent>
       <StartButton
-       $status={stageData.status}
-       disabled={stageData.status === "completed" || stageData.status === "not_available"}
-       onClick={() => {
-         if (isWaiting) onStart?.();
-         else if (isInProgress) onComplete?.();
-       }}
-     >
-       {isCompleted
-         ? "미션 완료됨"
-         : isInProgress
-         ? "미션 완료하기"
-         : stageData.status === "not_available"
-         ? "미션 불가"
-         : "미션 시작"}
-     </StartButton>
+        $status={stageData.status}
+        disabled={
+          stageData.status === "completed" ||
+          stageData.status === "not_available"
+        }
+        onClick={() => {
+          if (isWaiting) onStart?.();
+          else if (isInProgress) onComplete?.();
+        }}
+      >
+        {isCompleted
+          ? "미션 완료됨"
+          : isInProgress
+          ? "미션 완료하기"
+          : stageData.status === "not_available"
+          ? "미션 불가"
+          : "미션 시작"}
+      </StartButton>
     </TooltipWrapper>
   );
 };
 
-function getStageIcon(stage, isPressed) {
+function getStageIcon(stage, isPressed, currentLevel) {
+  // 카테고리 세트 선택
   const set = CATEGORY_ICONS[stage.category] || CATEGORY_ICONS._default;
-  const isActiveVisual = stage.status === "completed"; // ✅ 완료되면 active로 보이기
-  const variant = isActiveVisual
-    ? isPressed
-      ? "active_pressed"
-      : "active_unpressed"
-    : isPressed
-    ? "inactive_pressed"
-    : "inactive_unpressed";
-  return <img src={set[variant]} alt={`${stage.category} ${variant}`} />;
+
+  // 미완료/대기 상태면 비활성 아이콘
+  const isActiveVisual =
+    stage.status === "completed" || stage.status === "in_progress";
+
+  if (!isActiveVisual) {
+    return (
+      <img
+        src={isPressed ? set.inactive_pressed : set.inactive_unpressed}
+        alt={`${stage.category} inactive`}
+      />
+    );
+  }
+
+  // 레벨 1~5 클램프 후 키 조합
+  const lv = Math.min(Math.max(Number(currentLevel) || 1, 1), 5);
+  const key = isPressed ? `active${lv}_pressed` : `active${lv}_unpressed`;
+
+  return <img src={set[key]} alt={`${stage.category} ${key}`} />;
 }
 
-const MissionProgress = ({ userXp, currentLevel, levelTitle }) => {
+const MissionProgress = ({ userXp, currentLevel }) => {
   const areaRef = useRef(null);
 
   const targetLevel = Math.min(currentLevel + 1, 5);
@@ -194,9 +219,8 @@ export default function Home() {
         setUnlockedLevel(ul);
         // 시작 레벨을 해금된 최댓값으로 맞추고 싶다면:
         setCurrentLevel((prev) => Math.min(Math.max(prev, 1), ul));
-      } catch (e) {
-
-      }
+      // eslint-disable-next-line no-empty
+      } catch {}
     })();
     return () => controller.abort();
   }, []);
@@ -207,24 +231,22 @@ export default function Home() {
       return;
     }
 
-    const controller = new AbortController(); 
+    const controller = new AbortController();
     const fetchStages = async () => {
       try {
         setLoadingStages(true);
         setStageError(null);
 
         // 인덱스는 1부터
-        const promises = levelData.stages.map((_, i) =>
-          api
-            .get(
-              `/mission/levelmission/${currentLevel}/${i + 1}/`,
-              {
+        const promises = levelData.stages.map(
+          (_, i) =>
+            api
+              .get(`/mission/levelmission/${currentLevel}/${i + 1}/`, {
                 headers: { ...getAuthHeaders() },
                 signal: controller.signal,
-              }
-            )
-            .then((res) => res.data)
-            .catch(() => null) // 한 개 실패해도 전체는 유지
+              })
+              .then((res) => res.data)
+              .catch(() => null) // 한 개 실패해도 전체는 유지
         );
 
         const results = await Promise.all(promises);
@@ -234,41 +256,45 @@ export default function Home() {
         );
 
         const merged = levelData.stages.map((st, i) => {
-          const pos = STAGE_POSITIONS[i] ?? {};
-  const base = { ...st, category: resolveCategory(st) };
-  const detail = results[i];
-  const withDetail = attachMission(base, detail);
+          const base = { ...st, category: resolveCategory(st) };
+          const detail = results[i];
+          const withDetail = attachMission(base, detail);
 
-  const levelMissionId = detail?.id ?? null;            // ✅ 레벨미션 ID
-  const state = levelMissionId ? missionStateById.get(levelMissionId) : null;
+          const levelMissionId = detail?.id ?? null; // ✅ 레벨미션 ID
+          const state = levelMissionId
+            ? missionStateById.get(levelMissionId)
+            : null;
 
-  const userMissionId = state?.id ?? null; // (선택) 사용자미션 ID 따로 보관
+          const userMissionId = state?.id ?? null; // (선택) 사용자미션 ID 따로 보관
 
-  const isLevelUnlocked = currentLevel <= unlockedLevel;
-  const defaultStatus = isLevelUnlocked ? "waiting" : "not_available";
+          const isLevelUnlocked = currentLevel <= unlockedLevel;
+          const normalize = (status) => {
+            if (!isLevelUnlocked) return "not_available";
+            // 해금 상태에서는 서버가 not_available을 주더라도 waiting으로 업그레이드
+            if (status === "completed" || status === "in_progress")
+              return status;
+            return "waiting";
+          };
 
-  return {
-    ...withDetail,
-    missionId: levelMissionId ?? null,             // ✅ PUT에 쓸 ID
-    userMissionId,        // (선택) 사용자미션 ID 따로 보관
-    status: state?.status ?? defaultStatus,
-    requireverification:
-      state?.requireverification ?? withDetail.requireverification ?? false,
-    missionDetail: {
-      ...withDetail.missionDetail,
-      xp:
-        state?.reward_xp ??
-        detail?.reward_xp ??
-        withDetail.missionDetail?.xp ??
-        20,
-    },
-  };
-});
-
-
-
-
-
+          return {
+            ...withDetail,
+            missionId: levelMissionId ?? null, // ✅ PUT에 쓸 ID
+            userMissionId, // (선택) 사용자미션 ID 따로 보관
+            status: normalize(state?.status),
+            requireverification:
+              state?.requireverification ??
+              withDetail.requireverification ??
+              false,
+            missionDetail: {
+              ...withDetail.missionDetail,
+              xp:
+                state?.reward_xp ??
+                detail?.reward_xp ??
+                withDetail.missionDetail?.xp ??
+                20,
+            },
+          };
+        });
 
         setServerStages(merged);
       } catch (e) {
@@ -289,11 +315,11 @@ export default function Home() {
 
     fetchStages();
     return () => controller.abort();
-  }, [currentLevel, levelData, allMissionStatus]);
+  }, [currentLevel, levelData, allMissionStatus, unlockedLevel]);
 
   useEffect(() => {
-  const ul = getUnlockedLevel(userXp ?? 0);
-  setUnlockedLevel(ul);
+    const ul = getUnlockedLevel(userXp ?? 0);
+    setUnlockedLevel(ul);
   }, [userXp]);
 
   const handleLevelChange = (level) => {
@@ -306,111 +332,124 @@ export default function Home() {
   };
 
   // 상태/XP 새로고침 (서버 진실원본 동기화)
-const refreshAllMissions = async () => {
-  try {
-    const res = await api.get("/mission/levelmission/", {
-      headers: { ...getAuthHeaders() },
-    });
-    const { user_xp, all_missions } = res.data || {};
-    setUserXp(user_xp ?? 0);
-    setAllMissionStatus(Array.isArray(all_missions) ? all_missions : []);
-  } catch (e) {
-    console.warn("미션 목록 갱신 실패:", e);
-  }
-};
+  const refreshAllMissions = async () => {
+    try {
+      const res = await api.get("/mission/levelmission/", {
+        headers: { ...getAuthHeaders() },
+      });
+      const { user_xp, all_missions } = res.data || {};
+      setUserXp(user_xp ?? 0);
+      setAllMissionStatus(Array.isArray(all_missions) ? all_missions : []);
+    } catch (e) {
+      console.warn("미션 목록 갱신 실패:", e);
+    }
+  };
 
-// 특정 스테이지 상태만 로컬 즉시 업데이트
-const updateStageStatus = (idx, newStatus, patch = {}) => {
-  setServerStages((prev) =>
-    prev.map((s, i) => (i === idx ? { ...s, status: newStatus, ...patch } : s))
-  );
-};
+  // 특정 스테이지 상태만 로컬 즉시 업데이트
+  const updateStageStatus = (idx, newStatus, patch = {}) => {
+    setServerStages((prev) =>
+      prev.map((s, i) =>
+        i === idx ? { ...s, status: newStatus, ...patch } : s
+      )
+    );
+  };
 
-const handleMissionStart = async (idx) => {
-  const stage = serverStages[idx];
-  let idToUse = stage?.userMissionId ?? stage?.missionId; // 우선 userMissionId
+  const handleMissionStart = async (idx) => {
+    const stage = serverStages[idx];
+    let idToUse = stage?.userMissionId ?? stage?.missionId; // 우선 userMissionId
 
-  if (!idToUse) {
-    console.warn("미션 ID가 없습니다:", stage);
-    return;
-  }
-
-  try {
-    await api.put(`/mission/levelmission/${idToUse}/`, null, {
-      headers: { ...getAuthHeaders() },
-    });
-  } catch (e) {
-    // userMissionId가 안 먹는 백엔드일 경우 missionId로 재시도
-    if (stage?.missionId && idToUse !== stage.missionId) {
-      try {
-        await api.put(`/mission/levelmission/${stage.missionId}/`, null, {
-          headers: { ...getAuthHeaders() },
-        });
-      } catch (e2) {
-        console.error("미션 시작 실패:", e2);
-        return;
-      }
-    } else {
-      console.error("미션 시작 실패:", e);
+    if (!idToUse) {
+      console.warn("미션 ID가 없습니다:", stage);
       return;
     }
-  }
 
-  updateStageStatus(idx, "in_progress");
-  setActiveStageIndex(null); // 말풍선 닫기
-  refreshAllMissions();      // 서버와 동기화
-};
-
-const handleMissionComplete = async (idx) => {
-  const stage = serverStages[idx];
-  // 1순위: userMissionId, 없으면 level mission id
-  let idToUse = stage?.userMissionId ?? stage?.missionId;
-
-  if (!idToUse) {
-    console.warn("완료 호출에 사용할 미션 ID가 없습니다:", stage);
-    return;
-  }
-
-  try {
-    // ✅ path param으로 ID 붙여서 호출
-    const res = await api.post(`/mission/levelmissioncomplete/${idToUse}/`, null, {
-      headers: { ...getAuthHeaders() },
-    });
-
-    // XP 반영
-    if (typeof res.data?.user_xp === "number") {
-      setUserXp(res.data.user_xp);
-    }
-
-    updateStageStatus(idx, "completed");
-    setActiveStageIndex(null);
-    refreshAllMissions();
-  } catch (e) {
-    // 혹시 userMissionId로 404가 나면 level mission id로 재시도
-    if (stage?.missionId && idToUse !== stage.missionId) {
-      try {
-        const res2 = await api.post(`/mission/levelmissioncomplete/${stage.missionId}/`, null, {
-          headers: { ...getAuthHeaders() },
-        });
-        if (typeof res2.data?.user_xp === "number") {
-          setUserXp(res2.data.user_xp);
+    try {
+      await api.put(`/mission/levelmission/${idToUse}/`, null, {
+        headers: { ...getAuthHeaders() },
+      });
+    } catch (e) {
+      // userMissionId가 안 먹는 백엔드일 경우 missionId로 재시도
+      if (stage?.missionId && idToUse !== stage.missionId) {
+        try {
+          await api.put(`/mission/levelmission/${stage.missionId}/`, null, {
+            headers: { ...getAuthHeaders() },
+          });
+        } catch (e2) {
+          console.error("미션 시작 실패:", e2);
+          return;
         }
-        updateStageStatus(idx, "completed");
-        setActiveStageIndex(null);
-        refreshAllMissions();
+      } else {
+        console.error("미션 시작 실패:", e);
         return;
-      } catch (e2) {
-        console.error("미션 완료 실패(재시도 포함):", e2);
       }
-    } else {
-      console.error("미션 완료 실패:", e);
     }
-  }
-};
+
+    updateStageStatus(idx, "in_progress");
+    setActiveStageIndex(null); // 말풍선 닫기
+    refreshAllMissions(); // 서버와 동기화
+  };
+
+  const handleMissionComplete = async (idx) => {
+    const stage = serverStages[idx];
+    // 1순위: userMissionId, 없으면 level mission id
+    let idToUse = stage?.userMissionId ?? stage?.missionId;
+
+    if (!idToUse) {
+      console.warn("완료 호출에 사용할 미션 ID가 없습니다:", stage);
+      return;
+    }
+
+    try {
+      // ✅ path param으로 ID 붙여서 호출
+      const res = await api.post(
+        `/mission/levelmissioncomplete/${idToUse}/`,
+        null,
+        {
+          headers: { ...getAuthHeaders() },
+        }
+      );
+
+      // XP 반영
+      if (typeof res.data?.user_xp === "number") {
+        setUserXp(res.data.user_xp);
+      }
+
+      updateStageStatus(idx, "completed");
+      setActiveStageIndex(null);
+      refreshAllMissions();
+    } catch (e) {
+      // 혹시 userMissionId로 404가 나면 level mission id로 재시도
+      if (stage?.missionId && idToUse !== stage.missionId) {
+        try {
+          const res2 = await api.post(
+            `/mission/levelmissioncomplete/${stage.missionId}/`,
+            null,
+            {
+              headers: { ...getAuthHeaders() },
+            }
+          );
+          if (typeof res2.data?.user_xp === "number") {
+            setUserXp(res2.data.user_xp);
+          }
+          updateStageStatus(idx, "completed");
+          setActiveStageIndex(null);
+          refreshAllMissions();
+          return;
+        } catch (e2) {
+          console.error("미션 완료 실패(재시도 포함):", e2);
+        }
+      } else {
+        console.error("미션 완료 실패:", e);
+      }
+    }
+  };
 
   return (
     <Wrapper>
-      <LevelSelector currentLevel={currentLevel} onLevelChange={handleLevelChange} />
+      <LevelSelector
+        currentLevel={currentLevel}
+        onLevelChange={handleLevelChange}
+      />
 
       <Content>
         {!!levelData && (
@@ -434,15 +473,17 @@ const handleMissionComplete = async (idx) => {
               onLevelChange={handleLevelChange}
             />
 
-           <MissionProgress
-           userXp={userXp}
-           currentLevel={currentLevel}
-          levelTitle={LEVEL_META[currentLevel]?.title || "다음 레벨"}
-           />
+            <MissionProgress
+              userXp={userXp}
+              currentLevel={currentLevel}
+              levelTitle={LEVEL_META[currentLevel]?.title || "다음 레벨"}
+            />
 
             <GameMapBackGround $locked={isViewingLocked}>
               {isViewingLocked && (
-                <LockedBadge>이 레벨은 아직 잠금 상태예요. XP를 모아 해금해보세요!</LockedBadge>
+                <LockedBadge>
+                  이 레벨은 아직 잠금 상태예요. XP를 모아 해금해보세요!
+                </LockedBadge>
               )}
               <GameMapContainer>
                 {loadingStages && (
@@ -463,31 +504,33 @@ const handleMissionComplete = async (idx) => {
                       key={i}
                       $status={stage.status}
                       $type={stage.type}
+                      $level={currentLevel}
                       style={{ top: stage.top, left: stage.left }}
                       onClick={() => handleStageClick(i)}
                       disabled={loadingStages}
                     >
-                      {getStageIcon(stage, pressed)}
+                      {getStageIcon(stage, pressed, currentLevel)}
                     </StageIcon>
                   );
                 })}
 
-                {activeStageIndex !== null && serverStages[activeStageIndex] && (
-                  <MissionTooltip
-                    stageData={{
-                      ...serverStages[activeStageIndex],
-                      missionDetail:
-                        serverStages[activeStageIndex].missionDetail ?? {
+                {activeStageIndex !== null &&
+                  serverStages[activeStageIndex] && (
+                    <MissionTooltip
+                      stageData={{
+                        ...serverStages[activeStageIndex],
+                        missionDetail: serverStages[activeStageIndex]
+                          .missionDetail ?? {
                           title: "미션 정보 없음",
                           xp: 0,
                         },
-                    }}
-                    index={activeStageIndex}
-                    onClose={() => setActiveStageIndex(null)}
-                    onStart={() => handleMissionStart(activeStageIndex)}
-                    onComplete={() => handleMissionComplete(activeStageIndex)}
-                  />
-                )}
+                      }}
+                      index={activeStageIndex}
+                      onClose={() => setActiveStageIndex(null)}
+                      onStart={() => handleMissionStart(activeStageIndex)}
+                      onComplete={() => handleMissionComplete(activeStageIndex)}
+                    />
+                  )}
               </GameMapContainer>
             </GameMapBackGround>
           </LevelBlock>
@@ -643,8 +686,6 @@ const GameMapContainer = styled.div`
 
   /* ✅ contain 대신 더 작게 */
   background-size: 320px 350px;
-
-  
 `;
 
 const LockedBadge = styled.div`
@@ -654,7 +695,7 @@ const LockedBadge = styled.div`
   left: 50%;
   transform: translateX(-50%);
   z-index: 3;
-  background: rgba(0,0,0,0.7);
+  background: rgba(0, 0, 0, 0.7);
   color: #fff;
   padding: 6px 10px;
   border-radius: 10px;
@@ -686,7 +727,6 @@ const GameMapBackGround = styled.div`
         z-index: 200;
       }
     `}
-
 `;
 
 const StageIcon = styled.button`
@@ -702,8 +742,8 @@ const StageIcon = styled.button`
   cursor: pointer;
 
   /* ✅ 상태(status)에 따라 배경색 동적 변경 */
-  background-color: ${({ $status }) =>
-    $status === "completed" ? "#1DC3FF" : "#E0E0E0"};
+  background-color: ${({ $status, $level }) =>
+    $status === "completed" ? LEVEL_COLORS[$level] || "#1DC3FF" : "#E0E0E0"};
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 
   /* ✅ 타입(type)에 따라 아이콘 크기 등 스타일 조정 */
@@ -727,7 +767,9 @@ const TooltipWrapper = styled.div`
   transform: translateX(-50%);
   width: 90%;
   background-color: ${({ $status }) =>
-  $status === "completed" || $status === "in_progress" ? "#1DC3FF" : "#bbbcc4"};
+    $status === "completed" || $status === "in_progress"
+      ? "#1DC3FF"
+      : "#bbbcc4"};
   border-radius: 16px;
   padding: 30px;
   color: #fff;
@@ -749,8 +791,10 @@ const TooltipWrapper = styled.div`
     left: ${({ $anchor }) => $anchor};
 
     ${({ $anchorDirection, $status }) => {
-        const color =
-        $status === "completed" || $status === "in_progress" ? "#1DC3FF" : "#BDBDBD";
+      const color =
+        $status === "completed" || $status === "in_progress"
+          ? "#1DC3FF"
+          : "#BDBDBD";
       if ($anchorDirection === "bottom") {
         return `
           bottom: -8px;
@@ -786,7 +830,9 @@ const StartButton = styled.button`
   border: none;
   background-color: #fff;
   color: ${({ $status }) =>
-  $status === "completed" || $status === "in_progress" ? "#1DC3FF" : "#bbbcc4"};
+    $status === "completed" || $status === "in_progress"
+      ? "#1DC3FF"
+      : "#bbbcc4"};
   border-radius: 12px;
   font-size: 16px;
   font-weight: 700;
