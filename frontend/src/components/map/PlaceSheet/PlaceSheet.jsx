@@ -23,7 +23,6 @@ const CompactContent = ({ place, onViewDetails, onLike }) => {
       <Address>{place?.address ?? "주소 정보 없음"}</Address>
       <InfoRow>
         <HoursInfo $isOpen={place?.isOpen}>{place?.isOpen ? "영업중" : "영업종료"}</HoursInfo>
-        <span>{place?.hours ?? "정보 없음"}</span>
         <RatingContainer>
           <span style={{ fontWeight: "600" }}>
             {place?.rating?.toFixed(1) ?? "N/A"}
@@ -80,7 +79,6 @@ const ExpandedContent = ({
           {/* place 데이터가 있으면 name을, 없으면 '장소명'을 표시 */}
           <MainTitle>{place?.name ?? "장소명"}</MainTitle>
           <SubInfo>
-            {/* 아래 데이터들은 추후 백엔드에서 추가될 경우 자동으로 표시됩니다. */}
             <span>{place?.category ?? "카테고리"}</span>
             <span>·</span>
             <span>
@@ -146,9 +144,7 @@ const ExpandedContent = ({
               <span>
                 <img src="/icons/map/mapdetail/time.svg" alt="영업시간" />
               </span>
-              <p>{place?.isOpen ? "영업중" : "영업종료"}</p>  
-              ·
-              <p>{place?.closeHour ? `${place.closeHour}에 영업종료` : "영업시간 정보 없음"}</p>
+              <p><strong>{place?.isOpen ? "영업중" : "영업종료"}</strong>&nbsp;{place?.closeHour ? `${place.closeHour}에 영업종료` : "영업시간 정보 없음"}</p>  
             </InfoItem>
             <InfoItem>
               <span>
@@ -663,12 +659,20 @@ const InfoItem = styled.div`
   }
   /* 텍스트 스타일 */
   & > p {
+    margin-right: 30px;
     flex: 1;
   }
 
   img {
     width: 22px;
     height: auto;
+  }
+
+  strong {
+  margin-top: 3px;
+  margin-right: 5px;
+  font-weight: 700;
+  color: #e33150;
   }
 `;
 
