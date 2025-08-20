@@ -25,7 +25,7 @@ function removeOldKakaoScript() {
   // 완전 초기화
   try {
     delete window.kakao;
-  } catch (_) {
+  } catch {
     /* ignore */
   }
 }
@@ -79,7 +79,6 @@ export default function Map() {
 
   // 상태 관리
   const [isMapReady, setIsMapReady] = useState(false);
-  const [allMarkets, setAllMarkets] = useState([]);
   const [selectedPlace, setSelectedPlace] = useState(null);
   const [infoWindow, setInfoWindow] = useState(null);
 
@@ -260,7 +259,6 @@ export default function Map() {
     const fetchAllMarketLocations = async () => {
       try {
         const response = await api.get("/market/");
-        setAllMarkets(response.data);
         response.data.forEach((market) => {
           const markerPosition = new window.kakao.maps.LatLng(
             market.lat,
