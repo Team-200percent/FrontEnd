@@ -354,7 +354,7 @@ export default function Map() {
         $isSheetOpen={isPlaceSheetOpen}
         $viewMode={sheetViewMode}
       >
-        <LocateButton />
+        <LocateButton mapRef={mapRef}/>
       </LocateButtonWrapper>
 
       <PlaceSheet
