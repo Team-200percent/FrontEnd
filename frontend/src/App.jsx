@@ -16,11 +16,11 @@ import Recommend from "./pages/Recommend";
 import Login from "./pages/Login";
 import MapSearch from "./pages/map/MapSearch";
 import WeeklyMission from "./pages/home/WeeklyMission";
-import WriteReview from "./pages/map/WriteReview";
+import Signup from "./pages/Signup";
 
 function AppInner() {
   const location = useLocation(); // 현재 URL 전체 정보를 주는 React Hook
-  const hideNavPaths = ["/splash", "/onboarding", "/login", "/map-search"]; // 여기에 숨길 경로들 적기
+  const hideNavPaths = ["/splash", "/onboarding", "/login", "/signup", "/map-search"]; // 여기에 숨길 경로들 적기
   const shouldHideNav = hideNavPaths.some((path) =>
     location.pathname.startsWith(path)
   );
@@ -34,6 +34,7 @@ function AppInner() {
         <Route path="/splash" element={<Splash />} />
         <Route path="/onboarding" element={<Onboarding />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
 
         {/* Protected Routes */}
         <Route path="/home" element={<Home />} />
