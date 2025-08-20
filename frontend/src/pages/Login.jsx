@@ -1,64 +1,92 @@
-import { use, useState } from "react";
+// src/pages/Login.jsx
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import styled from "styled-components";
-import axios from "axios";
 import api from "../lib/api";
-
 
 export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+
+  // ✅ 필드별 에러 상태
+  const [errors, setErrors] = useState({ username: "", password: "", form: "" });
+  const [submitting, setSubmitting] = useState(false);
+
   const navigate = useNavigate();
+
+  const clearFieldError = (name) => {
+    setErrors((e) => ({ ...e, [name]: "", form: "" }));
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setErrors({ username: "", password: "", form: "" });
 
-    if (!username || !password) {
-      alert("아이디와 비밀번호를 입력해주세요.");
-      return;
+    // ✅ 프론트 1차 검증
+    let hasClientError = false;
+    if (!username.trim()) {
+      hasClientError = true;
+      setErrors((prev) => ({ ...prev, username: "아이디를 입력해주세요." }));
     }
-
-    const loginData = {
-      username: username,
-      password: password,
-    };
+    if (!password) {
+      hasClientError = true;
+      setErrors((prev) => ({ ...prev, password: "비밀번호를 입력해주세요." }));
+    }
+    if (hasClientError) return;
 
     try {
-      const response = await api.post(
-        "/account/login/",
-        loginData
-      );
+      setSubmitting(true);
 
-      const accessToken = response.data?.token?.access_token;
-      if (accessToken) {
-  // 1) 저장 키를 'access_token' 으로 통일
-  localStorage.setItem("access_token", accessToken);
+      const { data } = await api.post("/account/login/", {
+        username,
+        password,
+      });
 
-  // 2) (선택) 인스턴스에도 바로 붙여두기 — 새로고침하면 사라지니 인터셉터도 함께 쓰는게 안전
-  api.defaults.headers.common.Authorization = `Bearer ${accessToken}`;
-  // 만약 인스턴스가 아니라 전역 axios만 쓴다면 아래 줄:
-  // axios.defaults.headers.common.Authorization = `Bearer ${accessToken}`;
-
-  console.log("로그인 성공:", response.data);
-  navigate("/home");
-} else {
-  alert("로그인에 실패했습니다. (토큰 없음)");
-}
-    } catch (error) {
-      console.error("로그인 실패:", error);
-      // ✅ 2. 서버가 보내주는 에러 메시지를 사용자에게 표시
-      if (error.response && error.response.data) {
-        const errorMsg = error.response.data.non_field_errors?.[0];
-        if (errorMsg?.includes("User does not exist")) {
-          alert("존재하지 않는 아이디입니다.");
-        } else if (errorMsg?.includes("Wrong password")) {
-          alert("비밀번호가 일치하지 않습니다.");
-        } else {
-          alert("로그인에 실패했습니다. 다시 시도해주세요.");
-        }
-      } else {
-        alert("서버에 문제가 발생했습니다. 잠시 후 다시 시도해주세요.");
+      const accessToken = data?.token?.access_token;
+      if (!accessToken) {
+        setErrors({
+          username: "",
+          password: "",
+          form: "로그인에 실패했습니다. 잠시 후 다시 시도해주세요.",
+        });
+        return;
       }
+
+      // 토큰 저장 + 헤더 주입
+      localStorage.setItem("access_token", accessToken);
+      api.defaults.headers.common.Authorization = `Bearer ${accessToken}`;
+
+      navigate("/home");
+    } catch (error) {
+      // ✅ 백엔드 에러 메시지 매핑 (예: DRF non_field_errors)
+      const msg =
+        error?.response?.data?.non_field_errors?.[0] ||
+        error?.response?.data?.detail ||
+        "";
+
+      if (msg.includes("User does not exist")) {
+        // 아이디가 존재하지 않음
+        setErrors({ username: "존재하지 않는 아이디입니다.", password: "", form: "" });
+      } else if (msg.includes("Wrong password")) {
+        // 비밀번호 불일치
+        setErrors({ username: "", password: "비밀번호가 일치하지 않습니다.", form: "" });
+      } else if (error?.response?.status === 400) {
+        // 일반적인 잘못된 요청
+        setErrors({
+          username: "",
+          password: "",
+          form: "아이디 또는 비밀번호를 확인해주세요.",
+        });
+      } else {
+        // 네트워크/서버 오류
+        setErrors({
+          username: "",
+          password: "",
+          form: "서버에 문제가 발생했습니다. 잠시 후 다시 시도해주세요.",
+        });
+      }
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -66,37 +94,64 @@ export default function Login() {
     <Wrapper>
       <Header>
         <Brand>
-          <img src="/icons/mainlogo-sky.png" />
+          <img src="/icons/mainlogo-sky.png" alt="동네방네" />
         </Brand>
       </Header>
 
-      <Form onSubmit={handleLogin}>
+      <Form onSubmit={handleLogin} noValidate>
+        {/* 아이디 */}
         <Field>
-          <Label>아이디</Label>
+          <Label htmlFor="login-username">아이디</Label>
           <Input
+            id="login-username"
             type="text"
             placeholder="영어, 숫자 조합 4~10자 이내"
             value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            onChange={(e) => {
+              setUsername(e.target.value);
+              if (errors.username) clearFieldError("username");
+            }}
+            $error={!!errors.username}
+            aria-invalid={!!errors.username}
+            aria-describedby={errors.username ? "username-error" : undefined}
+            autoComplete="username"
           />
+          {errors.username && <ErrorText id="username-error">{errors.username}</ErrorText>}
         </Field>
 
+        {/* 비밀번호 */}
         <Field>
-          <Label>비밀번호</Label>
+          <Label htmlFor="login-password">비밀번호</Label>
           <Input
+            id="login-password"
             type="password"
             placeholder="영어, 숫자 조합 8~15자 이내"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              if (errors.password) clearFieldError("password");
+            }}
+            $error={!!errors.password}
+            aria-invalid={!!errors.password}
+            aria-describedby={errors.password ? "password-error" : undefined}
+            autoComplete="current-password"
           />
+          {errors.password && <ErrorText id="password-error">{errors.password}</ErrorText>}
         </Field>
 
-        <Submit type="submit">로그인</Submit>
-        <Join to="/home">홈으로(임시)</Join>
+        {/* 폼 전체 에러 */}
+        {errors.form && <FormError role="alert">{errors.form}</FormError>}
+
+        <Submit type="submit" disabled={submitting}>
+          {submitting ? "로그인 중…" : "로그인"}
+        </Submit>
+        <Join to="/signup">회원가입</Join>
       </Form>
     </Wrapper>
   );
 }
+
+/* ---------------- styles ---------------- */
 
 const Wrapper = styled.div`
   width: min(100vw, 430px);
@@ -126,13 +181,13 @@ const Brand = styled.div`
 const Form = styled.form`
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 18px;
   margin-top: 12px;
 `;
 
 const Field = styled.div`
   display: grid;
-  gap: 10px;
+  gap: 8px;
 `;
 
 const Label = styled.label`
@@ -146,7 +201,7 @@ const Input = styled.input`
   width: 100%;
   padding: 10px 10px 10px 15px;
   border-radius: 10px;
-  border: 1.5px solid #1dc3ff;
+  border: 1.5px solid ${({ $error }) => ($error ? "#ff6b6b" : "#1dc3ff")};
   background: #fff;
   font-size: 16px;
   outline: none;
@@ -157,14 +212,30 @@ const Input = styled.input`
     font-family: "Pretendard", sans-serif;
     font-weight: 500;
   }
+
   &:focus {
-    border-color: #1dc3ff;
-    box-shadow: 0 0 0 3px rgba(79, 123, 255, 0.15);
+    border-color: ${({ $error }) => ($error ? "#ff6b6b" : "#1dc3ff")};
+    box-shadow: 0 0 0 3px
+      ${({ $error }) => ($error ? "rgba(255, 107, 107, 0.18)" : "rgba(29, 195, 255, 0.18)")};
   }
 `;
 
+const ErrorText = styled.p`
+  margin: -2px 4px 0;
+  font-size: 12px;
+  color: #e54646; /* 빨간 안내문 */
+  line-height: 1.3;
+`;
+
+const FormError = styled.div`
+  margin-top: 2px;
+  font-size: 13px;
+  color: #e54646;
+  text-align: left;
+`;
+
 const Submit = styled.button`
-  margin-top: 8px;
+  margin-top: 6px;
   height: 46px;
   border: 0;
   border-radius: 10px;
@@ -177,6 +248,10 @@ const Submit = styled.button`
   &:active {
     transform: translateY(1px);
   }
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
 `;
 
 const Join = styled(Link)`
@@ -185,4 +260,5 @@ const Join = styled(Link)`
   font-size: 16px;
   font-weight: 600;
   text-decoration: none;
+  margin-top: 6px;
 `;
