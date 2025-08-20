@@ -7,7 +7,7 @@ import {
 } from "react-router-dom";
 import Home from "./pages/home/Home";
 import Map from "./pages/map/Map";
-import MyPage from "./pages/MyPage";
+import MyPage from "./pages/mypage/MyPage";
 import Layout from "./layout/Layout";
 import NavBar from "./components/NavBar";
 import Onboarding from "./pages/Onboarding";
