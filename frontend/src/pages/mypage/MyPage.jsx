@@ -564,7 +564,7 @@ const Page = styled.div`
 `;
 const Hero = styled.div`
   height: 48%;
-  min-height: 500px;
+  min-height: 600px;
   background: url("/images/mypage/background.png") no-repeat center;
   background-size: cover;
   background-position: center;
@@ -632,7 +632,7 @@ const Effect = styled.div`
 const Shadow = styled.div`
   position: absolute;
   left: 10%;
-  top: 74%;
+  top: 67%;
   img {
     width: 440px;
     height: 80px;
