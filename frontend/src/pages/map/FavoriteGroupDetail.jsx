@@ -247,8 +247,8 @@ const handleCancelDelete = () => {
                 <img
                   src={
                     group?.visibility
-                      ? "/icons/map/public.svg"
-                      : "/icons/map/private.svg"
+                      ? "/icons/map/mapdetail/unlocked.svg"
+                      : "/icons/map/mapdetail/locked.svg"
                   }
                   alt={curGroup?.visibility ? "공개" : "비공개"}
                 />
