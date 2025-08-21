@@ -313,7 +313,7 @@ export default function FavoriteGroupsSheet({
                     <span>개수 {counts[group.id] ?? 0}/100</span>
                     <MetaDivider />
 
-                    {group.visibility ? (
+                    {!group.visibility ? (
                       <PrivacyWrap>
                         <img
                           src="/icons/map/mapdetail/locked.svg"
