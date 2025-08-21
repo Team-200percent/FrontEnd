@@ -2,6 +2,10 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import styled from "styled-components";
+import api from "../lib/api";
+import DatePicker from "react-datepicker";
+import { PatternFormat } from "react-number-format";
+import { ko } from "date-fns/locale";
 
 export default function SignupWizard() {
   const TOTAL = 6;
@@ -12,10 +16,15 @@ export default function SignupWizard() {
     username: "",
     password: "",
     password2: "",
+    nickname: "",
     gender: "M",
     birth: "",
     phone: "",
     inviteCode: "",
+    moveIn: "",
+    report: "",
+    type: "",
+    people: "",
     infra: [],
     experience: [],
     interests: [],
@@ -51,15 +60,63 @@ export default function SignupWizard() {
   }, [step, form]);
 
   const goNext = () => {
-    setStep((s) => s + 1); // 제한 없이 7로 증가하게
+    setStep((s) => s + 1);
   };
 
   const goPrev = () => setStep((s) => Math.max(1, s - 1));
 
   const handleSubmit = async () => {
-    // 마지막 단계에서 제출
-    // TODO: API 연결
-    console.log("submit:", form);
+    // 1. 프론트엔드 데이터를 백엔드 API 형식에 맞게 변환
+    const payload = {
+      username: form.username,
+      password: form.password,
+      nickname: form.nickname,
+      relocationDate: form.moveIn,
+      movedInReported: form.report === "완료", // "완료" -> true, "미완료" -> false
+      residenceType: form.type,
+      residentCount: form.people === "1인" ? 1 : 2, // "1인" -> 1, "2인 이상" -> 2
+      localInfrastructure: form.infra.join(", "), // 배열을 콤마로 구분된 문자열로
+      localLivingExperience: form.experience.join(", "), // 배열을 콤마로 구분된 문자열로
+      // 나머지 preference는 현재 없으므로 null
+
+      cafePreference: form.cafePreference?.join(", ") || null,
+      restaurantPreference: form.restaurantPreference?.join(", ") || null,
+      sportsLeisurePreference: form.sportsPreference?.join(", ") || null, // form state 이름 확인 필요
+      leisureCulturePreference: form.culturePreference?.join(", ") || null, // form state 이름 확인 필요
+    };
+
+    try {
+      // 2. 변환된 데이터로 API POST 요청
+      const response = await api.post("/account/join/", payload);
+
+      // 3. 성공 시 토큰 저장 및 다음 단계로 이동
+      const { access_token } = response.data.token;
+      if (access_token) {
+        localStorage.setItem("accessToken", access_token);
+        api.defaults.headers.common["Authorization"] = `Bearer ${access_token}`;
+        alert(response.data.message || "성공적으로 등록되었습니다!");
+        setStep(7); // 완료 화면으로 이동
+      } else {
+        throw new Error("토큰이 수신되지 않았습니다.");
+      }
+    } catch (error) {
+      console.error("회원가입 실패:", error);
+      // 4. 실패 시 서버 에러 메시지 표시
+      if (error.response && error.response.data) {
+        const data = error.response.data;
+        if (data.username) {
+          alert(`아이디 오류: ${data.username[0]}`);
+        } else if (data.nickname) {
+          alert(`닉네임 오류: ${data.nickname[0]}`);
+        } else {
+          alert("회원가입 중 오류가 발생했습니다.");
+        }
+      } else {
+        alert("서버에 연결할 수 없습니다.");
+      }
+    } finally {
+      setShowBottomSheet(true);
+    }
   };
 
   return (
@@ -86,6 +143,7 @@ export default function SignupWizard() {
           showBottomSheet={showBottomSheet}
           setShowBottomSheet={setShowBottomSheet}
           onClose={() => setShowBottomSheet(false)}
+          handleSubmit={handleSubmit}
         />
       ) : (
         <>
@@ -143,19 +201,17 @@ function Step1({
 
   const checkUsername = async () => {
     const username = form.username.trim();
-    if (username.length < 4) {
-      alert("아이디는 4자 이상이어야 합니다.");
-      return;
-    }
 
     try {
-      // 실제 API 요청이라고 가정
-      const response = await fetch(`/api/check-username?username=${username}`);
-      const result = await response.json();
+      const response = await api.get("/account/join/id", {
+        params: {
+          username: username,
+        },
+      });
 
-      // 예시 응답 구조: { available: true } 또는 { available: false }
+      const { available, message } = response.data;
       setIsUsernameChecked(true);
-      setIsUsernameValid(result.available);
+      setIsUsernameValid(available);
     } catch (err) {
       console.error("중복 확인 실패:", err);
       alert("서버 오류. 다시 시도해주세요.");
@@ -185,12 +241,25 @@ function Step1({
         <ConfirmBtn onClick={checkUsername}>중복확인</ConfirmBtn>
       </InputWrap>
 
+      {form.username.length < 4 && (
+        <ErrorText>* 아이디는 4자 이상이어야 합니다.</ErrorText>
+      )}
+
       {isUsernameChecked && isUsernameValid === true && (
         <Sub>* 사용 가능한 아이디입니다.</Sub>
       )}
       {isUsernameChecked && isUsernameValid === false && (
         <ErrorText>* 이미 사용 중인 아이디입니다.</ErrorText>
       )}
+
+      <Label>닉네임</Label>
+      <InputWrap>
+        <Input
+          value={form.nickname}
+          placeholder="닉네임 입력"
+          onChange={(e) => setForm((f) => ({ ...f, nickname: e.target.value }))}
+        />
+      </InputWrap>
 
       <Label>비밀번호</Label>
       <InputWrap>
@@ -234,7 +303,7 @@ function Step2({ form, setForm }) {
   return (
     <>
       <H1>
-        {form.username}님의 <br /> <strong>기본 정보</strong>를 알려주세요
+        {form.nickname}님의 <br /> <strong>기본 정보</strong>를 알려주세요
       </H1>
       <H2>정보 추천을 위해 사용돼요</H2>
       <Label>성별</Label>
@@ -254,31 +323,63 @@ function Step2({ form, setForm }) {
       </BtnRow>
 
       <Label>생년월일</Label>
-      <Input
-        placeholder="생년월일 입력"
-        value={form.birth}
-        onChange={(e) => setForm((f) => ({ ...f, birth: e.target.value }))}
-      />
+      {/* <DatePicker
+        locale={ko} // 달력을 한국어로 표시
+        selected={form.birth ? new Date(form.birth) : null} // 선택된 날짜 (state)
+        onChange={(date) => setForm((f) => ({ ...f, birth: date }))} // 날짜 선택 시 state 변경
+        dateFormat="yyyy-MM-dd" // 입력창에 표시될 날짜 형식
+        showYearDropdown // 년도 선택 드롭다운 표시
+        showMonthDropdown // 월 선택 드롭다운 표시
+        dropdownMode="select" // 드롭다운을 스크롤이 아닌 선택 방식으로
+        customInput={<Input />} // 기존에 만든 Input 스타일을 그대로 사용
+        placeholderText="생년월일 선택"
+      /> */}
+      <InputWrap>
+        <Input
+          placeholder="생년월일 입력"
+          value={form.birth}
+          onChange={(e) => setForm((f) => ({ ...f, birth: e.target.value }))}
+        />
+      </InputWrap>
 
       <Label>휴대전화 번호</Label>
-      <Input
-        placeholder="휴대전화 번호 입력"
-        value={form.phone}
-        onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-      />
+      <InputWrap>
+        {/* <PatternFormat
+          format="###-####-####" // 입력될 형식 지정
+          mask="_" // 빈 자리를 "_"로 표시 (선택사항)
+          allowEmptyFormatting
+          customInput={Input} // ✅ 기존에 만든 Input 스타일 재사용
+          value={form.phone}
+          // ✅ 포맷되지 않은 숫자 값만 state에 저장
+          onValueChange={(values) => {
+            setForm((f) => ({ ...f, phone: values.value }));
+          }}
+          placeholder="010-1234-5678"
+          type="tel" // 모바일에서 숫자 키패드가 뜨도록 설정
+        /> */}
+        <Input
+          placeholder="휴대전화 번호 입력"
+          value={form.phone}
+          onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+        />
+      </InputWrap>
+
       <AuthBtn>인증하기</AuthBtn>
 
       <Label>초대코드 (선택)</Label>
-      <Input
-        placeholder="초대코드가 있을 경우 입력해주세요"
-        value={form.inviteCode}
-        onChange={(e) => setForm((f) => ({ ...f, inviteCode: e.target.value }))}
-      />
+      <InputWrap>
+        <Input
+          placeholder="초대코드가 있을 경우 입력해주세요"
+          value={form.inviteCode}
+          onChange={(e) =>
+            setForm((f) => ({ ...f, inviteCode: e.target.value }))
+          }
+        />
+      </InputWrap>
     </>
   );
 }
 
-/* Step3~Step6는 필요한 UI로 채워 넣으면 됨 */
 function Step3({ form, setForm }) {
   const handleSelect = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -286,7 +387,7 @@ function Step3({ form, setForm }) {
   return (
     <>
       <H1>
-        {form.username}님의 <br /> <strong>거주 정보</strong>를 알려주세요
+        {form.nickname}님의 <br /> <strong>거주 정보</strong>를 알려주세요
       </H1>
 
       <QuestionSection>
@@ -305,15 +406,18 @@ function Step3({ form, setForm }) {
 
         <Label>전입신고 여부</Label>
         <OptionWrap>
-          {["완료", "미완료"].map((item) => (
-            <OptionBtn
-              key={item}
-              $active={form.report === item}
-              onClick={() => handleSelect("report", item)}
-            >
-              {item}
-            </OptionBtn>
-          ))}
+          <OptionBtn
+            $active={form.report === true}
+            onClick={() => handleSelect("report", true)}
+          >
+            완료
+          </OptionBtn>
+          <OptionBtn
+            $active={form.report === false}
+            onClick={() => handleSelect("report", false)}
+          >
+            미완료
+          </OptionBtn>
         </OptionWrap>
 
         <Label>거주 형태</Label>
@@ -333,15 +437,21 @@ function Step3({ form, setForm }) {
 
         <Label>거주 인원</Label>
         <OptionWrap>
-          {["1인", "2인 이상"].map((item) => (
-            <OptionBtn
-              key={item}
-              $active={form.people === item}
-              onClick={() => handleSelect("people", item)}
-            >
-              {item}
-            </OptionBtn>
-          ))}
+          {/* ✅ 1인 버튼 */}
+          <OptionBtn
+            $active={form.people === 1}
+            onClick={() => handleSelect("people", 1)}
+          >
+            1인
+          </OptionBtn>
+
+          {/* ✅ 2인 이상 버튼 */}
+          <OptionBtn
+            $active={form.people === 2}
+            onClick={() => handleSelect("people", 2)}
+          >
+            2인 이상
+          </OptionBtn>
         </OptionWrap>
       </QuestionSection>
     </>
@@ -369,7 +479,7 @@ function Step4({ form, setForm }) {
   return (
     <>
       <H1>
-        {form.username}님 <br /> <strong>동네 인프라를 얼마나 알고</strong>
+        {form.nickname}님 <br /> <strong>동네 인프라를 얼마나 알고</strong>
         있나요? <b>(중복 가능)</b>
       </H1>
 
@@ -408,7 +518,7 @@ function Step5({ form, setForm }) {
   return (
     <>
       <H1>
-        {form.username}님 <br /> <strong>어떤 동네 생활 경험</strong>이 있나요?
+        {form.nickname}님 <br /> <strong>어떤 동네 생활 경험</strong>이 있나요?
       </H1>
 
       <CheckboxGroup>
@@ -427,28 +537,130 @@ function Step5({ form, setForm }) {
 }
 
 function Step6({ form, setForm }) {
-  const toggleInterest = (item) => {
-    const newInterests = form.interests.includes(item)
-      ? form.interests.filter((v) => v !== item)
-      : [...form.interests, item];
-    setForm((prev) => ({ ...prev, interests: newInterests }));
+  const PREFERENCE_CATEGORIES = {
+    cafe: [
+      "조용한 카페",
+      "인스타 감성 카페",
+      "공부 · 작업하기 좋은 카페",
+      "디저트 맛집",
+      "브런치 카페",
+      "로스터리 · 스페셜티",
+      "프랜차이즈",
+    ],
+    restaurant: [
+      "한식",
+      "중식",
+      "일식",
+      "양식",
+      "분식",
+      "패스트푸드",
+      "채식 · 비건",
+      "다이어트식",
+      "고기집",
+      "디저트 · 베이커리",
+    ],
+    sports: [
+      "헬스 / 피트니스",
+      "러닝 / 조깅",
+      "요가",
+      "필라테스",
+      "수영",
+      "등산",
+      "볼링",
+      "탁구",
+      "댄스스포츠",
+    ],
+    culture: [
+      "영화관",
+      "공연 · 전시",
+      "독서실 / 스터디카페",
+      "PC방",
+      "코워킹 스페이스",
+      "보드게임 · 방탈출",
+    ],
   };
+
+  const toggleInterest = (interest, categoryKey) => {
+    setForm((prev) => {
+      const currentCategoryInterests = prev[categoryKey] || [];
+      const newInterests = currentCategoryInterests.includes(interest)
+        ? currentCategoryInterests.filter((item) => item !== interest)
+        : [...currentCategoryInterests, interest];
+      return { ...prev, [categoryKey]: newInterests };
+    });
+  };
+
   return (
     <>
       <H1>
-        {form.username}님의 <br /> <strong>취향 · 관심사</strong>를 알려주세요{" "}
+        {form.nickname}님의 <br /> <strong>취향 · 관심사</strong>를 알려주세요{" "}
         <b>(중복 가능)</b>
       </H1>
+
+      <SheetScroll>
+        <CategoryTitle $accent>카페 선호</CategoryTitle>
+        <ChipWrap>
+          {PREFERENCE_CATEGORIES.cafe.map((label) => (
+            <Chip
+              key={label}
+              $active={form.cafePreference?.includes(label)}
+              onClick={() => toggleInterest(label, "cafePreference")}
+            >
+              {label}
+            </Chip>
+          ))}
+        </ChipWrap>
+
+        <CategoryTitle $accent>식당 선호</CategoryTitle>
+        <ChipWrap>
+          {PREFERENCE_CATEGORIES.restaurant.map((label) => (
+            <Chip
+              key={label}
+              $active={form.restaurantPreference?.includes(label)}
+              onClick={() => toggleInterest(label, "restaurantPreference")}
+            >
+              {label}
+            </Chip>
+          ))}
+        </ChipWrap>
+
+        <CategoryTitle $accent>운동 · 레저 선호</CategoryTitle>
+        <ChipWrap>
+          {PREFERENCE_CATEGORIES.sports.map((label) => (
+            <Chip
+              key={label}
+              $active={form.sportsPreference?.includes(label)}
+              onClick={() => toggleInterest(label, "sportsPreference")}
+            >
+              {label}
+            </Chip>
+          ))}
+        </ChipWrap>
+
+        <CategoryTitle $accent>여가 · 문화 선호</CategoryTitle>
+        <ChipWrap>
+          {PREFERENCE_CATEGORIES.culture.map((label) => (
+            <Chip
+              key={label}
+              $active={form.culturePreference?.includes(label)}
+              onClick={() => toggleInterest(label, "culturePreference")}
+            >
+              {label}
+            </Chip>
+          ))}
+        </ChipWrap>
+      </SheetScroll>
     </>
   );
 }
 
-function Complete({ showBottomSheet, setShowBottomSheet, onClose }) {
+function Complete({
+  showBottomSheet,
+  setShowBottomSheet,
+  onClose,
+  handleSubmit,
+}) {
   const navigate = useNavigate();
-
-  const handleConfirm = () => {
-    setShowBottomSheet(true);
-  };
 
   const requestPermissions = async () => {
     // 1. 알림 권한
@@ -534,7 +746,7 @@ function Complete({ showBottomSheet, setShowBottomSheet, onClose }) {
 
         <Character src="/icons/home/duck1-on.png" alt="character" />
 
-        <Primary className="last" onClick={handleConfirm}>
+        <Primary className="last" onClick={handleSubmit}>
           시작하기
         </Primary>
       </Content>
@@ -1033,4 +1245,34 @@ const Backdrop = styled.div`
   inset: 0;
   background: rgba(0, 0, 0, 0.3);
   z-index: 2000;
+`;
+
+const SheetScroll = styled.div`
+  flex: 1;
+  overflow-y: auto;
+`;
+
+const CategoryTitle = styled.h3`
+  font-size: 15px;
+  font-weight: 500;
+  margin-left: 5px;
+  margin-bottom: 15px;
+  color: ${({ $accent }) => ($accent ? "#00BFFF" : "#222")};
+`;
+
+const ChipWrap = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 8px;
+  margin-bottom: 20px;
+`;
+
+const Chip = styled.button`
+  border: 1px solid ${({ $active }) => ($active ? "#1dc3ff" : "#8b8585")};
+  background: ${({ $active }) => ($active ? "#1dc3ff" : "#fff")};
+  color: ${({ $active }) => ($active ? "#fff" : "#333")};
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 14px;
+  font-weight: 400;
 `;
