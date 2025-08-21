@@ -88,6 +88,39 @@ export default function Map() {
   const [isGroupSheetOpen, setIsGroupSheetOpen] = useState(false);
   const [sheetViewMode, setSheetViewMode] = useState("compact");
 
+  // src/pages/map/Map.jsx
+
+  const handleMarkerClick = async (lat, lng, marketId) => {
+    setIsPlaceSheetOpen(true);
+    setSelectedPlace(null);
+    setSheetViewMode("compact");
+    try {
+      const response = await api.get(
+        "https://200percent.p-e.kr/market/simple/",
+        {
+          params: { lat, lng },
+        }
+      );
+      const simpleInfo = response.data[0];
+      if (simpleInfo) {
+        setSelectedPlace({
+          id: marketId,
+          name: simpleInfo.name,
+          address: simpleInfo.address,
+          hours: simpleInfo.business_hours,
+          rating: simpleInfo.avg_rating,
+          isOpen: simpleInfo.is_open,
+          isFavorite: simpleInfo.is_favorite,
+          images: simpleInfo.images, // ✅ 이미지 배열 추가
+          lat: simpleInfo.lat ?? lat,
+          lng: simpleInfo.lng ?? lng,
+        });
+      }
+    } catch (error) {
+      console.error("간단한 상점 정보 로딩 실패:", error);
+    }
+  };
+
   // 🔑 검색 통합 로직
   const handleSearchSubmit = useCallback(async (query) => {
     const q = (query || "").trim();
@@ -172,7 +205,18 @@ export default function Map() {
             searchLabelRef.current.setMap(mapRef.current);
           }
 
-          setSelectedPlace({ ...preload, lat, lng });
+          setSelectedPlace({
+            name: preload.name,
+            address: preload.address,
+            category: preload.category,
+            rating: preload.avg_rating,
+            reviewCount: preload.review_count,
+            isOpen: preload.is_open,
+            isFavorite: preload.is_favorite, // ✅ 중요
+            lat: preload.lat,
+            lng: preload.lng,
+            images: preload.images ?? [],
+          });
           setIsPlaceSheetOpen(true);
           setSheetViewMode("compact");
         }
@@ -286,19 +330,7 @@ export default function Map() {
             newInfoWindow.setMap(mapRef.current);
             setInfoWindow(newInfoWindow);
 
-            setSelectedPlace({
-              name: market.name,
-              address: market.address,
-              hours: market.business_hours,
-              category: market.category,
-              rating: market.avg_rating,
-              isOpen: market.is_open,
-              isFavorite: market.is_favorite,
-              lat: market.lat,
-              lng: market.lng,
-            });
-            setIsPlaceSheetOpen(true);
-            setSheetViewMode("compact");
+            handleMarkerClick(market.lat, market.lng, market.id);
           };
         });
       } catch (error) {
@@ -306,7 +338,7 @@ export default function Map() {
       }
     };
     fetchAllMarketLocations();
-  }, [isMapReady, infoWindow]);
+  }, [isMapReady, infoWindow, handleMarkerClick]);
 
   // --- /map-search에서 넘어온 검색어 처리 ---
   useEffect(() => {
@@ -338,29 +370,32 @@ export default function Map() {
     >
       <div ref={boxRef} style={{ width: "100%", height: "100dvh" }} />
 
-      {!isFavoriteSheetOpen && sheetViewMode !== "expanded" && (
-        <>
-          <SearchBar mode="display" onSubmit={handleSearchSubmit} />
-          <CategoryChips
-            onSelect={(key) =>
-              navigate("/map-search", { state: { activeCategory: key } })
-            }
-          />
-          <FavoriteButton onClick={() => setIsFavoriteSheetOpen(true)} />
-        </>
-      )}
+      {!isFavoriteSheetOpen &&
+        sheetViewMode !== "expanded" &&
+        !isGroupSheetOpen && (
+          <>
+            <SearchBar mode="display" onSubmit={handleSearchSubmit} />
+            <CategoryChips
+              onSelect={(key) =>
+                navigate("/map-search", { state: { activeCategory: key } })
+              }
+            />
+            <FavoriteButton onClick={() => setIsFavoriteSheetOpen(true)} />
+          </>
+        )}
 
       <LocateButtonWrapper
         $isSheetOpen={isPlaceSheetOpen}
         $viewMode={sheetViewMode}
       >
-        <LocateButton mapRef={mapRef}/>
+        <LocateButton mapRef={mapRef} />
       </LocateButtonWrapper>
 
       <PlaceSheet
         open={isPlaceSheetOpen}
         onClose={() => setIsPlaceSheetOpen(false)}
         onCloseAll={() => {
+          setSheetViewMode("compact");
           setIsPlaceSheetOpen(false);
           setIsFavoriteSheetOpen(false);
           setIsGroupSheetOpen(false);
