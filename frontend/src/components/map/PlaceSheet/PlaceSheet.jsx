@@ -22,7 +22,11 @@ const CompactContent = ({ place, onViewDetails, onLike }) => {
       </CompactHeader>
       <Address>{place?.address ?? "주소 정보 없음"}</Address>
       <InfoRow>
-        <HoursInfo $isOpen={place?.isOpen}>{place?.isOpen ? "영업중" : "영업종료"}</HoursInfo>
+        <HoursInfo $isOpen={place?.isOpen}>
+          <strong>{place?.isOpen ? "영업중" : "영업종료"}</strong>
+          &nbsp;&nbsp;
+          {place?.hours ?? "정보 없음"}
+        </HoursInfo>
         <RatingContainer>
           <span style={{ fontWeight: "600" }}>
             {place?.rating?.toFixed(1) ?? "N/A"}
@@ -36,9 +40,7 @@ const CompactContent = ({ place, onViewDetails, onLike }) => {
       </InfoRow>
       <DetailButton onClick={onViewDetails}>자세히 보기</DetailButton>
       <ImagePreview
-      $src={
-          (place?.images?.[0]?.url || place?.images?.[0]?.image_url) ?? ""
-       }
+        $src={(place?.images?.[0]?.url || place?.images?.[0]?.image_url) ?? ""}
       />
     </CompactWrapper>
   );
@@ -79,14 +81,20 @@ const ExpandedContent = ({
           {/* place 데이터가 있으면 name을, 없으면 '장소명'을 표시 */}
           <MainTitle>{place?.name ?? "장소명"}</MainTitle>
           <SubInfo>
-            <span>{place?.category ?? "카테고리"}</span>
-            <span>·</span>
             <span>
-              <img src="/icons/map/mapdetail/graystar.svg" alt="별점" />{" "}
-              {place?.rating?.toFixed(1) ?? "평점 없음"}
+              <b>{place?.category ?? "카테고리"} ·</b>{" "}
             </span>
-            <span>·</span>
-            <span>리뷰 {place?.reviewCount ?? "0"}</span>
+            <img
+              src={
+                place?.rating
+                  ? "/icons/map/star.svg"
+                  : "/icons/map/mapdetail/graystar.svg"
+              }
+              alt="별점"
+            />
+            <span>{place?.rating?.toFixed(1) ?? "평점 없음"}</span>
+
+            <span>· 리뷰 {place?.reviewCount ?? "0"}</span>
           </SubInfo>
         </TitleSection>
 
@@ -94,7 +102,13 @@ const ExpandedContent = ({
           {Array.isArray(place?.images) && place.images.length > 0 ? (
             place.images.map((img) => {
               const src = img.url || img.image_url; // 혹시 기존 형식도 들어오면 호환
-              return <Photo key={img.id ?? src} src={src} alt={place?.name ?? "사진"} />;
+              return (
+                <Photo
+                  key={img.id ?? src}
+                  src={src}
+                  alt={place?.name ?? "사진"}
+                />
+              );
             })
           ) : (
             <>
@@ -112,12 +126,12 @@ const ExpandedContent = ({
           >
             홈
           </Tab>
-          <Tab
+          {/* <Tab
             $active={activeTab === "menu"}
             onClick={() => onTabClick("menu")}
           >
             메뉴
-          </Tab>
+          </Tab> */}
           <Tab
             $active={activeTab === "review"}
             onClick={() => onTabClick("review")}
@@ -144,7 +158,12 @@ const ExpandedContent = ({
               <span>
                 <img src="/icons/map/mapdetail/time.svg" alt="영업시간" />
               </span>
-              <p><strong>{place?.isOpen ? "영업중" : "영업종료"}</strong>&nbsp;{place?.closeHour ? `${place.closeHour}에 영업종료` : "영업시간 정보 없음"}</p>  
+              <p>
+                <strong>{place?.isOpen ? "영업중" : "영업종료"}</strong>&nbsp;
+                {place?.closeHour
+                  ? `${place.closeHour}에 영업종료`
+                  : "영업시간 정보 없음"}
+              </p>
             </InfoItem>
             <InfoItem>
               <span>
@@ -163,7 +182,11 @@ const ExpandedContent = ({
           </InfoList>
         )}
         {activeTab === "review" && (
-          <ReviewContent place={place} onWriteReview={onWriteReview} refreshKey={reviewsVersion} />
+          <ReviewContent
+            place={place}
+            onWriteReview={onWriteReview}
+            refreshKey={reviewsVersion}
+          />
         )}
       </ContentArea>
     </ExpandedWrapper>
@@ -188,32 +211,32 @@ export default function PlaceSheet({
   const sheetRef = useRef(null);
   const dragInfo = useRef({ startY: 0, isDragging: false });
 
-  const handleReviewSubmitted = (newReview) => {
+  const handleReviewSubmitted = () => {
     setIsWritingReview(false);
     setActiveTab("review");
-    setPlace(prev => ({ ...prev, reviewCount: (prev?.reviewCount || 0) + 1 }));
-    setReviewsVersion(prev => prev + 1);
+    setPlace((prev) => ({
+      ...prev,
+      reviewCount: (prev?.reviewCount || 0) + 1,
+    }));
+    setReviewsVersion((prev) => prev + 1);
   };
 
   const handleExpand = async () => {
-   
     if (!place || !place.lat || !place.lng) return;
 
     onViewModeChange("expanded");
     setIsLoadingDetails(true);
 
     try {
-      // 1. API 주소를 '/market/detail/'로 변경
-      const response = await api.get(
-        "/market/detail/",
-        {
-          // 2. params 옵션을 사용해 lat과 lng를 전달
-          params: {
-            lat: place.lat,
-            lng: place.lng,
-          },
-        }
-      );
+      const accessToken = localStorage.getItem("accessToken"); // 예: 저장된 토큰
+      const response = await api.get("/market/detail/", {
+        // 2. params 옵션을 사용해 lat과 lng를 전달
+        params: {
+          lat: place.lat,
+          lng: place.lng,
+        },
+        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {}, // ✅ accessToken이 있을 때만 헤더에 포함
+      });
 
       // 3. 응답 데이터가 배열이므로 첫 번째 항목을 사용
       const detailInfo = response.data[0];
@@ -233,16 +256,16 @@ export default function PlaceSheet({
           reviewCount: detailInfo.review_count ?? null,
           // url 필드 통일: { id, url }
           images: Array.isArray(detailInfo.images)
-           ? detailInfo.images.map((img) => ({
-               id: img.id,
-               url: img.image_url,
-               created: img.created,
-               market: img.market,
-             }))
-           : [],
-       };
+            ? detailInfo.images.map((img) => ({
+                id: img.id,
+                url: img.image_url,
+                created: img.created,
+                market: img.market,
+              }))
+            : [],
+        };
 
-       setPlace((prev) => ({ ...prev, ...mapped }));
+        setPlace((prev) => ({ ...prev, ...mapped }));
       }
     } catch (error) {
       console.error("상세 정보 로딩 실패:", error);
@@ -252,39 +275,39 @@ export default function PlaceSheet({
   };
 
   const fetchPlaceDetail = async () => {
-  if (!place?.lat || !place?.lng) return;
+    if (place?.lat || !place?.lng) return;
 
-  try {
-    const response = await api.get("/market/detail/", {
-      params: { lat: place.lat, lng: place.lng },
-    });
-    const detailInfo = response.data?.[0];
-    if (!detailInfo) return;
+    try {
+      const response = await api.get("/market/detail/", {
+        params: { lat: place.lat, lng: place.lng },
+      });
+      const detailInfo = response.data?.[0];
+      if (!detailInfo) return;
 
-    const mapped = {
-      isFavorite: detailInfo.is_favorite,
-      category: detailInfo.category ?? null,
-      address: detailInfo.address ?? null,
-      isOpen: detailInfo.is_open ?? null,
-      closeHour: detailInfo.close_hour ?? null,
-      phone: detailInfo.telephone ?? null,
-      website: detailInfo.url ?? null,
-      rating: detailInfo.avg_rating ?? null,
-      reviewCount: detailInfo.review_count ?? null,
-      images: Array.isArray(detailInfo.images)
-        ? detailInfo.images.map((img) => ({
-            id: img.id,
-            url: img.image_url,
-            created: img.created,
-            market: img.market,
-          }))
-        : [],
-    };
-    setPlace((prev) => ({ ...prev, ...mapped }));
-  } catch (e) {
-    console.error("상세 재조회 실패:", e);
-  }
-};
+      const mapped = {
+        isFavorite: detailInfo.is_favorite,
+        category: detailInfo.category ?? null,
+        address: detailInfo.address ?? null,
+        isOpen: detailInfo.is_open ?? null,
+        closeHour: detailInfo.close_hour ?? null,
+        phone: detailInfo.telephone ?? null,
+        website: detailInfo.url ?? null,
+        rating: detailInfo.avg_rating ?? null,
+        reviewCount: detailInfo.review_count ?? null,
+        images: Array.isArray(detailInfo.images)
+          ? detailInfo.images.map((img) => ({
+              id: img.id,
+              url: img.image_url,
+              created: img.created,
+              market: img.market,
+            }))
+          : [],
+      };
+      setPlace((prev) => ({ ...prev, ...mapped }));
+    } catch (e) {
+      console.error("상세 재조회 실패:", e);
+    }
+  };
 
   const onDragStart = (e) => {
     dragInfo.current = {
@@ -321,7 +344,10 @@ export default function PlaceSheet({
           <CompactContent
             place={place}
             onViewDetails={handleExpand}
-            onLike={() => onGroupSheetToggle(true)}
+            onLike={async () => {
+              await fetchPlaceDetail(); // 📌 isFavorite 최신값 반영
+              onGroupSheetToggle(true);
+            }}
           />
         ) : isLoadingDetails || !place || !(place.name || place.address) ? (
           <LoadingSpinner />
@@ -351,7 +377,11 @@ export default function PlaceSheet({
       />
 
       {isWritingReview && (
-        <WriteReview place={place} onClose={() => setIsWritingReview(false)} onSubmitted={handleReviewSubmitted} />
+        <WriteReview
+          place={place}
+          onClose={() => setIsWritingReview(false)}
+          onSubmitted={handleReviewSubmitted}
+        />
       )}
     </>
   );
@@ -454,9 +484,14 @@ const InfoRow = styled.div`
 `;
 
 const HoursInfo = styled.span`
-  font-size: 14px;
-  color: #e33150;
-  font-weight: 500;
+  color: #8b8585;
+  
+
+  strong {
+    font-size: 14px;
+    color: #e33150;
+    font-weight: 800;
+  }
 `;
 
 // ✅ 별점 표시 스타일
@@ -597,6 +632,15 @@ const SubInfo = styled.div`
   display: flex;
   align-items: center;
   gap: 6px;
+
+  b {
+    vertical-align: -1.5px;
+  }
+
+  img {
+    width: 15px;
+    height: 15px;
+  }
 `;
 
 const PhotoSection = styled.div`
@@ -669,10 +713,10 @@ const InfoItem = styled.div`
   }
 
   strong {
-  margin-top: 3px;
-  margin-right: 5px;
-  font-weight: 700;
-  color: #e33150;
+    margin-top: 3px;
+    margin-right: 5px;
+    font-weight: 700;
+    color: #e33150;
   }
 `;
 
