@@ -82,6 +82,30 @@ async function fetchDynamicSections() {
   return { sections, pick };
 }
 
+async function fetchReviewPick() {
+  try {
+    const res = await api.get("/review/recommend/", {
+      headers: { ...getAuthHeaders() },
+    });
+    return res.data?.results ?? [];
+  } catch (e) {
+    console.error("리뷰 PICK 불러오기 실패:", e);
+    return [];
+  }
+}
+
+function LoadingMessage() {
+  return (
+    <LoadingWrapper>
+      <img src="icons/mainlogo-sky.png" alt="로고" />
+      <Spinner />
+      <LoadingText>
+        추천 장소를 불러오는 중이에요<span className="dot">...</span>
+      </LoadingText>
+    </LoadingWrapper>
+  );
+}
+
 /** ----------------------------------------------------------------
  *  2) 컴포넌트
  * ---------------------------------------------------------------- */
@@ -90,23 +114,30 @@ export default function Recommend() {
   const [nick, setNick] = useState("");
   const [sections, setSections] = useState([]);
   const [pick, setPick] = useState([]);
+  const [reviewPick, setReviewPick] = useState([]);
 
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const [nickRes, dynRes] = await Promise.allSettled([
+        const [nickRes, dynRes, reviewRes] = await Promise.allSettled([
           fetchNickname(),
           fetchDynamicSections(),
+          fetchReviewPick(), // ✅ 추가
         ]);
+
         if (!mounted) return;
+
         if (nickRes.status === "fulfilled") setNick(nickRes.value || "");
         if (dynRes.status === "fulfilled") {
           setSections(dynRes.value.sections || []);
           setPick(dynRes.value.pick || []);
         }
+        if (reviewRes.status === "fulfilled") {
+          setReviewPick(reviewRes.value);
+        }
       } catch (e) {
-        console.error("추천/닉네임 로딩 실패:", e);
+        console.error("추천/닉네임/리뷰 로딩 실패:", e);
       } finally {
         if (mounted) setLoading(false);
       }
@@ -118,58 +149,64 @@ export default function Recommend() {
 
   return (
     <Page>
-      {/* ▷ 상단 검색바 */}
       <SearchBar />
 
-      {/* ▷ 추천 섹션들 */}
-      <Section>
-        <Banner>
-          <LeftIcon>
-            <img src="/icons/recommend/character.png" alt="캐릭터" />
-          </LeftIcon>
-          <TextWrap>
-            <p className="top">
-              AI가 {displayNick}님의 <strong>취향을 반영</strong>해{" "}
-            </p>
-            <span>
-              <strong>좋아할 동네 장소</strong>를 선별해서 보여드려요!
-            </span>
-          </TextWrap>
-        </Banner>
-      </Section>
+      {loading ? (
+        <LoadingMessage />
+      ) : (
+        <>
+          <Section>
+            <Banner>
+              <LeftIcon>
+                <img src="/icons/recommend/character.png" alt="캐릭터" />
+              </LeftIcon>
+              <TextWrap>
+                <p className="top">
+                  AI가 {displayNick}님의 <strong>취향을 반영</strong>해{" "}
+                </p>
+                <span>
+                  <strong>좋아할 동네 장소</strong>를 선별해서 보여드려요!
+                </span>
+              </TextWrap>
+            </Banner>
+          </Section>
 
-      {sections.map((sec) => (
-        <Section key={sec.key}>
-          <SectionTitle>
-            {displayNick}님이 좋아할 {sec.label}
-          </SectionTitle>
+          {sections.map((sec) => (
+            <Section key={sec.key}>
+              <SectionTitle>
+                {displayNick}님이 좋아할 {sec.label}
+              </SectionTitle>
 
-          <Row className="personal">
-            {loading ? (
-              <SkeletonRow />
-            ) : (
-              (sec.items || []).map((item) => (
-                <PlaceCard key={item.id} item={item} />
-              ))
-            )}
-          </Row>
-        </Section>
-      ))}
+              <Row className="personal">
+                {loading ? (
+                  <SkeletonRow />
+                ) : (
+                  (sec.items || []).map((item) => (
+                    <PlaceCard key={item.id} item={item} />
+                  ))
+                )}
+              </Row>
+            </Section>
+          ))}
 
-      {pick.length > 0 && (
-        <Section>
-          <BlockTitle>방문자 리얼리뷰 PICK!</BlockTitle>
-          <BlockSub>동네 고수들의 솔직한 리뷰를 만나보세요</BlockSub>
-          <Row className="real-review">
-            {loading ? (
-              <SkeletonRow wide />
-            ) : (
-              pick.map((item) => <PickCard key={item.id} item={item} />)
-            )}
-          </Row>
-        </Section>
+          {pick.length > 0 && (
+            <Section>
+              <BlockTitle>방문자 리얼리뷰 PICK!</BlockTitle>
+              <BlockSub>동네 고수들의 솔직한 리뷰를 만나보세요</BlockSub>
+              <Row className="real-review">
+                {loading ? (
+                  <SkeletonRow wide />
+                ) : (
+                  reviewPick.map((item) => (
+                    <PickCard key={item.id} item={item} />
+                  ))
+                )}
+              </Row>
+            </Section>
+          )}
+          <BottomSpace />
+        </>
       )}
-      <BottomSpace />
     </Page>
   );
 }
@@ -204,19 +241,21 @@ function PickCard({ item }) {
     <Pick>
       <PickHeader>
         <UserWrapper>
-          <Avatar img src="/icons/map/review/usericon.png" />
-          <UserBadge />
-          <span>외로운 식객_…</span>
+          <Avatar img src="/icons/recommend/usericon.png" />
+          <span>{item.nickname || "익명의 사용자"}</span>
+          <Recent>
+            최근방문일<br />
+            {item.recent ?? new Date(item.created).toLocaleDateString("ko-KR")}
+          </Recent>
         </UserWrapper>
-        <Recent>{item.recent ?? "최근방문일"}</Recent>
       </PickHeader>
-      <PickThumb $src={item.image} />
+      <PickThumb $src={item.images?.[0]} />
       <PickBody>
-        <Name title={item.name}>{item.name}</Name>
+        <Name title={item.market_name}>{item.market_name}</Name>
         <MetaRow>
           <Stars rating={item.rating} />
           <SmallDot />
-          <MetaText>{item.category}</MetaText>
+          <MetaText>{item.market_type}</MetaText>
         </MetaRow>
       </PickBody>
       <PickHeart type="button" aria-label="좋아요">
@@ -432,7 +471,7 @@ const Pick = styled.article`
   position: relative;
   width: 210px;
   border-radius: 20px;
-  box-shadow: 0 3px 10px 0 rgba(0, 0, 0, 0.10);
+  box-shadow: 0 3px 10px 0 rgba(0, 0, 0, 0.1);
   background: #fff;
   overflow: hidden;
   margin-left: 4px;
@@ -442,38 +481,29 @@ const Pick = styled.article`
 const PickHeader = styled.div`
   display: flex;
   justify-content: space-between;
-  padding: 12px;
+  padding: 6px 12px;
 `;
 
 const UserWrapper = styled.div`
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 10px;
   span {
-    font-size: 12px;
+    font-size: 15px;
     color: #69707a;
   }
 `;
 
-const UserBadge = styled.img`
-  position: absolute;
-  left: 35px;
-  top: 10px;
-  width: 15px;
-  height: 15px;
-  border-radius: 50%;
-  background: #e8edf2;
-`;
-
 const Avatar = styled.img`
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: #e8edf2;
+  width: 50px;
+  height: 50px;
 `;
-const Recent = styled.span`
-  font-size: 11px;
-  color: #9aa3ad;
+const Recent = styled.div`
+  text-align: right;
+  font-size: 9px;
+  color: #bbbcc4;
+  margin-left: 10px;
 `;
 const PickThumb = styled.div`
   height: 240px;
@@ -506,4 +536,71 @@ const Skeleton = styled.div`
 
 const BottomSpace = styled.div`
   height: 24px;
+`;
+
+const LoadingWrapper = styled.div`
+  flex: 1;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 60vh;
+
+  img {
+    width: 100px;
+    height: 100px;
+    margin-bottom: 20%;
+  }
+`;
+
+const Spinner = styled.div`
+  width: 60px;
+  height: 60px;
+  margin: 0 auto;
+  margin-bottom: 20%;
+  border: 5px solid #ccc;
+  border-top: 8px solid #1dc3ff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+
+  @keyframes spin {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+`;
+
+const LoadingText = styled.div`
+  font-size: 20px;
+  background: #1dc3ff;
+  border-radius: 50px;
+  padding: 16px 20px;
+  color: #fff;
+  font-weight: 500;
+  position: relative;
+
+  .dot {
+    display: inline-block;
+    margin-left: 4px;
+    animation: blink 1.5s infinite steps(3, start);
+    content: "...";
+  }
+
+  @keyframes blink {
+    0% {
+      content: "";
+    }
+    33% {
+      content: ".";
+    }
+    66% {
+      content: "..";
+    }
+    100% {
+      content: "...";
+    }
+  }
 `;
