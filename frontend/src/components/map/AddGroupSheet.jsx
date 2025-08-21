@@ -2,12 +2,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import styled from "styled-components";
 import api from "../../lib/api";
 
-
-const getCookie = (name) => {
-  const m = document.cookie.match("(^|;)\\s*" + name + "\\s*=\\s*([^;]+)");
-  return m ? m.pop() : "";
-};
-
 const COLORS = ["#FF6b85", "#FA3", "#FFD555", "#7CD2C3", "#C3A1EF", "#FCA7C8"];
 
 const COLOR_NAME_MAP = {
@@ -310,6 +304,11 @@ const Header = styled.header`
     width: 40px;
     height: 40px;
   }
+  img {
+    width: 24px;
+    height: 24px;
+  }
+
 `;
 const Title = styled.h2`
   font-size: 20px;
