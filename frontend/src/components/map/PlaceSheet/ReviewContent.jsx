@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo } from "react";
 import styled from "styled-components";
 import api from "../../../lib/api";
 
-
 // API 키와 UI 텍스트/아이콘을 매핑하는 객체
 const TAG_MAP = {
   taste_count: {
@@ -40,10 +39,6 @@ export default function ReviewContent({ place, onWriteReview, refreshKey }) {
   const [isReviewsExpanded, setIsReviewsExpanded] = useState(false);
   const [photoReviews, setPhotoReviews] = useState([]);
 
-  const handleWriteReviewClick = () => {
-    setIsWritingReview(true);
-  };
-
   useEffect(() => {
     // API 호출에 필요한 lat, lng가 없으면 실행하지 않음 (안전장치)
     if (!place || !place.lat || !place.lng) {
@@ -66,7 +61,7 @@ export default function ReviewContent({ place, onWriteReview, refreshKey }) {
         setReviewData(response.data);
 
         const photoRes = await api.get(`/review/photo/`, {
-        params: { lat: place.lat, lng: place.lng },
+          params: { lat: place.lat, lng: place.lng },
         });
         setPhotoReviews(photoRes.data.images ?? []);
       } catch (error) {
@@ -175,17 +170,19 @@ export default function ReviewContent({ place, onWriteReview, refreshKey }) {
                   {/* nickname이 구현되면 review.nickname으로 변경 */}
                   <span>{review.nickname ?? `user_${review.user}`}</span>
                   <small>리뷰 {review.review_count}· 팔로워 36</small>
+                  <StarsWrapper>
+                    {/* ✅ 개별 리뷰의 rating을 사용합니다. */}
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Star
+                        key={i}
+                        $filled={i < Math.round(review.rating ?? 0)}
+                      />
+                    ))}
+                  </StarsWrapper>
                 </UserInfo>
               </UserProfile>
               <FollowButton>팔로우</FollowButton>
             </ReviewHeader>
-
-            <StarsWrapper>
-              {/* ✅ 개별 리뷰의 rating을 사용합니다. */}
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Star key={i} $filled={i < Math.round(review.rating ?? 0)} />
-              ))}
-            </StarsWrapper>
 
             <PhotoSection>
               {Array.isArray(review.images) && review.images.length > 0 ? (
@@ -205,13 +202,18 @@ export default function ReviewContent({ place, onWriteReview, refreshKey }) {
                 </>
               )}
             </PhotoSection>
- 
 
             {/* ✅ 개별 리뷰의 description을 사용합니다. */}
             <ReviewDescription>{review.description}</ReviewDescription>
 
             <ReviewDate>
-              {new Date(review.created).toLocaleDateString()}
+              {(() => {
+                const d = new Date(review.created);
+                const yy = String(d.getFullYear()).slice(2); // 두 자리 연도
+                const mm = String(d.getMonth() + 1).padStart(2, "0");
+                const dd = String(d.getDate()).padStart(2, "0");
+                return `${yy}.${mm}.${dd}`;
+              })()}
             </ReviewDate>
 
             <ReviewTags>
@@ -390,9 +392,15 @@ const WriteReviewButton = styled.button`
 const PhotoReviewSection = styled.section``;
 
 const PhotoGrid = styled.div`
+  padding: 20px 0;
   display: flex;
   gap: 8px;
   overflow-x: auto;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  scrollbar-width: none; /* Firefox */
 `;
 const PhotoPlaceholder = styled.div`
   flex-shrink: 0;
@@ -429,12 +437,14 @@ const UserProfile = styled.div`
     height: 36px;
     border-radius: 50%;
     object-fit: cover;
+    margin-bottom: 8%;
   }
 `;
 const UserInfo = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 10px;
+  padding: 4px;
   margin-right: 130px;
   span {
     font-weight: 600;
@@ -456,8 +466,6 @@ const FollowButton = styled.button`
   cursor: pointer;
 `;
 const StarsWrapper = styled.div`
-  margin-left: 55px;
-  margin-bottom: 10px;
   display: flex;
   gap: 2px;
 `;
@@ -524,7 +532,6 @@ const ReviewDate = styled.time`
   font-size: 12px;
   color: #86858b;
   text-align: right;
-  margin-top: -8px;
 `;
 
 const Photo = styled.img`
