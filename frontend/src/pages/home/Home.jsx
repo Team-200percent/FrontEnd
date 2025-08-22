@@ -358,7 +358,7 @@ export default function Home() {
     const stage = serverStages[idx];
     let idToUse = stage?.missionId;
 
-    if (currentLevel === 1 && idx === 3) {
+    if (currentLevel === 1 && idx === 7) {
       setActiveStageIndex(null);
       setIsVerificationSheetOpen(true);
       return;
@@ -546,10 +546,10 @@ export default function Home() {
       <VerificationSheet
         open={isVerificationSheetOpen}
         onClose={() => setIsVerificationSheetOpen(false)}
-        missionTitle={serverStages[3]?.missionDetail?.title}
+        missionTitle={serverStages[7]?.missionDetail?.title}
         onComplete={() => {
           setIsVerificationSheetOpen(false);
-          handleMissionComplete(3);
+          handleMissionComplete(7);
         }}
       />
     </Wrapper>
