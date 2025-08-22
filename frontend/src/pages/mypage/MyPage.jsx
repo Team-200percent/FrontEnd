@@ -287,11 +287,100 @@ export default function MyPage() {
 
   const [sheetState, setSheetState] = useState(SHEET.COLLAPSED);
   const sheetRef = useRef(null);
-  const drag = useRef({ startY: 0, dragging: false, delta: 0 });
-
-  const THRESHOLD = 80; // 스냅 임계값(px)
 
   const assets = useMemo(() => LEVEL_ASSETS[level] ?? LEVEL_ASSETS[1], [level]);
+
+  const drag = useRef({
+    startY: 0,
+    dragging: false,
+    delta: 0,
+    pointerId: null,
+    pointerType: "mouse",
+    moved: false,
+  });
+  const THRESHOLD_TOUCH = 80;
+  const THRESHOLD_MOUSE = 24;
+
+  const applyTranslate = (px) => {
+    const el = sheetRef.current;
+    if (!el) return;
+    el.style.transform = `translateY(${px}px)`;
+  };
+
+  const onPointerDown = (e) => {
+    const y = e.clientY;
+    drag.current = {
+      startY: y,
+      dragging: true,
+      delta: 0,
+      pointerId: e.pointerId,
+      pointerType: e.pointerType || "mouse",
+      moved: false,
+    };
+    // 드래그 캡처로 창 밖으로 나가도 추적
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+    // 드래그 중 텍스트 선택 방지
+    document.body.style.userSelect = "none";
+  };
+
+  const onPointerMove = (e) => {
+    if (!drag.current.dragging) return;
+    const y = e.clientY;
+    const raw = y - drag.current.startY;
+    drag.current.delta = raw;
+    drag.current.moved = true;
+
+    // 상태별로 한 방향만 시각 피드백
+    if (sheetState === SHEET.COLLAPSED) {
+      const up = Math.min(0, raw); // 위로만
+      applyTranslate(Math.abs(up));
+    } else {
+      const down = Math.max(0, raw); // 아래로만
+      applyTranslate(down);
+    }
+  };
+
+  const endDrag = () => {
+    const el = sheetRef.current;
+    if (el) el.style.transform = "";
+    drag.current.dragging = false;
+    drag.current.pointerId = null;
+    document.body.style.userSelect = "";
+  };
+  useEffect(() => {
+    // 전역 포인터 이동/업: 캡처가 안되는 브라우저 대비
+    const move = (e) => onPointerMove(e);
+    const up = () => {
+      if (!drag.current.dragging) return;
+      const d = drag.current.delta;
+      const threshold =
+        drag.current.pointerType === "mouse"
+          ? THRESHOLD_MOUSE
+          : THRESHOLD_TOUCH;
+
+      if (sheetState === SHEET.COLLAPSED) {
+        if (-d > threshold) expandSheet();
+      } else {
+        if (d > threshold) collapseSheet();
+      }
+      endDrag();
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
+    return () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+    };
+  }, [sheetState]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 클릭-투-토글: 거의 움직이지 않았으면 토글로 처리
+  const onHandleClick = () => {
+    if (drag.current.moved) return;
+    if (sheetState === SHEET.COLLAPSED) expandSheet();
+    else collapseSheet();
+  };
 
   const onDragStart = (e) => {
     const y = e.touches ? e.touches[0].clientY : e.clientY;
@@ -426,18 +515,13 @@ export default function MyPage() {
       </Hero>
 
       {/* Bottom Sheet */}
-      <Sheet
-        ref={sheetRef}
-        $expanded={sheetState === SHEET.EXPANDED}
-        onMouseDown={onDragStart}
-        onMouseMove={onDragMove}
-        onMouseUp={onDragEnd}
-        onMouseLeave={onDragEnd}
-        onTouchStart={onDragStart}
-        onTouchMove={onDragMove}
-        onTouchEnd={onDragEnd}
-      >
-        <Handle />
+      <Sheet ref={sheetRef} $expanded={sheetState === SHEET.EXPANDED}>
+        <HandleArea
+          onPointerDown={onPointerDown}
+          onClick={onHandleClick} /* 짧은 클릭 → 토글 */
+        >
+          <Handle />
+        </HandleArea>
         <SheetInner $expanded={sheetState === SHEET.EXPANDED}>
           <DisplayName>
             {profile?.nickname || profile?.username || "사용자"}
@@ -558,16 +642,14 @@ const Page = styled.div`
   width: min(100vw, 430px);
   min-height: 100vh;
   margin: 0 auto;
-  background: #fff;
+  background: url("/images/mypage/background.png") no-repeat center;
+  background-size: cover;
   position: relative;
   overflow: hidden;
 `;
 const Hero = styled.div`
-  height: 48%;
-  min-height: 600px;
-  background: url("/images/mypage/background.png") no-repeat center;
-  background-size: cover;
-  background-position: center;
+  min-height: 500px;
+
   position: relative;
   display: flex;
   flex-direction: column;
@@ -631,8 +713,8 @@ const Effect = styled.div`
 
 const Shadow = styled.div`
   position: absolute;
-  left: 10%;
-  top: 67%;
+  left: 12%;
+  top: 72%;
   img {
     width: 440px;
     height: 80px;
@@ -668,27 +750,42 @@ const Sheet = styled.div`
   margin: 0 auto;
   width: 100%;
   max-width: 430px;
-  height: ${({ $expanded }) => ($expanded ? "calc(100% - 8px)" : "48%")};
+  height: ${({ $expanded }) => ($expanded ? "100%" : "48%")};
   background: #fff;
-  border-top-left-radius: 22px;
-  border-top-right-radius: 22px;
+  border-top-left-radius: ${({ $expanded }) => ($expanded ? "0px" : "22px")};
+  border-top-right-radius: ${({ $expanded }) => ($expanded ? "0px" : "22px")};
   box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.12);
   transition: height 260ms ease, border-radius 260ms ease;
   z-index: 200;
   touch-action: pan-y;
 `;
+const HandleArea = styled.div`
+  position: relative;
+  height: 48px; /* 드래그 히트영역 크게 */
+  display: grid;
+  place-items: center;
+  cursor: grab;
+  touch-action: none; /* 제스처를 드래그로 */
+  user-select: none;
+`;
 const Handle = styled.div`
-  width: 44px;
+  width: 70px;
   height: 5px;
   background: #d0d0d5;
   border-radius: 999px;
-  margin: 10px auto 6px;
 `;
+
 const SheetInner = styled.div`
   height: calc(100% - 21px);
   padding: ${({ $expanded }) =>
     $expanded ? "74px 18px 16px" : "6px 18px 16px"};
   transition: padding 200ms ease;
+  /* ✅ 접힘에서는 스크롤 불가, 펼친 뒤에만 스크롤 */
+  overflow-y: ${({ $expanded }) => ($expanded ? "auto" : "hidden")};
+  /* ✅ 터치 제스처도 접힘 상태에선 막기 */
+  touch-action: ${({ $expanded }) => ($expanded ? "auto" : "none")};
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 `;
 
 const DisplayName = styled.div`
@@ -869,6 +966,8 @@ const Badges = styled.div`
   justify-content: center;
 
   gap: 0px 20px;
+
+  margin-bottom: 30%;
 `;
 
 const Badge = styled.div`
