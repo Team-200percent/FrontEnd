@@ -10,6 +10,97 @@ import {
   placeForGroupState,
 } from "../state/atom";
 
+function DragScrollRow({ className, children }) {
+  const ref = React.useRef(null);
+  const drag = React.useRef({
+    active: false,
+    startX: 0,
+    startScroll: 0,
+    moved: false,
+    pointerId: null,
+  });
+
+  const isInteractive = (el) =>
+    el.closest?.(
+      'button, a, input, textarea, select, [role="button"], [data-nodrag]'
+    );
+
+  const onPointerDown = (e) => {
+    if (!ref.current) return;
+    if (isInteractive(e.target)) return;
+    ref.current.setPointerCapture?.(e.pointerId);
+    drag.current = {
+      active: true,
+      startX: e.clientX,
+      startScroll: ref.current.scrollLeft,
+      moved: false,
+      pointerId: e.pointerId,
+    };
+    // 드래그 중 텍스트 선택/이미지 드래그 방지
+    document.body.style.userSelect = "none";
+    document.body.style.cursor = "grabbing";
+  };
+
+  const onPointerMove = (e) => {
+    if (!drag.current.active || !ref.current) return;
+    const dx = e.clientX - drag.current.startX;
+    if (Math.abs(dx) > 8) drag.current.moved = true;
+    ref.current.scrollLeft = drag.current.startScroll - dx;
+  };
+
+  const endDrag = () => {
+    drag.current.active = false;
+    drag.current.moved = false;
+    drag.current.pointerId = null;
+    document.body.style.userSelect = "";
+    document.body.style.cursor = "";
+  };
+
+  React.useEffect(() => {
+    const move = (e) => onPointerMove(e);
+    const up = () => endDrag();
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
+    return () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+    };
+  }, []);
+
+  // 마우스 휠(세로) → 가로 스크롤로 변환 (터치패드도 부드럽게)
+  const onWheel = (e) => {
+    if (!ref.current) return;
+    if (isInteractive(e.target)) return;
+    const el = ref.current;
+    const absY = Math.abs(e.deltaY);
+    const absX = Math.abs(e.deltaX);
+    if (absY > absX) {
+      el.scrollLeft += e.deltaY;
+      e.preventDefault();
+    }
+  };
+
+  return (
+    <RowStyled
+      ref={ref}
+      className={className}
+      onPointerDown={onPointerDown}
+      onWheel={onWheel}
+      onClickCapture={(e) => {
+        if (drag.current.moved && !isInteractive(e.target)) {
+          e.stopPropagation();
+          e.preventDefault();
+        }
+        drag.current.moved = false;
+      }}
+    >
+      {children}
+    </RowStyled>
+  );
+}
+
 const getAuthHeaders = () => {
   const token =
     localStorage.getItem("access_token") || localStorage.getItem("accessToken");
@@ -201,7 +292,7 @@ export default function Recommend() {
                 {displayNick}님이 좋아할 {sec.label}
               </SectionTitle>
 
-              <Row className="personal">
+              <DragScrollRow className="personal">
                 {loading ? (
                   <SkeletonRow />
                 ) : (
@@ -213,7 +304,7 @@ export default function Recommend() {
                     />
                   ))
                 )}
-              </Row>
+              </DragScrollRow>
             </Section>
           ))}
 
@@ -221,7 +312,8 @@ export default function Recommend() {
             <Section>
               <BlockTitle>방문자 리얼리뷰 PICK!</BlockTitle>
               <BlockSub>동네 고수들의 솔직한 리뷰를 만나보세요</BlockSub>
-              <Row className="real-review">
+              <DragScrollRow className="real-review">
+                {" "}
                 {loading ? (
                   <SkeletonRow wide />
                 ) : (
@@ -233,7 +325,7 @@ export default function Recommend() {
                     />
                   ))
                 )}
-              </Row>
+              </DragScrollRow>
             </Section>
           )}
           <BottomSpace />
@@ -248,7 +340,7 @@ function PlaceCard({ item, onLike }) {
 
   const handleClick = async () => {
     try {
-      await onLike(item, !isFavorite);
+      await onLike();
       setIsFavorite(!isFavorite);
     } catch (e) {
       console.error("즐겨찾기 처리 실패:", e);
@@ -265,10 +357,11 @@ function PlaceCard({ item, onLike }) {
           <Stars rating={item.rating} />
         </MetaRow>
       </CardBody>
-      <Heart type="button" aria-label="좋아요" onClick={handleClick}>
+      <Heart type="button" aria-label="좋아요" onClick={handleClick} data-nodrag
+      >
         <img
           src={
-            item.isFavorite
+            isFavorite
               ? "/icons/map/compact-heart-on.png"
               : "/icons/map/compact-heart-off.png"
           }
@@ -284,7 +377,7 @@ function PickCard({ item, onLike }) {
 
   const handleClick = async () => {
     try {
-      await onLike(item, !isFavorite);
+      await onLike();
       setIsFavorite(!isFavorite);
     } catch (e) {
       console.error("즐겨찾기 처리 실패:", e);
@@ -313,10 +406,10 @@ function PickCard({ item, onLike }) {
           <MetaText>{item.market_type}</MetaText>
         </MetaRow>
       </PickBody>
-      <PickHeart type="button" aria-label="좋아요" onClick={handleClick}>
+      <PickHeart type="button" aria-label="좋아요" onClick={handleClick} data-nodrag>
         <img
           src={
-            item.isFavorite
+            isFavorite
               ? "/icons/map/compact-heart-on.png"
               : "/icons/map/compact-heart-off.png"
           }
@@ -436,7 +529,7 @@ const Card = styled.article`
   width: 220px;
 `;
 
-const Thumb = styled.div`
+const Thumb = styled.div.attrs({ draggable: false })`
   margin: 6px;
   border-radius: 14px;
   height: 220px;
@@ -550,7 +643,7 @@ const UserWrapper = styled.div`
   }
 `;
 
-const Avatar = styled.img`
+const Avatar = styled.div.attrs({ draggable: false })`
   width: 50px;
   height: 50px;
 `;
@@ -560,7 +653,7 @@ const Recent = styled.div`
   color: #bbbcc4;
   margin-left: 10px;
 `;
-const PickThumb = styled.div`
+const PickThumb = styled.div.attrs({ draggable: false })`
   height: 240px;
   background: ${({ $src }) => ($src ? `url(${$src}) center/cover` : "#d9d9d9")};
 `;
@@ -658,4 +751,32 @@ const LoadingText = styled.div`
       content: "...";
     }
   }
+`;
+
+const RowStyled = styled.div`
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+
+  overflow-x: auto;
+  padding: 4px 4px 14px;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  &.personal {
+    gap: 5px;
+  }
+  &.real-review {
+    gap: 15px;
+  }
+  cursor: grab;
+  user-select: none;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  & > * {
+    scroll-snap-align: start;
+    flex: 0 0 auto;
+  }
+  touch-action: pan-x;
 `;
