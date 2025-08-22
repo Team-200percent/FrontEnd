@@ -168,8 +168,13 @@ export default function PlaceSheet({
     drag.current.moved = true;
 
     if (viewMode === "compact") {
-      const up = Math.min(0, raw); // 위로만
-      applyTranslate(Math.abs(up));
+      if (raw < 0) {
+        // 위로 끌기(확장 제스처)
+        applyTranslate(Math.abs(raw));
+      } else {
+        // 아래로 끌기(닫기 제스처)
+        applyTranslate(raw);
+      }
     } else {
       const down = Math.max(0, raw); // 아래로만
       applyTranslate(down);
@@ -185,8 +190,9 @@ export default function PlaceSheet({
 
   // 휠 위로 굴리면(스크롤 업) 확장 UX
   const onHandleWheel = (e) => {
-    if (viewMode === "compact" && e.deltaY < -10) {
-      handleExpand();
+    if (viewMode === "compact") {
+      if (e.deltaY < -10) handleExpand(); // 위로 → 확장
+      else if (e.deltaY > 10) onClose(); // 아래로 → 닫기
     }
   };
 
@@ -203,6 +209,7 @@ export default function PlaceSheet({
 
       if (viewMode === "compact") {
         if (-d > threshold) handleExpand();
+        else if (d > threshold) onClose(); // 👈 아래로 끌면 닫기
       } else {
         if (d > threshold) onViewModeChange("compact");
       }
