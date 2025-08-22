@@ -23,7 +23,7 @@ export default function Splash() {
 
     const navigationTimer = setTimeout(() => {
       navigate("/onboarding");
-    }, 5000);
+    }, 2000);
 
     return () => {
       clearTimeout(transitionTimer);
@@ -141,7 +141,6 @@ const LogoWrap = styled.div`
   position: relative;
   animation: ${fadeInUp} 520ms ease 180ms forwards;
 
-  
   .egg {
     width: 25%;
     height: auto;
