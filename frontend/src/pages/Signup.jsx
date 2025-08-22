@@ -3,9 +3,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import api from "../lib/api";
-import DatePicker from "react-datepicker";
-import { PatternFormat } from "react-number-format";
-import { ko } from "date-fns/locale";
+
 
 export default function SignupWizard() {
   const TOTAL = 6;
