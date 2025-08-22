@@ -4,7 +4,6 @@ import api from "../../lib/api";
 import { LEVELS } from "../../data/DummyLevel";
 import LevelSelector from "../../components/home/LevelSelector";
 import WeeklyMissionBox from "../../components/home/WeeklyMissionBox";
-import LevelDropdown from "../../components/home/LevelDropdown";
 import {
   CATEGORY_ICONS,
   LEVEL_META,
@@ -472,12 +471,7 @@ export default function Home() {
               </TitleWrap>
             </LevelHeader>
 
-            <LevelDropdown
-              isOpen={isDropdownOpen}
-              levels={LEVELS}
-              currentLevel={currentLevel}
-              onLevelChange={handleLevelChange}
-            />
+            
 
             <MissionProgress
               userXp={userXp}
