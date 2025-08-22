@@ -7,7 +7,145 @@ import api from "../../../lib/api";
 
 const LoadingSpinner = () => <Spinner>Loading...</Spinner>;
 
-const CompactContent = ({ place, onViewDetails, onLike }) => {
+
+
+export default function PlaceSheet({
+  open,
+  onClose,
+  onCloseAll,
+  place,
+  setPlace,
+  viewMode,
+  onViewModeChange,
+  isGroupSheetOpen,
+  onGroupSheetToggle,
+  refetchPlace, 
+}) {
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+  const [isWritingReview, setIsWritingReview] = useState(false);
+  const [reviewsVersion, setReviewsVersion] = useState(0);
+  const [activeTab, setActiveTab] = useState("home");
+  const sheetRef = useRef(null);
+  const dragInfo = useRef({ startY: 0, isDragging: false });
+
+  const handleReviewSubmitted = () => {
+    setIsWritingReview(false);
+    setActiveTab("review");
+    setPlace((prev) => ({
+      ...prev,
+      reviewCount: (prev?.reviewCount || 0) + 1,
+    }));
+    setReviewsVersion((prev) => prev + 1);
+  };
+
+  const handleExpand = async () => {
+    if (!place || !place.lat || !place.lng) return;
+
+    onViewModeChange("expanded");
+    setIsLoadingDetails(true);
+
+    try {
+      const accessToken = localStorage.getItem("accessToken"); // 예: 저장된 토큰
+      const response = await api.get("/market/detail/", {
+        // 2. params 옵션을 사용해 lat과 lng를 전달
+        params: {
+          lat: place.lat,
+          lng: place.lng,
+        },
+        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {}, // ✅ accessToken이 있을 때만 헤더에 포함
+      });
+
+      // 3. 응답 데이터가 배열이므로 첫 번째 항목을 사용
+      const detailInfo = response.data[0];
+
+      console.log("서버로부터 받은 상세 정보:", detailInfo);
+
+      if (detailInfo) {
+        const mapped = {
+          isFavorite: detailInfo.is_favorite,
+          category: detailInfo.category ?? null,
+          address: detailInfo.address ?? null,
+          isOpen: detailInfo.is_open ?? null,
+          closeHour: detailInfo.close_hour ?? null,
+          phone: detailInfo.telephone ?? null,
+          website: detailInfo.url ?? null,
+          rating: detailInfo.avg_rating ?? null,
+          reviewCount: detailInfo.review_count ?? null,
+          // url 필드 통일: { id, url }
+          images: Array.isArray(detailInfo.images)
+            ? detailInfo.images.map((img) => ({
+                id: img.id,
+                url: img.image_url,
+                created: img.created,
+                market: img.market,
+              }))
+            : [],
+        };
+
+        setPlace((prev) => ({ ...prev, ...mapped }));
+      }
+    } catch (error) {
+      console.error("상세 정보 로딩 실패:", error);
+    } finally {
+      setIsLoadingDetails(false);
+    }
+  };
+
+  const fetchPlaceDetail = async () => {
+    if (place?.lat || !place?.lng) return;
+
+    try {
+      const response = await api.get("/market/detail/", {
+        params: { lat: place.lat, lng: place.lng },
+      });
+      const detailInfo = response.data?.[0];
+      if (!detailInfo) return;
+
+      const mapped = {
+        isFavorite: detailInfo.is_favorite,
+        category: detailInfo.category ?? null,
+        address: detailInfo.address ?? null,
+        isOpen: detailInfo.is_open ?? null,
+        closeHour: detailInfo.close_hour ?? null,
+        phone: detailInfo.telephone ?? null,
+        website: detailInfo.url ?? null,
+        rating: detailInfo.avg_rating ?? null,
+        reviewCount: detailInfo.review_count ?? null,
+        images: Array.isArray(detailInfo.images)
+          ? detailInfo.images.map((img) => ({
+              id: img.id,
+              url: img.image_url,
+              created: img.created,
+              market: img.market,
+            }))
+          : [],
+      };
+      setPlace((prev) => ({ ...prev, ...mapped }));
+    } catch (e) {
+      console.error("상세 재조회 실패:", e);
+    }
+  };
+
+  const onDragStart = (e) => {
+    dragInfo.current = {
+      isDragging: true,
+      startY: e.touches ? e.touches[0].clientY : e.clientY,
+    };
+  };
+  const onDragEnd = (e) => {
+    if (!dragInfo.current.isDragging) return;
+    const endY = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
+    const deltaY = endY - dragInfo.current.startY;
+    if (viewMode === "compact" && deltaY < -50) handleExpand();
+    else if (viewMode === "expanded" && deltaY > 50)
+      onViewModeChange("compact");
+    else if (viewMode === "compact" && deltaY > 50) onClose();
+    dragInfo.current.isDragging = false;
+  };
+
+  if (!open) return null;
+
+  const CompactContent = ({ place, onViewDetails, onLike }) => {
   const compactHeartIconSrc = place?.isFavorite
     ? "/icons/map/compact-heart-on.png"
     : "/icons/map/compact-heart-off.png";
@@ -192,141 +330,6 @@ const ExpandedContent = ({
     </ExpandedWrapper>
   );
 };
-
-export default function PlaceSheet({
-  open,
-  onClose,
-  onCloseAll,
-  place,
-  setPlace,
-  viewMode,
-  onViewModeChange,
-  isGroupSheetOpen,
-  onGroupSheetToggle,
-}) {
-  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
-  const [isWritingReview, setIsWritingReview] = useState(false);
-  const [reviewsVersion, setReviewsVersion] = useState(0);
-  const [activeTab, setActiveTab] = useState("home");
-  const sheetRef = useRef(null);
-  const dragInfo = useRef({ startY: 0, isDragging: false });
-
-  const handleReviewSubmitted = () => {
-    setIsWritingReview(false);
-    setActiveTab("review");
-    setPlace((prev) => ({
-      ...prev,
-      reviewCount: (prev?.reviewCount || 0) + 1,
-    }));
-    setReviewsVersion((prev) => prev + 1);
-  };
-
-  const handleExpand = async () => {
-    if (!place || !place.lat || !place.lng) return;
-
-    onViewModeChange("expanded");
-    setIsLoadingDetails(true);
-
-    try {
-      const accessToken = localStorage.getItem("accessToken"); // 예: 저장된 토큰
-      const response = await api.get("/market/detail/", {
-        // 2. params 옵션을 사용해 lat과 lng를 전달
-        params: {
-          lat: place.lat,
-          lng: place.lng,
-        },
-        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {}, // ✅ accessToken이 있을 때만 헤더에 포함
-      });
-
-      // 3. 응답 데이터가 배열이므로 첫 번째 항목을 사용
-      const detailInfo = response.data[0];
-
-      console.log("서버로부터 받은 상세 정보:", detailInfo);
-
-      if (detailInfo) {
-        const mapped = {
-          isFavorite: detailInfo.is_favorite,
-          category: detailInfo.category ?? null,
-          address: detailInfo.address ?? null,
-          isOpen: detailInfo.is_open ?? null,
-          closeHour: detailInfo.close_hour ?? null,
-          phone: detailInfo.telephone ?? null,
-          website: detailInfo.url ?? null,
-          rating: detailInfo.avg_rating ?? null,
-          reviewCount: detailInfo.review_count ?? null,
-          // url 필드 통일: { id, url }
-          images: Array.isArray(detailInfo.images)
-            ? detailInfo.images.map((img) => ({
-                id: img.id,
-                url: img.image_url,
-                created: img.created,
-                market: img.market,
-              }))
-            : [],
-        };
-
-        setPlace((prev) => ({ ...prev, ...mapped }));
-      }
-    } catch (error) {
-      console.error("상세 정보 로딩 실패:", error);
-    } finally {
-      setIsLoadingDetails(false);
-    }
-  };
-
-  const fetchPlaceDetail = async () => {
-    if (place?.lat || !place?.lng) return;
-
-    try {
-      const response = await api.get("/market/detail/", {
-        params: { lat: place.lat, lng: place.lng },
-      });
-      const detailInfo = response.data?.[0];
-      if (!detailInfo) return;
-
-      const mapped = {
-        isFavorite: detailInfo.is_favorite,
-        category: detailInfo.category ?? null,
-        address: detailInfo.address ?? null,
-        isOpen: detailInfo.is_open ?? null,
-        closeHour: detailInfo.close_hour ?? null,
-        phone: detailInfo.telephone ?? null,
-        website: detailInfo.url ?? null,
-        rating: detailInfo.avg_rating ?? null,
-        reviewCount: detailInfo.review_count ?? null,
-        images: Array.isArray(detailInfo.images)
-          ? detailInfo.images.map((img) => ({
-              id: img.id,
-              url: img.image_url,
-              created: img.created,
-              market: img.market,
-            }))
-          : [],
-      };
-      setPlace((prev) => ({ ...prev, ...mapped }));
-    } catch (e) {
-      console.error("상세 재조회 실패:", e);
-    }
-  };
-
-  const onDragStart = (e) => {
-    dragInfo.current = {
-      isDragging: true,
-      startY: e.touches ? e.touches[0].clientY : e.clientY,
-    };
-  };
-  const onDragEnd = (e) => {
-    if (!dragInfo.current.isDragging) return;
-    const endY = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
-    const deltaY = endY - dragInfo.current.startY;
-    if (viewMode === "compact" && deltaY < -50) handleExpand();
-    else if (viewMode === "expanded" && deltaY > 50)
-      onViewModeChange("compact");
-    else if (viewMode === "compact" && deltaY > 50) onClose();
-    dragInfo.current.isDragging = false;
-  };
-
-  if (!open) return null;
 
   return (
     <>

@@ -1,35 +1,60 @@
-import React, { useState, useEffect } from 'react';
-import styled from 'styled-components';
-import AddGroupSheet from './AddGroupSheet';
+import React, { useState, useEffect } from "react";
+import styled from "styled-components";
+import AddGroupSheet from "./AddGroupSheet";
 import api from "../../lib/api";
 
-export default function GroupSheet({ open, onClose, onCloseAll, place }) {
+export default function GroupSheet({
+  open,
+  onClose,
+  onCloseAll,
+  place,
+  onFavoriteSaved,
+}) {
   const [groups, setGroups] = useState([]); // 1. 전체 그룹 목록을 저장할 state
-  const [selectedGroups, setSelectedGroups] = useState(new Set()); // 2. 선택된 그룹 ID를 저장할 state
+  const [selectedGroups, setSelectedGroups] = useState(new Set()); // selectedGroups에 새로 체크된 그룹들은 POST.
+  const [initialGroups, setInitialGroups] = useState(new Set()); // initialGroups에만 있는데 지금은 해제된 그룹들은 DELETE.
   const [isLoading, setIsLoading] = useState(true);
   const [isAddGroupSheetOpen, setIsAddGroupSheetOpen] = useState(false);
 
-  // 시트가 열릴 때, 사용자의 그룹 목록을 불러옵니다.
   useEffect(() => {
-    if (open) {
-      const fetchGroups = async () => {
+    if (open && place?.lat && place?.lng) {
+      const fetchInitialState = async () => {
         setIsLoading(true);
         try {
-          const response = await api.get("/market/favoritegroup/");
-          setGroups(response.data);
-          // TODO: place가 이미 속한 그룹이 있다면 selectedGroups에 미리 추가하는 로직
+          // 1. 두 API를 동시에 요청합니다.
+          const [allGroupsResponse, placeGroupsResponse] = await Promise.all([
+            api.get("/market/favoritegroup/"), // 사용자의 전체 그룹 목록
+            api.get("/market/temp/", {
+              // 이 장소가 속한 그룹 목록
+              params: {
+                lat: place.lat,
+                lng: place.lng,
+              },
+            }),
+          ]);
+
+          const allGroups = allGroupsResponse.data || [];
+          const placeGroups = placeGroupsResponse.data?.groups || [];
+
+          // 2. 전체 그룹 목록을 state에 저장합니다.
+          setGroups(allGroups);
+
+          // 3. 이 장소가 속한 그룹 ID들로 초기 선택 상태를 만듭니다.
+          const initialGroupIds = new Set(placeGroups.map((g) => g.id));
+          setSelectedGroups(initialGroupIds);
+          setInitialGroups(initialGroupIds);
         } catch (error) {
-          console.error("그룹 목록 로딩 실패:", error);
+          console.error("그룹 정보 로딩 실패:", error);
         } finally {
           setIsLoading(false);
         }
       };
-      fetchGroups();
+      fetchInitialState();
     }
-  }, [open]);
+  }, [open, place]);
 
   const handleGroupClick = (groupId) => {
-    setSelectedGroups(prev => {
+    setSelectedGroups((prev) => {
       const newSet = new Set(prev);
       newSet.has(groupId) ? newSet.delete(groupId) : newSet.add(groupId);
       return newSet;
@@ -38,46 +63,50 @@ export default function GroupSheet({ open, onClose, onCloseAll, place }) {
 
   // '저장' 버튼 클릭 시 실행될 함수
   const handleSave = async () => {
-    if (selectedGroups.size === 0) {
-      alert("저장할 그룹을 하나 이상 선택해주세요.");
-      return;
-    }
     if (!place || !place.lat || !place.lng) {
       alert("장소 정보가 없어 저장할 수 없습니다.");
       return;
     }
 
-    try {
-      // ✅ 3. 선택된 모든 그룹에 대해 API 요청을 보냅니다.
-      const requests = Array.from(selectedGroups).map(groupId => 
-        api.post(
-          `/market/favoriteitem/${groupId}/`,
-          null, // Body가 비어있으므로 null 전달
-          {
-            params: {
-              lat: place.lat,
-              lng: place.lng
-            }
-          }
-        )
-      );
-      
-      await Promise.all(requests); // 모든 요청이 끝날 때까지 기다림
-      
-      alert("즐겨찾기에 추가되었습니다!");
-      onClose(); // 성공 시 GroupSheet 닫기
+    const addList = [...selectedGroups].filter((id) => !initialGroups.has(id));
+    const removeList = [...initialGroups].filter(
+      (id) => !selectedGroups.has(id)
+    );
 
+    try {
+      const addRequests = addList.map((groupId) =>
+        api.post(`/market/favoriteitem/${groupId}/`, null, {
+          params: {
+            lat: place.lat,
+            lng: place.lng,
+          },
+        })
+      );
+
+      const deleteRequests = removeList.map((groupId) =>
+        api.delete(`/market/favoriteitem/${groupId}/`, {
+          params: {
+            lat: place.lat,
+            lng: place.lng,
+          },
+        })
+      );
+
+      await Promise.all([...addRequests, ...deleteRequests]);
+
+      alert("즐겨찾기 그룹이 저장되었습니다!");
+      onFavoriteSaved?.(selectedGroups.size > 0);
+      onClose();
     } catch (error) {
-      console.error("즐겨찾기 추가 실패:", error);
-      alert("즐겨찾기 추가에 실패했습니다.");
+      console.error("즐겨찾기 저장 실패:", error);
+      alert("즐겨찾기 저장에 실패했습니다.");
     }
   };
 
   const handleGroupCreated = (newGroup) => {
-    setGroups(prev => [...prev, newGroup]);
-    setSelectedGroups(prev => new Set(prev).add(newGroup.id));
+    setGroups((prev) => [...prev, newGroup]);
+    setSelectedGroups((prev) => new Set(prev).add(newGroup.id));
   };
-
 
   if (!open) return null;
 
@@ -86,9 +115,14 @@ export default function GroupSheet({ open, onClose, onCloseAll, place }) {
       <Backdrop onClick={onClose} />
       <SheetContainer>
         <Header>
-          <button onClick={onClose}>&lt;</button>
+          <img onClick={onClose} src="icons/map/leftarrow.svg" alt="뒤로가기" />
           <Title>{place?.name}</Title>
-          <button onClick={onCloseAll}>×</button>
+
+          <img
+            onClick={onCloseAll}
+            src="icons/map/mapdetail/x.svg"
+            alt="닫기"
+          />
         </Header>
 
         <Content>
@@ -98,8 +132,15 @@ export default function GroupSheet({ open, onClose, onCloseAll, place }) {
           ) : (
             <GroupList>
               {groups.map((group) => (
-                <GroupItem key={group.id} onClick={() => handleGroupClick(group.id)}>
-                  <img className="folder-icon" src={`/icons/map/mapdetail/folder/folder-${group.color}.png`} alt="폴더" />
+                <GroupItem
+                  key={group.id}
+                  onClick={() => handleGroupClick(group.id)}
+                >
+                  <img
+                    className="folder-icon"
+                    src={`/icons/map/mapdetail/folder/folder-${group.color}.png`}
+                    alt="폴더"
+                  />
                   <GroupName>{group.name}</GroupName>
                   <CheckIcon $selected={selectedGroups.has(group.id)} />
                 </GroupItem>
@@ -109,7 +150,9 @@ export default function GroupSheet({ open, onClose, onCloseAll, place }) {
         </Content>
 
         <Footer>
-          <AddNewGroupButton onClick={() => setIsAddGroupSheetOpen(true)}>+ 새 그룹 추가</AddNewGroupButton>
+          <AddNewGroupButton onClick={() => setIsAddGroupSheetOpen(true)}>
+            + 새 그룹 추가
+          </AddNewGroupButton>
           <SaveButton onClick={handleSave}>저장</SaveButton>
         </Footer>
       </SheetContainer>
@@ -154,7 +197,7 @@ const Header = styled.header`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px;
+  padding: 30px;
   flex-shrink: 0;
 
   button {
