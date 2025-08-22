@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import styled from "styled-components";
 import { useNavigate } from "react-router-dom";
 import api from "../../lib/api";
+import VerificationSheet from "../../components/home/VerificationSheet";
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem("access_token");
@@ -16,6 +17,9 @@ export default function WeeklyMission() {
   const [missions, setMissions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errMsg, setErrMsg] = useState("");
+
+  const [isVerificationSheetOpen, setIsVerificationSheetOpen] = useState(false);
+  const [verifyingMissionIndex, setVerifyingMissionIndex] = useState(null);
 
   // 목록 + 상세 병합
   useEffect(() => {
@@ -95,6 +99,12 @@ export default function WeeklyMission() {
   const handleStart = async (idx) => {
     const m = missions[idx];
     if (!m) return;
+
+    if (m.weeklymissionId === 2) {
+      setVerifyingMissionIndex(idx);
+      setIsVerificationSheetOpen(true);
+      return;
+    }
     try {
       await api.put(`/mission/weeklymission/${m.weeklymissionId}/`, null, {
         headers: getAuthHeaders(),
@@ -209,6 +219,18 @@ export default function WeeklyMission() {
             );
           })}
       </Sheet>
+
+      <VerificationSheet className="week"
+        open={isVerificationSheetOpen}
+        onClose={() => setIsVerificationSheetOpen(false)}
+        missionTitle={verifyingMissionIndex !== null ? missions[verifyingMissionIndex]?.detail?.title : ""}
+        onComplete={() => {
+          if (verifyingMissionIndex !== null) {
+            setIsVerificationSheetOpen(false);
+            handleComplete(verifyingMissionIndex);
+          }
+        }}
+      />
     </Page>
   );
 }

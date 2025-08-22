@@ -10,10 +10,8 @@ import {
   LEVEL_META,
   STAGE_POSITIONS,
 } from "../../data/HomeData";
-import {
-  getUnlockedLevel,
-  XP_THRESHOLDS,
-} from "../../data/Level";
+import { getUnlockedLevel, XP_THRESHOLDS } from "../../data/Level";
+import VerificationSheet from "../../components/home/VerificationSheet";
 
 const LEVEL_COLORS = {
   1: "#1DC3FF", // 레벨 1 색상
@@ -196,6 +194,8 @@ export default function Home() {
   const [loadingStages, setLoadingStages] = useState(false);
   const [stageError, setStageError] = useState(null);
 
+  const [isVerificationSheetOpen, setIsVerificationSheetOpen] = useState(false);
+
   const levelData = useMemo(
     () => LEVELS.find((l) => l.level === currentLevel),
     [currentLevel]
@@ -219,7 +219,7 @@ export default function Home() {
         setUnlockedLevel(ul);
         // 시작 레벨을 해금된 최댓값으로 맞추고 싶다면:
         setCurrentLevel((prev) => Math.min(Math.max(prev, 1), ul));
-      // eslint-disable-next-line no-empty
+        // eslint-disable-next-line no-empty
       } catch {}
     })();
     return () => controller.abort();
@@ -356,7 +356,13 @@ export default function Home() {
 
   const handleMissionStart = async (idx) => {
     const stage = serverStages[idx];
-    let idToUse = stage?.userMissionId ?? stage?.missionId; // 우선 userMissionId
+    let idToUse = stage?.missionId;
+
+    if (currentLevel === 1 && idx === 3) {
+      setActiveStageIndex(null);
+      setIsVerificationSheetOpen(true);
+      return;
+    }
 
     if (!idToUse) {
       console.warn("미션 ID가 없습니다:", stage);
@@ -392,7 +398,7 @@ export default function Home() {
   const handleMissionComplete = async (idx) => {
     const stage = serverStages[idx];
     // 1순위: userMissionId, 없으면 level mission id
-    let idToUse = stage?.userMissionId ?? stage?.missionId;
+    let idToUse = stage?.missionId;
 
     if (!idToUse) {
       console.warn("완료 호출에 사용할 미션 ID가 없습니다:", stage);
@@ -536,6 +542,16 @@ export default function Home() {
           </LevelBlock>
         )}
       </Content>
+
+      <VerificationSheet
+        open={isVerificationSheetOpen}
+        onClose={() => setIsVerificationSheetOpen(false)}
+        missionTitle={serverStages[3]?.missionDetail?.title}
+        onComplete={() => {
+          setIsVerificationSheetOpen(false);
+          handleMissionComplete(3);
+        }}
+      />
     </Wrapper>
   );
 }
