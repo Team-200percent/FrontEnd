@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import styled from "styled-components";
 import GroupSheet from "../GroupSheet";
 import ReviewContent from "./ReviewContent";
@@ -23,7 +23,6 @@ export default function PlaceSheet({
   const [reviewsVersion, setReviewsVersion] = useState(0);
   const [activeTab, setActiveTab] = useState("home");
   const sheetRef = useRef(null);
-  const dragInfo = useRef({ startY: 0, isDragging: false });
 
   const handleReviewSubmitted = () => {
     setIsWritingReview(false);
@@ -123,22 +122,102 @@ export default function PlaceSheet({
     }
   };
 
-  const onDragStart = (e) => {
-    dragInfo.current = {
-      isDragging: true,
-      startY: e.touches ? e.touches[0].clientY : e.clientY,
+  // ✅ 마우스/터치 겸용 포인터 드래그 상태
+  const drag = useRef({
+    startY: 0,
+    dragging: false,
+    delta: 0,
+    pointerId: null,
+    pointerType: "mouse",
+    moved: false,
+  });
+  const THRESHOLD_TOUCH = 80;
+  const THRESHOLD_MOUSE = 24;
+
+  const applyTranslate = (px) => {
+    const el = sheetRef.current;
+    if (!el) return;
+    el.style.transform = `translateY(${px}px)`;
+  };
+
+  const endDrag = () => {
+    const el = sheetRef.current;
+    if (el) el.style.transform = "";
+    drag.current.dragging = false;
+    drag.current.pointerId = null;
+    document.body.style.userSelect = "";
+  };
+
+  const onPointerDown = (e) => {
+    drag.current = {
+      startY: e.clientY,
+      dragging: true,
+      delta: 0,
+      pointerId: e.pointerId,
+      pointerType: e.pointerType || "mouse",
+      moved: false,
     };
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+    document.body.style.userSelect = "none"; // 드래그 중 텍스트 선택 방지
   };
-  const onDragEnd = (e) => {
-    if (!dragInfo.current.isDragging) return;
-    const endY = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
-    const deltaY = endY - dragInfo.current.startY;
-    if (viewMode === "compact" && deltaY < -50) handleExpand();
-    else if (viewMode === "expanded" && deltaY > 50)
-      onViewModeChange("compact");
-    else if (viewMode === "compact" && deltaY > 50) onClose();
-    dragInfo.current.isDragging = false;
+
+  const onPointerMove = (e) => {
+    if (!drag.current.dragging) return;
+    const raw = e.clientY - drag.current.startY;
+    drag.current.delta = raw;
+    drag.current.moved = true;
+
+    if (viewMode === "compact") {
+      const up = Math.min(0, raw); // 위로만
+      applyTranslate(Math.abs(up));
+    } else {
+      const down = Math.max(0, raw); // 아래로만
+      applyTranslate(down);
+    }
   };
+
+  // 클릭-투-토글: 거의 움직이지 않았으면 토글 처리
+  const onHandleClick = () => {
+    if (drag.current.moved) return;
+    if (viewMode === "compact") handleExpand();
+    else onViewModeChange("compact");
+  };
+
+  // 휠 위로 굴리면(스크롤 업) 확장 UX
+  const onHandleWheel = (e) => {
+    if (viewMode === "compact" && e.deltaY < -10) {
+      handleExpand();
+    }
+  };
+
+  // 전역 포인터 업/무브로 스냅/확장 처리
+  useEffect(() => {
+    const move = (e) => onPointerMove(e);
+    const up = () => {
+      if (!drag.current.dragging) return;
+      const d = drag.current.delta;
+      const threshold =
+        drag.current.pointerType === "mouse"
+          ? THRESHOLD_MOUSE
+          : THRESHOLD_TOUCH;
+
+      if (viewMode === "compact") {
+        if (-d > threshold) handleExpand();
+      } else {
+        if (d > threshold) onViewModeChange("compact");
+      }
+      endDrag();
+    };
+
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
+    return () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+    };
+  }, [viewMode]); // viewMode가 바뀔 때만 갱신
 
   if (!open) return null;
 
@@ -215,7 +294,7 @@ export default function PlaceSheet({
           </ButtonWrapper>
         </ExpandedHeader>
 
-        <ContentArea>
+        <ContentArea $expanded={viewMode === "expanded"}>
           <TitleSection>
             {/* place 데이터가 있으면 name을, 없으면 '장소명'을 표시 */}
             <MainTitle>{place?.name ?? "장소명"}</MainTitle>
@@ -334,15 +413,12 @@ export default function PlaceSheet({
 
   return (
     <>
-      <SheetContainer
-        ref={sheetRef}
-        $viewMode={viewMode}
-        onTouchStart={onDragStart}
-        onTouchEnd={onDragEnd}
-        onMouseDown={onDragStart}
-        onMouseUp={onDragEnd}
-      >
-        <HandleBar />
+      <SheetContainer ref={sheetRef} $viewMode={viewMode}>
+        <HandleBar
+          onPointerDown={onPointerDown}
+          onClick={onHandleClick}
+          onWheel={onHandleWheel}
+        />
         {viewMode === "compact" ? (
           // ✅ 1. CompactContent의 JSX를 직접 작성합니다.
           <CompactContent
@@ -421,7 +497,7 @@ const SheetContainer = styled.div`
 `;
 
 const HandleBar = styled.div`
-  width: 40px;
+  width: 60px;
   height: 4px;
   background-color: #dbdbdb;
   border-radius: 2px;
@@ -622,7 +698,10 @@ const GrayXButton = styled(BackButton)`
 
 const ContentArea = styled.div`
   flex: 1;
-  overflow-y: auto; /* 내용이 많아지면 스크롤 */
+  overflow-y: ${({ $expanded }) => ($expanded ? "auto" : "hidden")};
+  touch-action: ${({ $expanded }) => ($expanded ? "auto" : "none")};
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 `;
 
 const TitleSection = styled.div`
