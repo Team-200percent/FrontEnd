@@ -1,55 +1,361 @@
-project/                    # 프로젝트 루트 디렉토리
-│
-├── public/                 # 정적 파일이 위치하는 폴더 (HTML, 이미지 등)
-│   ├── fonts/				# React 애플리케이션의 시작 HTML 파일
-│   │       ├── Pretendard-Regular.woff
-│   │       └── Pretendard-Bold.woff
-│   └── images/             # favicon(브라우저 구분), preview 모음
-│   │       ├── logo.svg
-│   │       └── preview.jpeg
-│
-├── src/                    # 주요 소스들 모음 폴더 (로직, 컴포넌트 등)
-│   ├── apis/               # API 호출 로직을 모아놓는 폴더
-│   │   ├── boothAPI.js
-│   │   └── instance.js		# 기본 API 호출에 대한 로직을 작성하였다
-│   │   
-│   ├── assets/             # 프로젝트의 에셋 파일(이미지, 아이콘 등)을 모아놓는 폴더
-│   │   ├── images/         # 이미지 파일 폴더
-│   │   │   ├── leaf.png    # 잎에 떨어지는 효과를 위한 이미지
-│   │   │   └── human.jpg  	# 개발자 페이지에 들어가는 이미지
-│   │
-│   ├── components/         # UI 컴포넌트들을 모아놓는 폴더
-│   │   ├── Header.jsx      # 헤더 컴포넌트
-│   │   ├── Footer.jsx      # 푸터 컴포넌트
-│   │   └── Button.jsx      # 버튼 컴포넌트
-│   │
-│   ├── constants/          # 실제 API연결 전 더미 데이터 모음
-│   │   ├── booth.js        # 헤더 컴포넌트
-│   │   └── boothdetail.js  # 버튼 컴포넌트
-│   │   
-│   ├── hooks/              # 커스텀 훅스를 관리하는 폴더
-│   │   ├── useBoothData.js     
-│   │   └── useUserAuth.js      
-│   │
-│   ├── layout/             # 기본 레이아웃 설정
-│   │   └── DefaultLayout.jsx 
-│   │
-│   ├── pages/              # 페이지별 컴포넌트를 정의하는 폴더
-│   │   ├── Home.js         
-│   │   ├── About.js            
-│   │   └── Contact.js      
-│   │
-│   ├── styles/             # 전체 스타일 및 테마를 관리하는 폴더
-│   │   ├── GlobalStyles.js       
-│   │   ├── Theme.js               
-│   │   └── fonts/             
-│   │
-│   ├── App.js              # 최상위 컴포넌트, 전체 애플리케이션의 구조를 정의
-│   ├── index.js            # ReactDOM을 사용해 `App.js`를 렌더링
-│   └── setupTests.js       # 테스트 환경 설정 파일
-│
-├── package.json            # 프로젝트의 메타데이터와 의존성 설정 파일
-├── README.md               # 프로젝트 설명 파일
-├── vite.config.js          # 기본 루트들을 새롭게 지정하는 파일
-├── .github                 # github 기본 탬플릿들 정리 파일
-└── .gitignore              # Git에 포함되지 않을 파일을 지정
+## Folder Structure
+
+```
+└── 📁frontend
+    └── 📁public
+        └── 📁fonts
+            ├── .DS_Store
+        └── 📁icons
+            └── 📁home
+                └── 📁levelheader
+                    ├── level1.png
+                    ├── level2.png
+                    ├── level3.png
+                    ├── level4.png
+                    ├── level5.png
+                └── 📁levelicon
+                    └── 📁facility
+                        ├── .DS_Store
+                        ├── active1-pressed.png
+                        ├── active1.png
+                        ├── inactive-pressed.png
+                        ├── inactive.png
+                    └── 📁heart
+                        ├── .DS_Store
+                        ├── active1-pressed.png
+                        ├── active1.png
+                        ├── active2-pressed.png
+                        ├── active2.png
+                        ├── active3-pressed.png
+                        ├── active3.png
+                        ├── active4-pressed.png
+                        ├── active4.png
+                        ├── active5-pressed.png
+                        ├── active5.png
+                        ├── inactive-pressed.png
+                        ├── inactive.png
+                    └── 📁like
+                        ├── .DS_Store
+                        ├── active1-pressed.png
+                        ├── active1.png
+                        ├── active2-pressed.png
+                        ├── active2.png
+                        ├── active3-pressed.png
+                        ├── active3.png
+                        ├── active4-pressed.png
+                        ├── active4.png
+                        ├── active5-pressed.png
+                        ├── active5.png
+                        ├── inactive-pressed.png
+                        ├── inactive.png
+                    └── 📁map
+                        ├── .DS_Store
+                        ├── active1-pressed.png
+                        ├── active1.png
+                        ├── active2-pressed.png
+                        ├── active2.png
+                        ├── active3-pressed.png
+                        ├── active3.png
+                        ├── active4-pressed.png
+                        ├── active4.png
+                        ├── active5-pressed.png
+                        ├── active5.png
+                        ├── inactive-pressed.png
+                        ├── inactive.png
+                    └── 📁pencil
+                        ├── .DS_Store
+                        ├── active1-pressed.png
+                        ├── active1.png
+                        ├── active2-pressed.png
+                        ├── active2.png
+                        ├── active3-pressed.png
+                        ├── active3.png
+                        ├── active4-presssed.png
+                        ├── active4.png
+                        ├── active5-presssed.png
+                        ├── active5.png
+                        ├── inactive-pressed.png
+                        ├── inactive.png
+                    └── 📁person
+                        ├── .DS_Store
+                        ├── active1-pressed.png
+                        ├── active1.png
+                        ├── active2-pressed.png
+                        ├── active2.png
+                        ├── active3-pressed.png
+                        ├── active3.png
+                        ├── active5-pressed.png
+                        ├── active5.png
+                        ├── inactive-pressed.png
+                        ├── inactive.png
+                    ├── .DS_Store
+                └── 📁missionicon
+                ├── .DS_Store
+                ├── duck1-off.png
+                ├── duck1-on.png
+                ├── duck2-off.png
+                ├── duck2-on.png
+                ├── egg1-off.png
+                ├── egg1-on.png
+                ├── egg2-off.png
+                ├── egg2-on.png
+                ├── level-path.png
+                ├── weeklycharacter.png
+                ├── weeklycharacterfront.png
+                ├── weeklymissionquestionicon.png
+                ├── yellowbubble.svg
+            └── 📁map
+                └── 📁CategoryChips
+                    └── 📁sky
+                        ├── cafe.svg
+                        ├── food.svg
+                        ├── hos.svg
+                        ├── life.svg
+                        ├── phar.svg
+                        ├── store.svg
+                    └── 📁white
+                        ├── cafe.svg
+                        ├── food.svg
+                        ├── hos.svg
+                        ├── life.svg
+                        ├── phar.svg
+                        ├── store.svg
+                    ├── .DS_Store
+                    ├── cafe.svg
+                    ├── food.svg
+                    ├── hos.svg
+                    ├── life.svg
+                    ├── phar.svg
+                    ├── store.svg
+                └── 📁favorite
+                    └── 📁inmap
+                        ├── heart-blue.png
+                        ├── heart-green.png
+                        ├── heart-orange.png
+                        ├── heart-pink.png
+                        ├── heart-purple.png
+                        ├── heart-red.png
+                        ├── heart-yellow.png
+                    ├── heart-blue.png
+                    ├── heart-green.png
+                    ├── heart-orange.png
+                    ├── heart-pink.png
+                    ├── heart-purple.png
+                    ├── heart-red.png
+                    ├── heart-yellow.png
+                └── 📁mapdetail
+                    └── 📁AddGroupFolder
+                        ├── private-off.png
+                        ├── private-on.png
+                        ├── public-off.png
+                        ├── public-on.png
+                    └── 📁folder
+                        ├── folder-blue.png
+                        ├── folder-green.png
+                        ├── folder-orange.png
+                        ├── folder-pink.png
+                        ├── folder-purple.png
+                        ├── folder-red.png
+                        ├── folder-yellow.png
+                    ├── .DS_Store
+                    ├── +.svg
+                    ├── check-off.png
+                    ├── check-on.png
+                    ├── dropdownarrow.png
+                    ├── graystar.svg
+                    ├── link.svg
+                    ├── locked.svg
+                    ├── pin.svg
+                    ├── tel.svg
+                    ├── time.svg
+                    ├── unlocked.svg
+                    ├── verticalline.png
+                    ├── x.svg
+                └── 📁review
+                    ├── addphoto.png
+                    ├── clean-sky.png
+                    ├── clean-white.png
+                    ├── cost-sky.png
+                    ├── cost-white.png
+                    ├── date-sky.png
+                    ├── date-sky.svg
+                    ├── date-white.png
+                    ├── date-white.svg
+                    ├── expandarrow.png
+                    ├── expandarrow2.png
+                    ├── fresh-sky.png
+                    ├── fresh-white.png
+                    ├── reviewpeopleicon.png
+                    ├── solo-sky.png
+                    ├── solo-white.png
+                    ├── taste-sky.png
+                    ├── taste-white.png
+                    ├── usericon.png
+                    ├── x.png
+                ├── .DS_Store
+                ├── compact-heart-off.png
+                ├── compact-heart-on.png
+                ├── dotdotdot.svg
+                ├── expanded-heart-off.png
+                ├── expanded-heart-on.png
+                ├── FavoriteHeart.svg
+                ├── findroute.svg
+                ├── findroutearrow.svg
+                ├── leftarrow-white.svg
+                ├── leftarrow.svg
+                ├── listicon.svg
+                ├── LocateIcon.svg
+                ├── mapbubble.png
+                ├── microphone.svg
+                ├── private.svg
+                ├── search.svg
+                ├── star.svg
+                ├── watchmap.svg
+            └── 📁mypage
+                └── 📁badge
+                    ├── .DS_Store
+                    ├── black-checked.png
+                    ├── black-signup.png
+                    ├── black-unchecked.png
+                    ├── black.png
+                    ├── bronze-checked.png
+                    ├── bronze-signup.png
+                    ├── bronze.png
+                    ├── gold-checked.png
+                    ├── gold-signup.png
+                    ├── gold-unchecked.png
+                    ├── gold.png
+                    ├── purple-checked.png
+                    ├── purple-signup.png
+                    ├── purple-unchecked.png
+                    ├── purple.png
+                    ├── silver-checked.png
+                    ├── silver-signup.png
+                    ├── silver-unchecked.png
+                    ├── silver.png
+                └── 📁effect
+                    ├── black-effect.png
+                    ├── bronze-effect.png
+                    ├── gold-effect.png
+                    ├── purple-effect.png
+                    ├── silver-effect.png
+                └── 📁level
+                    ├── 1.png
+                    ├── 2.png
+                    ├── 3.png
+                    ├── 4.png
+                    ├── 5.png
+                └── 📁levelnum
+                    ├── .DS_Store
+                    ├── 1.png
+                    ├── 2.png
+                    ├── 3.png
+                    ├── 4.png
+                    ├── 5.png
+                ├── .DS_Store
+            └── 📁navbar
+                ├── .DS_Store
+                ├── home-off.svg
+                ├── home-on.svg
+                ├── map-off.svg
+                ├── map-on.svg
+                ├── mypage-off.svg
+                ├── mypage-on.svg
+                ├── recommend-off.svg
+                ├── recommend-on.svg
+            └── 📁onboarding
+                ├── .DS_Store
+                ├── service-1.png
+                ├── service-2.png
+                ├── service-3.png
+                ├── service-4.png
+            └── 📁recommend
+                ├── character.png
+                ├── usericon.png
+            ├── .DS_Store
+            ├── introegg.png
+            ├── mainlogo-sky.png
+            ├── mainlogo-white.png
+        └── 📁images
+            └── 📁mypage
+                ├── background.png
+                ├── character.png
+                ├── shadow.svg
+            └── 📁onboarding
+                ├── .DS_Store
+                ├── onboarding1.png
+                ├── onboarding2.png
+                ├── onboarding3.png
+                ├── signupbg.png
+            ├── .DS_Store
+            ├── mapsearchad.png
+            ├── signupbg.png
+        ├── .DS_Store
+        ├── vite.svg
+    └── 📁src
+        └── 📁apis
+        └── 📁assets
+            ├── react.svg
+        └── 📁components
+            └── 📁home
+                ├── LevelSelector.jsx
+                ├── VerificationSheet.jsx
+                ├── WeeklyMissionBox.jsx
+            └── 📁map
+                └── 📁PlaceSheet
+                    ├── PlaceSheet.jsx
+                    ├── ReviewContent.jsx
+                ├── AddGroupSheet.jsx
+                ├── CategoryChips.jsx
+                ├── FavoriteButton.jsx
+                ├── FavoriteGroupsSheet.jsx
+                ├── GroupSheet.jsx
+                ├── LocateButton.jsx
+                ├── SearchBar.jsx
+            ├── NavBar.jsx
+        └── 📁constants
+        └── 📁data
+            ├── DummyLevel.js
+            ├── HomeData.js
+            ├── Level.js
+            ├── MapData.js
+        └── 📁hooks
+        └── 📁layout
+            ├── Layout.jsx
+        └── 📁lib
+            ├── api.js
+        └── 📁pages
+            └── 📁home
+                ├── Home.jsx
+                ├── WeeklyMission.jsx
+            └── 📁map
+                ├── FavoriteGroupDetail.jsx
+                ├── Map.jsx
+                ├── MapSearch.jsx
+                ├── WriteReview.jsx
+            └── 📁mypage
+                ├── MyPage.jsx
+            ├── Login.jsx
+            ├── Onboarding.jsx
+            ├── Recommend.jsx
+            ├── Signup.jsx
+            ├── Splash.jsx
+        └── 📁state
+            ├── atom.js
+        └── 📁styles
+            ├── GlobalStyle.jsx
+            ├── Map.css
+        ├── .DS_Store
+        ├── App.jsx
+        ├── main.jsx
+    ├── .DS_Store
+    ├── .env.local
+    ├── .gitignore
+    ├── eslint.config.js
+    ├── index.html
+    ├── netlify.toml
+    ├── package-lock.json
+    ├── package.json
+    ├── README.md
+    └── vite.config.js
+```
