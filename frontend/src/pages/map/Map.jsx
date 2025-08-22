@@ -232,8 +232,8 @@ export default function Map() {
       await ensureKakaoReady();
 
       const map = new window.kakao.maps.Map(boxRef.current, {
-        center: new window.kakao.maps.LatLng(37.5665, 126.978),
-        level: 7,
+        center: new window.kakao.maps.LatLng(37.507386, 126.960801),
+        level: 4,
       });
       mapRef.current = map;
       setIsMapReady(true);
