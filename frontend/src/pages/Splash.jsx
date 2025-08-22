@@ -19,11 +19,11 @@ export default function Splash() {
   useEffect(() => {
     const transitionTimer = setTimeout(() => {
       setIsSky(true);
-    }, 2000);
+    }, 1000);
 
     const navigationTimer = setTimeout(() => {
       navigate("/onboarding");
-    }, 2000);
+    }, 3000);
 
     return () => {
       clearTimeout(transitionTimer);
