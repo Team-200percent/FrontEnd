@@ -88,7 +88,7 @@ export default function PlaceSheet({
   };
 
   const fetchPlaceDetail = async () => {
-    if (place?.lat || !place?.lng) return;
+    if (!place?.lat || !place?.lng) return;
 
     try {
       const response = await api.get("/market/detail/", {
