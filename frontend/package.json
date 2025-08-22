@@ -10,6 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@react-three/drei": "^9.122.0",
+    "@react-three/fiber": "^8.18.0",
     "axios": "^1.11.0",
     "date-fns": "^4.1.0",
     "lucide-react": "^0.539.0",
@@ -20,7 +22,8 @@
     "react-router-dom": "^7.7.1",
     "recoil": "^0.7.7",
     "styled-components": "^6.1.19",
-    "styled-reset": "^4.5.2"
+    "styled-reset": "^4.5.2",
+    "three": "^0.179.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.30.1",
