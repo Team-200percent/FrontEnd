@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, useMemo, } from "react";
+import React, { useRef, useState, useEffect, useMemo } from "react";
 import styled from "styled-components";
 import AddGroupSheet from "./AddGroupSheet";
 import FavoriteGroupDetail from "../../pages/map/FavoriteGroupDetail";
@@ -36,7 +36,8 @@ export default function FavoriteGroupsSheet({
 
   const getAuthHeaders = () => {
     const t = localStorage.getItem("access_token");
-    const valid = t && t !== "null" && t !== "undefined" && String(t).trim() !== "";
+    const valid =
+      t && t !== "null" && t !== "undefined" && String(t).trim() !== "";
     return valid ? { Authorization: `Bearer ${t}` } : {};
   };
 
@@ -56,11 +57,26 @@ export default function FavoriteGroupsSheet({
       setLoading(true);
       setLoadError("");
       try {
-        const res = await api.get(
-          "/market/favoritegroup/"
-        );
+        const res = await api.get("/market/favoritegroup/");
         // 서버가 배열로 응답 (명세 참고)
-        setGroups(Array.isArray(res.data) ? res.data : []);
+        const groupList = Array.isArray(res.data) ? res.data : [];
+        setGroups(groupList);
+
+        const countPromises = groupList.map((g) =>
+          api.get(`/market/favoriteitem/${g.id}/`).then((r) => ({
+            id: g.id,
+            count:
+              r.data?.count ??
+              (Array.isArray(r.data?.results) ? r.data.results.length : 0),
+          }))
+        );
+        const countResults = await Promise.all(countPromises);
+
+        const countsMap = {};
+        countResults.forEach((result) => {
+          countsMap[result.id] = result.count;
+        });
+        setCounts(countsMap);
       } catch (e) {
         console.error(e);
         setLoadError("그룹을 불러오지 못했어요.");
@@ -80,7 +96,9 @@ export default function FavoriteGroupsSheet({
 
     const fetchCounts = async () => {
       try {
-        const reqs = groups.map((g) => api.get(`/market/favoriteitem/${g.id}/`));
+        const reqs = groups.map((g) =>
+          api.get(`/market/favoriteitem/${g.id}/`)
+        );
         const results = await Promise.allSettled(reqs);
 
         const map = {};
@@ -116,7 +134,6 @@ export default function FavoriteGroupsSheet({
     [groups, counts]
   );
 
-
   const onDragStart = (e) => {
     dragInfo.current = {
       isDragging: true,
@@ -139,7 +156,6 @@ export default function FavoriteGroupsSheet({
   const handleCreated = (newGroup) => {
     setGroups((prev) => [newGroup, ...prev]);
     setCounts((prev) => ({ ...prev, [newGroup.id]: 0 }));
-
   };
 
   const sortedGroups = useMemo(() => {
@@ -155,13 +171,19 @@ export default function FavoriteGroupsSheet({
     );
   }, [groups, sortMode]);
 
-  const openDetail = (group) => {
-    setDetailGroup(group);
-    setIsDetailOpen(true);
+  const openDetail = (groupOrId) => {
+    const group =
+      typeof groupOrId === "number"
+        ? groups.find((g) => g.id === groupOrId)
+        : groupOrId;
+
+    if (group) {
+      setDetailGroup(group);
+      setIsDetailOpen(true);
+    }
   };
 
   const handleDeleteGroup = async (groupId) => {
-    
     try {
       await api.delete(`/market/favoritegroup/${groupId}/`, {
         headers: getAuthHeaders(),
@@ -204,13 +226,12 @@ export default function FavoriteGroupsSheet({
   const handleGroupUpdated = (updated) => {
     setGroups((prev) =>
       prev.map((g) => (g.id === updated.id ? { ...g, ...updated } : g))
-  );
+    );
 
-  setDetailGroup((prev) =>
-    prev && prev.id === updated.id ? { ...prev, ...updated } : prev
-  );
-
-};
+    setDetailGroup((prev) =>
+      prev && prev.id === updated.id ? { ...prev, ...updated } : prev
+    );
+  };
 
   if (!open) return null; // open이 false면 아무것도 렌더링하지 않음
 
@@ -300,7 +321,7 @@ export default function FavoriteGroupsSheet({
 
           <GroupList>
             {sortedGroups.map((group) => (
-              <GroupItem key={group.id} onClick={() => openDetail(group)}>
+              <GroupItem key={group.id} onClick={() => openDetail(group.id)}>
                 <img
                   className="folder-icon"
                   src={`/icons/map/mapdetail/folder/folder-${group.color}.png`}
@@ -337,7 +358,7 @@ export default function FavoriteGroupsSheet({
                   title="그룹 삭제"
                   aria-label="그룹 삭제"
                   onClick={(e) => {
-                    e.stopPropagation();           
+                    e.stopPropagation();
                     setPendingDelete({ id: group.id, name: group.name });
                     setConfirmOpen(true);
                   }}
@@ -362,8 +383,12 @@ export default function FavoriteGroupsSheet({
           <ConfirmCard onClick={(e) => e.stopPropagation()}>
             <ConfirmText>이 그룹을 삭제합니다</ConfirmText>
             <ConfirmActions>
-              <ConfirmBtnGhost onClick={handleCancelDelete}>취소</ConfirmBtnGhost>
-              <ConfirmBtnDanger onClick={handleConfirmDelete}>삭제</ConfirmBtnDanger>
+              <ConfirmBtnGhost onClick={handleCancelDelete}>
+                취소
+              </ConfirmBtnGhost>
+              <ConfirmBtnDanger onClick={handleConfirmDelete}>
+                삭제
+              </ConfirmBtnDanger>
             </ConfirmActions>
           </ConfirmCard>
         </ConfirmBackdrop>
@@ -646,47 +671,47 @@ const RetryBtn = styled.button`
 `;
 
 const ConfirmBackdrop = styled.div`
-   position: fixed;
-   inset: 0;
-   z-index: 5000;
-   background: rgba(0,0,0,0.45);
-   display: grid;
-   place-items: center;
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  background: rgba(0, 0, 0, 0.45);
+  display: grid;
+  place-items: center;
 `;
 const ConfirmCard = styled.div`
-   width: calc(100% - 48px);
-   max-width: 360px;
-   background: #fff;
-   border-radius: 16px;
-   padding: 22px 20px 14px;
-   box-shadow: 0 12px 32px rgba(0,0,0,0.18);
+  width: calc(100% - 48px);
+  max-width: 360px;
+  background: #fff;
+  border-radius: 16px;
+  padding: 22px 20px 14px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
 `;
 const ConfirmText = styled.div`
-   font-size: 16px;
-   line-height: 22px;
-   color: #111;
-   text-align: center;
-   padding: 8px 6px 18px;
+  font-size: 16px;
+  line-height: 22px;
+  color: #111;
+  text-align: center;
+  padding: 8px 6px 18px;
 `;
 const ConfirmActions = styled.div`
-   display: flex;
-   justify-content: flex-end;
-   gap: 10px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
 `;
 const ConfirmBtnGhost = styled.button`
-   border: none;
-   background: transparent;
-   color: #666;
-   font-size: 14px;
-   padding: 8px 10px;
-   cursor: pointer;
-  `;
+  border: none;
+  background: transparent;
+  color: #666;
+  font-size: 14px;
+  padding: 8px 10px;
+  cursor: pointer;
+`;
 const ConfirmBtnDanger = styled.button`
-   border: none;
-   background: transparent;
-   color: #1dc3ff;
-   font-weight: 600;
-   font-size: 14px;
-   padding: 8px 10px;
-   cursor: pointer;
+  border: none;
+  background: transparent;
+  color: #1dc3ff;
+  font-weight: 600;
+  font-size: 14px;
+  padding: 8px 10px;
+  cursor: pointer;
 `;

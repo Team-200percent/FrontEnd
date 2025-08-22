@@ -3,7 +3,6 @@ import styled from "styled-components";
 import api from "../../lib/api";
 import AddGroupSheet from "../../components/map/AddGroupSheet";
 
-
 const HEART_ICON_BY_COLOR = {
   red: "/icons/map/favorite/heart-red.png",
   orange: "/icons/map/favorite/heart-orange.png",
@@ -11,8 +10,8 @@ const HEART_ICON_BY_COLOR = {
   green: "/icons/map/favorite/heart-green.png",
   purple: "/icons/map/favorite/heart-purple.png",
   pink: "/icons/map/favorite/heart-pink.png",
-  blue: "/icons/map/favorite/heart-blue.png", 
-}
+  blue: "/icons/map/favorite/heart-blue.png",
+};
 
 const HEART_ICON_BY_COLOR_MAP = {
   red: "/icons/map/favorite/inmap/heart-red.png",
@@ -21,19 +20,21 @@ const HEART_ICON_BY_COLOR_MAP = {
   green: "/icons/map/favorite/inmap/heart-green.png",
   purple: "/icons/map/favorite/inmap/heart-purple.png",
   pink: "/icons/map/favorite/inmap/heart-pink.png",
-  blue: "/icons/map/favorite/inmap/heart-blue.png", 
-}
+  blue: "/icons/map/favorite/inmap/heart-blue.png",
+};
 
-
-
-export default function FavoriteGroupDetail({ open, group, onClose, onGroupUpdated }) {
+export default function FavoriteGroupDetail({
+  open,
+  group,
+  onClose,
+  onGroupUpdated,
+}) {
   const [rows, setRows] = useState([]);
   const [editOpen, setEditOpen] = useState(false);
   const [curGroup, setCurGroup] = useState(group ?? null);
 
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState("");
-  const [deletingId, setDeletingId] = useState(null);
 
   const [showMap, setShowMap] = useState(false);
   const mapRef = useRef(null);
@@ -47,103 +48,111 @@ export default function FavoriteGroupDetail({ open, group, onClose, onGroupUpdat
   }, [curGroup]);
 
   useEffect(() => {
-    if (group) setCurGroup(group);
+    if (group) {
+      setRows([]);
+      setCurGroup(group);
+    }
   }, [group]);
 
   // 컴포넌트 내부에 util 추가
-const loadKakao = () =>
-  new Promise((resolve, reject) => {
-    if (window.kakao && window.kakao.maps) return resolve();
-    const appKey = import.meta.env.VITE_KAKAO_APP_KEY;
-    if (!appKey) return reject(new Error("Kakao APP KEY 없음"));
+  const loadKakao = () =>
+    new Promise((resolve, reject) => {
+      if (window.kakao && window.kakao.maps) return resolve();
+      const appKey = import.meta.env.VITE_KAKAO_APP_KEY;
+      if (!appKey) return reject(new Error("Kakao APP KEY 없음"));
 
-    const script = document.createElement("script");
-    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?autoload=false&appkey=${appKey}`;
-    script.async = true;
-    script.onload = () => {
-      window.kakao.maps.load(() => resolve());
-    };
-    script.onerror = reject;
-    document.head.appendChild(script);
-  });
-
-// showMap 이 켜지고 rows가 있을 때 지도 생성
-useEffect(() => {
-  if (!open || !group || !showMap) return;
-  if (!rows || rows.length === 0) return;
-
-  let map;
-  let markers = [];
-
-  loadKakao()
-    .then(() => {
-      const { kakao } = window;
-
-      // 지도 인스턴스
-      map = new kakao.maps.Map(mapRef.current, {
-        center: new kakao.maps.LatLng(rows[0].lat, rows[0].lng),
-        level: 6,
-      });
-
-      // 마커 이미지 (그룹 색상의 하트)
-      const imgSrc = HEART_ICON_BY_COLOR_MAP[group.color ?? "blue"] || HEART_ICON_BY_COLOR_MAP.blue;
-      const imageSize = new kakao.maps.Size(26, 26);
-      const imageOption = { offset: new kakao.maps.Point(13, 13) };
-      const markerImage = new kakao.maps.MarkerImage(imgSrc, imageSize, imageOption);
-
-      // bounds로 모든 마커 화면에 맞추기
-      const bounds = new kakao.maps.LatLngBounds();
-
-      rows.forEach((it) => {
-        const pos = new kakao.maps.LatLng(it.lat, it.lng);
-        const marker = new kakao.maps.Marker({
-          position: pos,
-          image: markerImage,
-          clickable: true,
-        });
-        marker.setMap(map);
-        markers.push(marker);
-        bounds.extend(pos);
-
-        // 간단한 인포윈도우
-        const iw = new kakao.maps.InfoWindow({
-          content: `<div style="padding:6px 10px; font-size:12px">${it.name || `가게 #${it.marketId}`}</div>`,
-        });
-        kakao.maps.event.addListener(marker, "click", () => {
-          iw.open(map, marker);
-        });
-      });
-
-      if (rows.length > 1) {
-        map.setBounds(bounds);
-      }
-    })
-    .catch((err) => {
-      console.error("Kakao 지도 로딩 실패:", err);
-      alert("지도를 불러오지 못했어요. 잠시 후 다시 시도해주세요.");
-      setShowMap(false);
+      const script = document.createElement("script");
+      script.src = `https://dapi.kakao.com/v2/maps/sdk.js?autoload=false&appkey=${appKey}`;
+      script.async = true;
+      script.onload = () => {
+        window.kakao.maps.load(() => resolve());
+      };
+      script.onerror = reject;
+      document.head.appendChild(script);
     });
 
-  // cleanup
-  return () => {
-    markers = [];
-    map = null;
-  };
-}, [open, group, showMap, rows]);
+  // showMap 이 켜지고 rows가 있을 때 지도 생성
+  useEffect(() => {
+    if (!open || !group || !showMap) return;
+    if (!rows || rows.length === 0) return;
+
+    let map;
+    let markers = [];
+
+    loadKakao()
+      .then(() => {
+        const { kakao } = window;
+
+        // 지도 인스턴스
+        map = new kakao.maps.Map(mapRef.current, {
+          center: new kakao.maps.LatLng(rows[0].lat, rows[0].lng),
+          level: 6,
+        });
+
+        // 마커 이미지 (그룹 색상의 하트)
+        const imgSrc =
+          HEART_ICON_BY_COLOR_MAP[group.color ?? "blue"] ||
+          HEART_ICON_BY_COLOR_MAP.blue;
+        const imageSize = new kakao.maps.Size(26, 26);
+        const imageOption = { offset: new kakao.maps.Point(13, 13) };
+        const markerImage = new kakao.maps.MarkerImage(
+          imgSrc,
+          imageSize,
+          imageOption
+        );
+
+        // bounds로 모든 마커 화면에 맞추기
+        const bounds = new kakao.maps.LatLngBounds();
+
+        rows.forEach((it) => {
+          const pos = new kakao.maps.LatLng(it.lat, it.lng);
+          const marker = new kakao.maps.Marker({
+            position: pos,
+            image: markerImage,
+            clickable: true,
+          });
+          marker.setMap(map);
+          markers.push(marker);
+          bounds.extend(pos);
+
+          // 간단한 인포윈도우
+          const iw = new kakao.maps.InfoWindow({
+            content: `<div style="padding:6px 10px; font-size:12px">${
+              it.name || `가게 #${it.marketId}`
+            }</div>`,
+          });
+          kakao.maps.event.addListener(marker, "click", () => {
+            iw.open(map, marker);
+          });
+        });
+
+        if (rows.length > 1) {
+          map.setBounds(bounds);
+        }
+      })
+      .catch((err) => {
+        console.error("Kakao 지도 로딩 실패:", err);
+        alert("지도를 불러오지 못했어요. 잠시 후 다시 시도해주세요.");
+        setShowMap(false);
+      });
+
+    // cleanup
+    return () => {
+      markers = [];
+      map = null;
+    };
+  }, [open, group, showMap, rows]);
 
   useEffect(() => {
-    if (!open || !curGroup) return;
+    if (!open || !group) return;
 
     const fetchItems = async () => {
+      if (!open || !group?.id) return;
       setLoading(true);
       setLoadError("");
       try {
-        const res = await api.get(
-          `/market/favoriteitem/${curGroup.id}/`,
-          {
-            withCredentials: true
-          }
-        );
+        const res = await api.get(`/market/favoriteitem/${group.id}/`);
+        setRows(res.data);
         const list = Array.isArray(res.data?.results) ? res.data.results : [];
         setRows(list);
       } catch (e) {
@@ -179,39 +188,41 @@ useEffect(() => {
   // };
 
   // 삭제 버튼을 눌렀을 때 모달 오픈
-const askDelete = (item) => {
-  setPendingDelete(item);     // rows 안의 한 항목 (id, lat, lng, name 포함)
-  setConfirmOpen(true);
-};
+  const askDelete = (item) => {
+    setPendingDelete(item); // rows 안의 한 항목 (id, lat, lng, name 포함)
+    setConfirmOpen(true);
+  };
 
-// 실제 삭제 호출
-const handleConfirmDelete = async () => {
-  if (!pendingDelete || !group?.id) return;
+  // 실제 삭제 호출
+  const handleConfirmDelete = async () => {
+    if (!pendingDelete || !group?.id) return;
 
-  try {
-    // 명세: DELETE /market/favoriteitem/<group_id>/?lat=..&lng=..
-    await api.delete(`/market/favoriteitem/${group.id}/`, {
-      params: { lat: pendingDelete.lat, lng: pendingDelete.lng },
-      withCredentials: true,
-    });
+    try {
+      // 명세: DELETE /market/favoriteitem/<group_id>/?lat=..&lng=..
+      await api.delete(`/market/favoriteitem/${group.id}/`, {
+        params: { lat: pendingDelete.lat, lng: pendingDelete.lng },
+        withCredentials: true,
+      });
 
-    // 목록에서 제거
-    setRows((prev) => prev.filter((r) => r.id !== pendingDelete.id));
-  } catch (e) {
-    console.error(e);
-    const msg = e?.response?.data?.detail || "삭제에 실패했어요. 잠시 후 다시 시도해주세요.";
-    alert(msg);
-  } finally {
+      // 목록에서 제거
+      setRows((prev) => prev.filter((r) => r.id !== pendingDelete.id));
+    } catch (e) {
+      console.error(e);
+      const msg =
+        e?.response?.data?.detail ||
+        "삭제에 실패했어요. 잠시 후 다시 시도해주세요.";
+      alert(msg);
+    } finally {
+      setConfirmOpen(false);
+      setPendingDelete(null);
+    }
+  };
+
+  // 모달 취소
+  const handleCancelDelete = () => {
     setConfirmOpen(false);
     setPendingDelete(null);
-  }
-};
-
-// 모달 취소
-const handleCancelDelete = () => {
-  setConfirmOpen(false);
-  setPendingDelete(null);
-};
+  };
 
   // (선택) 조회수 등 표시용
   const total = rows.length;
@@ -257,7 +268,11 @@ const handleCancelDelete = () => {
             </SubMeta>
             <BtnMeta>
               <UrlBtn>공유</UrlBtn>
-              <ModifyBtn as="button" type="button" onClick={() => setEditOpen(true)}>
+              <ModifyBtn
+                as="button"
+                type="button"
+                onClick={() => setEditOpen(true)}
+              >
                 수정
               </ModifyBtn>
             </BtnMeta>
@@ -268,72 +283,73 @@ const handleCancelDelete = () => {
         <Banner>
           <TextWrap>
             <span>전체</span>
-            <span style={{ color: "#fff", fontWeight: 700 }}>{rows.length}</span>
+            <span style={{ color: "#fff", fontWeight: 700 }}>
+              {rows.length}
+            </span>
           </TextWrap>
           <SortWrap>등록순</SortWrap>
         </Banner>
 
         {showMap ? (
-            <MapBox ref={mapRef} />
-          ) : (
-        <>
-        <Body>
+          <MapBox ref={mapRef} />
+        ) : (
+          <>
+            <Body>
+              <InfoBanner>
+                즐겨찾기는 그룹 당 <strong>100개까지 저장</strong>할 수
+                있습니다.
+              </InfoBanner>
 
-         
-          <InfoBanner>
-            즐겨찾기는 그룹 당 <strong>100개까지 저장</strong>할 수 있습니다.
-          </InfoBanner>
+              {loading && <State>불러오는 중…</State>}
+              {loadError && <State>{loadError}</State>}
+              {!loading && !loadError && rows.length === 0 && (
+                <State>아직 저장된 장소가 없어요.</State>
+              )}
 
+              <List>
+                {rows.map((it) => (
+                  <Row key={it.id}>
+                    <Left>
+                      <Heart>
+                        <img src={heartIcon} alt="" />
+                      </Heart>
+                      <TextCol>
+                        <Primary>{it.name || "미상"}</Primary>
+                        <Secondary>{it.address || ""}</Secondary>
+                      </TextCol>
+                    </Left>
+                    <RemoveBtn aria-label="삭제" onClick={() => askDelete(it)}>
+                      <img src="/icons/map/mapdetail/x.svg" alt="삭제" />
+                    </RemoveBtn>
+                  </Row>
+                ))}
+              </List>
 
-          {loading && <State>불러오는 중…</State>}
-          {loadError && <State>{loadError}</State>}
-          {!loading && !loadError && rows.length === 0 && (
-            <State>아직 저장된 장소가 없어요.</State>
-          )}
+              {confirmOpen && (
+                <ConfirmBackdrop onClick={handleCancelDelete}>
+                  <ConfirmCard onClick={(e) => e.stopPropagation()}>
+                    <ConfirmText>이 장소를 그룹에서 삭제합니다</ConfirmText>
+                    <ConfirmActions>
+                      <ConfirmBtnGhost onClick={handleCancelDelete}>
+                        취소
+                      </ConfirmBtnGhost>
+                      <ConfirmBtnDanger onClick={handleConfirmDelete}>
+                        삭제
+                      </ConfirmBtnDanger>
+                    </ConfirmActions>
+                  </ConfirmCard>
+                </ConfirmBackdrop>
+              )}
+            </Body>
 
-          <List>
-            {rows.map((it) => (
-              <Row key={it.id}>
-                <Left>
-                  <Heart>
-                    <img src={heartIcon} alt="" />
-                  </Heart>
-                  <TextCol>
-                      <Primary>{it.name || "미상"}</Primary>
-                      <Secondary>{it.address || ""}</Secondary>
-                  </TextCol>
-                </Left>
-                <RemoveBtn
-                  aria-label="삭제"
-                  onClick={() => askDelete(it)}
-                >
-                  <img src="/icons/map/mapdetail/x.svg" alt="삭제" />
-                </RemoveBtn>
-              </Row>
-            ))}
-          </List>
-          
-          {confirmOpen && (
-  <ConfirmBackdrop onClick={handleCancelDelete}>
-    <ConfirmCard onClick={(e) => e.stopPropagation()}>
-      <ConfirmText>이 장소를 그룹에서 삭제합니다</ConfirmText>
-      <ConfirmActions>
-        <ConfirmBtnGhost onClick={handleCancelDelete}>취소</ConfirmBtnGhost>
-        <ConfirmBtnDanger onClick={handleConfirmDelete}>삭제</ConfirmBtnDanger>
-      </ConfirmActions>
-    </ConfirmCard>
-  </ConfirmBackdrop>
-)}
-        </Body>
-
-        <Footer>
-          <AddBtn>
-            <img src="/icons/map/mapdetail/+.svg" alt="" />
-            &nbsp;즐겨찾기 추가
-          </AddBtn>
-        </Footer>
-        </>
-          )}
+            <Footer>
+              <AddBtn>
+                <img src="/icons/map/mapdetail/+.svg" alt="" />
+                &nbsp;즐겨찾기 추가
+              </AddBtn>
+            </Footer>
+          </>
+        )}
       </Modal>
 
       <AddGroupSheet
@@ -341,17 +357,19 @@ const handleCancelDelete = () => {
         mode="edit"
         group={curGroup}
         onClose={() => setEditOpen(false)}
-        onCloseAll={() => { setEditOpen(false); onClose?.(); }}
+        onCloseAll={() => {
+          setEditOpen(false);
+          onClose?.();
+        }}
         onUpdated={(updated) => {
-          setCurGroup((prev) => ({ ...prev, ...updated }))
+          setCurGroup((prev) => ({ ...prev, ...updated }));
           onGroupUpdated?.(updated);
           setEditOpen(false);
         }}
       />
     </>
   );
-};
-  
+}
 
 const Modal = styled.div`
   position: fixed;
@@ -676,7 +694,7 @@ const ConfirmBackdrop = styled.div`
   position: fixed;
   inset: 0;
   z-index: 5000;
-  background: rgba(0,0,0,0.45);
+  background: rgba(0, 0, 0, 0.45);
   display: grid;
   place-items: center;
 `;
@@ -687,7 +705,7 @@ const ConfirmCard = styled.div`
   background: #fff;
   border-radius: 16px;
   padding: 22px 20px 14px;
-  box-shadow: 0 12px 32px rgba(0,0,0,0.18);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
 `;
 
 const ConfirmText = styled.div`
