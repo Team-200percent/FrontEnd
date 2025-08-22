@@ -17,10 +17,28 @@ import Login from "./pages/Login";
 import MapSearch from "./pages/map/MapSearch";
 import WeeklyMission from "./pages/home/WeeklyMission";
 import Signup from "./pages/Signup";
+import { RecoilRoot, useRecoilState, useRecoilValue } from "recoil";
+import GroupSheet from "./components/map/GroupSheet";
+import { isGroupSheetOpenState, placeForGroupState } from "./state/atom";
+
+function GroupSheetController() {
+  const [isOpen, setIsOpen] = useRecoilState(isGroupSheetOpenState);
+  const place = useRecoilValue(placeForGroupState);
+
+  return (
+    <GroupSheet open={isOpen} onClose={() => setIsOpen(false)} place={place} />
+  );
+}
 
 function AppInner() {
   const location = useLocation(); // 현재 URL 전체 정보를 주는 React Hook
-  const hideNavPaths = ["/splash", "/onboarding", "/login", "/signup", "/map-search"]; // 여기에 숨길 경로들 적기
+  const hideNavPaths = [
+    "/splash",
+    "/onboarding",
+    "/login",
+    "/signup",
+    "/map-search",
+  ]; // 여기에 숨길 경로들 적기
   const shouldHideNav = hideNavPaths.some((path) =>
     location.pathname.startsWith(path)
   );
@@ -53,8 +71,11 @@ function AppInner() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <AppInner />
-    </BrowserRouter>
+    <RecoilRoot>
+      <BrowserRouter>
+        <AppInner />
+        <GroupSheetController />
+      </BrowserRouter>
+    </RecoilRoot>
   );
 }
