@@ -56,7 +56,7 @@ function DragScrollRow({ className, children }) {
     document.body.style.cursor = "";
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     const move = (e) => onPointerMove(e);
     const up = () => endDrag();
     window.addEventListener("pointermove", move);
@@ -69,25 +69,27 @@ function DragScrollRow({ className, children }) {
     };
   }, []);
 
-  // 마우스 휠(세로) → 가로 스크롤로 변환 (터치패드도 부드럽게)
-  const onWheel = (e) => {
-    if (!ref.current) return;
-    if (isInteractive(e.target)) return;
+  useEffect(() => {
     const el = ref.current;
-    const absY = Math.abs(e.deltaY);
-    const absX = Math.abs(e.deltaX);
-    if (absY > absX) {
-      el.scrollLeft += e.deltaY;
-      e.preventDefault();
-    }
-  };
+    if (!el) return;
+    const onWheelNative = (e) => {
+      const absY = Math.abs(e.deltaY);
+      const absX = Math.abs(e.deltaX);
+      // 세로 제스처를 가로 스크롤로 흘림
+      if (absY > absX) {
+        el.scrollLeft += e.deltaY;
+        e.preventDefault(); // 이제 경고 안 뜸
+      }
+    };
+    el.addEventListener("wheel", onWheelNative, { passive: false });
+    return () => el.removeEventListener("wheel", onWheelNative);
+  }, []);
 
   return (
     <RowStyled
       ref={ref}
       className={className}
       onPointerDown={onPointerDown}
-      onWheel={onWheel}
       onClickCapture={(e) => {
         if (drag.current.moved && !isInteractive(e.target)) {
           e.stopPropagation();
@@ -261,7 +263,7 @@ export default function Recommend() {
     }
   };
 
-  const displayNick = nick || "회원님";
+  const displayNick = nick || "회원";
 
   return (
     <Page>
@@ -357,7 +359,11 @@ function PlaceCard({ item, onLike }) {
           <Stars rating={item.rating} />
         </MetaRow>
       </CardBody>
-      <Heart type="button" aria-label="좋아요" onClick={handleClick} data-nodrag
+      <Heart
+        type="button"
+        aria-label="좋아요"
+        onClick={handleClick}
+        data-nodrag
       >
         <img
           src={
@@ -406,7 +412,12 @@ function PickCard({ item, onLike }) {
           <MetaText>{item.market_type}</MetaText>
         </MetaRow>
       </PickBody>
-      <PickHeart type="button" aria-label="좋아요" onClick={handleClick} data-nodrag>
+      <PickHeart
+        type="button"
+        aria-label="좋아요"
+        onClick={handleClick}
+        data-nodrag
+      >
         <img
           src={
             isFavorite
@@ -643,10 +654,11 @@ const UserWrapper = styled.div`
   }
 `;
 
-const Avatar = styled.div.attrs({ draggable: false })`
+const Avatar = styled.img.attrs({ draggable: false })`
   width: 50px;
   height: 50px;
 `;
+
 const Recent = styled.div`
   text-align: right;
   font-size: 9px;
