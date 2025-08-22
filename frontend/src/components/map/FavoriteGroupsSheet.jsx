@@ -13,7 +13,13 @@ export default function FavoriteGroupsSheet({
   onViewModeChange,
 }) {
   const sheetRef = useRef(null);
-  const dragInfo = useRef({ startY: 0, isDragging: false }); // 드래그 로직 (간소화 버전)
+  const dragRef = useRef({
+    active: false,
+    startY: 0,
+    dy: 0,
+    pointerId: null,
+  });
+  const CLOSE_THRESHOLD = 60;
 
   const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -134,24 +140,67 @@ export default function FavoriteGroupsSheet({
     [groups, counts]
   );
 
-  const onDragStart = (e) => {
-    dragInfo.current = {
-      isDragging: true,
-      startY: e.touches ? e.touches[0].clientY : e.clientY,
+  const applyTranslate = (px) => {
+    const el = sheetRef.current;
+    if (!el) return;
+    el.style.transform = `translateY(${px}px)`;
+  };
+
+  const clearTransform = () => {
+    const el = sheetRef.current;
+    if (el) el.style.transform = "";
+  };
+
+  const onPointerDown = (e) => {
+    // 핸들바에서만 시작 (아래 JSX 참고)
+    const target = e.currentTarget;
+    target.setPointerCapture?.(e.pointerId);
+    dragRef.current = {
+      active: true,
+      startY: e.clientY,
+      dy: 0,
+      pointerId: e.pointerId,
     };
+    document.body.style.userSelect = "none";
+    document.body.style.cursor = "grabbing";
   };
 
-  const onDragEnd = (e) => {
-    if (!dragInfo.current.isDragging) return;
-    const endY = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
-    const deltaY = endY - dragInfo.current.startY;
+  const onPointerMove = (e) => {
+    if (!dragRef.current.active) return;
+    const dy = Math.max(0, e.clientY - dragRef.current.startY); // 아래로만
+    dragRef.current.dy = dy;
+    applyTranslate(dy);
+  };
 
-    // 아래로 50px 이상 끌면 onClose 함수를 호출하여 시트를 닫습니다.
-    if (deltaY > 50) {
+  const onPointerUp = () => {
+    if (!dragRef.current.active) return;
+    const dy = dragRef.current.dy;
+    dragRef.current.active = false;
+    dragRef.current.pointerId = null;
+    document.body.style.userSelect = "";
+    document.body.style.cursor = "";
+
+    if (dy > CLOSE_THRESHOLD) {
+      // 닫기
+      clearTransform();
       onClose();
+      return;
     }
-    dragInfo.current.isDragging = false;
+    // 복귀 스냅
+    clearTransform();
   };
+
+  useEffect(() => {
+    // 전역 move/up로 캡처 (드래그 중 포인터가 밖으로 나가도 추적)
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerUp);
+    window.addEventListener("pointercancel", onPointerUp);
+    return () => {
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener("pointercancel", onPointerUp);
+    };
+  }, []);
 
   const handleCreated = (newGroup) => {
     setGroups((prev) => [newGroup, ...prev]);
@@ -237,14 +286,8 @@ export default function FavoriteGroupsSheet({
 
   return (
     <>
-      <SheetContainer
-        ref={sheetRef}
-        onTouchStart={onDragStart}
-        onTouchEnd={onDragEnd}
-        onMouseDown={onDragStart}
-        onMouseUp={onDragEnd}
-      >
-        <HandleBar />
+      <SheetContainer ref={sheetRef}>
+        <HandleBar onPointerDown={onPointerDown} />
 
         <Content>
           <SubHeader>
@@ -427,6 +470,8 @@ const SheetContainer = styled.div`
   box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
+  will-change: transform;
+  transition: transform 100mss ease;
 `;
 
 const HandleBar = styled.div`
@@ -436,6 +481,7 @@ const HandleBar = styled.div`
   border-radius: 2px;
   margin: 8px auto;
   cursor: grab;
+  touch-action: none;
 `;
 
 const Header = styled.header`
