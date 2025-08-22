@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 import AddGroupSheet from "./AddGroupSheet";
 import api from "../../lib/api";
+import { useSetRecoilState } from "recoil";
+import { favoriteStateChanged } from "../../state/atom";
 
 export default function GroupSheet({
   open,
@@ -15,6 +17,8 @@ export default function GroupSheet({
   const [initialGroups, setInitialGroups] = useState(new Set()); // initialGroups에만 있는데 지금은 해제된 그룹들은 DELETE.
   const [isLoading, setIsLoading] = useState(true);
   const [isAddGroupSheetOpen, setIsAddGroupSheetOpen] = useState(false);
+
+  const setFavoriteChanged = useSetRecoilState(favoriteStateChanged);
 
   useEffect(() => {
     if (open && place?.lat && place?.lng) {
@@ -96,6 +100,7 @@ export default function GroupSheet({
 
       alert("즐겨찾기 그룹이 저장되었습니다!");
       onFavoriteSaved?.(selectedGroups.size > 0);
+      setFavoriteChanged((prev) => prev + 1); // 즐겨찾기 상태 변경 알림
       onClose();
     } catch (error) {
       console.error("즐겨찾기 저장 실패:", error);
