@@ -23,7 +23,7 @@ export default function Splash() {
 
     const navigationTimer = setTimeout(() => {
       navigate("/onboarding");
-    }, 3000);
+    }, 2000);
 
     return () => {
       clearTimeout(transitionTimer);
@@ -73,7 +73,7 @@ const Shell = styled.div`
   background: #1dc3ff;
   justify-content: center;
   background: ${({ $isSky }) => ($isSky ? "#1dc3ff" : "#fff")};
-  transition: background-color 1.5s ease;
+  transition: background-color 1s ease;
 `;
 
 const Frame = styled.div`
