@@ -188,7 +188,7 @@ export default function AddGroupSheet({
                 placeholder="그룹명을 입력하세요"
                 value={groupName}
                 onChange={(e) => setGroupName(e.target.value)}
-                maxLength={20}
+                maxLength={19}
               />
               <CharCounter>
                 <strong>{groupName.length}</strong>/20
