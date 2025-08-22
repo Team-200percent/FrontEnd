@@ -181,7 +181,7 @@ const Shell = styled.div`
   display: grid;
   place-items: center;
   overflow: hidden;
-  background: var(--sky0);
+  background: ${(p) => (p.$sky ? "var(--sky3)" : "var(--sky0)")};
   transition: background-color 1200ms ease;
 
   ${(p) =>
