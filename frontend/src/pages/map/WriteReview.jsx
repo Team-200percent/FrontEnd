@@ -2,7 +2,6 @@ import React, { useRef, useState } from "react";
 import styled from "styled-components";
 import api from "../../lib/api";
 
-
 const KEYWORD_TAGS = [
   {
     key: "taste_tag",
@@ -37,8 +36,8 @@ const KEYWORD_TAGS = [
   {
     key: "date_tag",
     text: "데이트하기 좋아요",
-    icon_on: "/icons/map/review/date-white.png",
-    icon_off: "/icons/map/review/date-sky.png",
+    icon_on: "/icons/map/review/date-white.svg",
+    icon_off: "/icons/map/review/date-sky.svg",
   },
 ];
 export default function WriteReview({ place, onClose, onSubmitted }) {
@@ -64,9 +63,10 @@ export default function WriteReview({ place, onClose, onSubmitted }) {
   };
 
   const handleSubmit = async () => {
-    if (submitting) return;             // ✅ 더블클릭 방지
+    if (submitting) return; // ✅ 더블클릭 방지
     if (rating === 0) return alert("별점을 매겨주세요!");
-    if (selectedTags.size === 0) return alert("좋았던 점을 하나 이상 선택해주세요!");
+    if (selectedTags.size === 0)
+      return alert("좋았던 점을 하나 이상 선택해주세요!");
 
     // 태그 변환
     const tagData = {};
@@ -92,7 +92,10 @@ export default function WriteReview({ place, onClose, onSubmitted }) {
 
       const form = new FormData();
       Object.entries(reviewPayload).forEach(([k, v]) =>
-        form.append(k, typeof v === "boolean" ? (v ? "true" : "false") : String(v))
+        form.append(
+          k,
+          typeof v === "boolean" ? (v ? "true" : "false") : String(v)
+        )
       );
       photos.forEach(({ file }) => form.append("image", file));
 
@@ -146,6 +149,9 @@ export default function WriteReview({ place, onClose, onSubmitted }) {
         <BackButton onClick={onClose}>
           <img src="/icons/map/leftarrow.svg" alt="뒤로가기" />
         </BackButton>
+      </Header>
+
+      <Content>
         <TitleSection>
           {/* place 데이터가 있으면 name을, 없으면 '장소명'을 표시 */}
           <MainTitle>{place?.name ?? "장소명"}</MainTitle>
@@ -161,9 +167,6 @@ export default function WriteReview({ place, onClose, onSubmitted }) {
             <span>리뷰 {place?.reviewCount ?? "0"}</span>
           </SubInfo>
         </TitleSection>
-      </Header>
-
-      <Content>
         {/* ⭐ 별점 */}
         <Section>
           <SectionTitle>
@@ -248,6 +251,7 @@ export default function WriteReview({ place, onClose, onSubmitted }) {
                   key={tag.text}
                   $active={isActive}
                   onClick={() => toggleTag(tag.text)}
+                  item={tag}
                 >
                   <img src={isActive ? tag.icon_on : tag.icon_off} alt="" />
                   {tag.text}
@@ -292,20 +296,20 @@ const Wrapper = styled.div`
   display: flex;
   flex-direction: column;
   z-index: 10000;
+  overflow: hidden;
 `;
 const Header = styled.header`
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 8px;
   padding: 0 4px;
   background: #fff;
   z-index: 10;
-  height: 52px;
-  flex: 1;
 `;
 const BackButton = styled.button`
-  margin-top: 10%;
-  margin-left: 5%;
+  margin-top: 5%;
+  margin-left: 3%;
   background: none;
   border: none;
   cursor: pointer;
@@ -325,10 +329,11 @@ const ContentArea = styled.div`
 `;
 
 const TitleSection = styled.div`
-  padding: 16px 30px;
+  padding: 0px 10px;
 `;
 
 const MainTitle = styled.h1`
+  margin-top: 10%;
   font-size: 26px;
   font-weight: 800;
 `;
@@ -348,16 +353,18 @@ const Title = styled.h1`
   font-size: 18px;
   font-weight: 700;
 `;
+
 const Content = styled.div`
   flex: 1;
   margin-top: -20px;
   padding: 24px;
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: 11px;
+  overflow-y: auto;
 `;
 const Section = styled.section`
-  padding: 0 8px;
+  padding: 10px 10px;
 `;
 const SectionTitle = styled.h2`
   font-size: 16px;
@@ -372,7 +379,6 @@ const SectionTitle = styled.h2`
 `;
 const Badge = styled.span`
   margin-left: 6px;
-  margin-bottom: 2.5px;
   font-size: 10px;
   font-weight: 600;
   padding: 3px 8px;
@@ -387,9 +393,8 @@ const Badge = styled.span`
 const StarRating = styled.div`
   display: flex;
   align-items: center;
-  margin-left: 6px;
-  margin-top: 25px;
-  gap: 8px;
+  margin-top: 3%;
+  gap: 6px;
 `;
 const StarBtn = styled.button`
   border: 0;
@@ -482,6 +487,12 @@ const Tag = styled.button`
     width: 20px;
     height: 20px;
   }
+
+  ${({ item }) =>
+    item.key === "date_tag" &&
+    `
+    padding: 4px 8px;
+  `}
 `;
 const TextArea = styled.textarea`
   width: 100%;

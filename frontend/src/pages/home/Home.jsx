@@ -566,7 +566,7 @@ const Content = styled.div`
 
 const TitleWrap = styled.div`
   display: flex;
-  gap: 26px;
+  justify-content: space-between;
   h1 {
     font-size: 24px;
     font-weight: 600;
@@ -574,6 +574,7 @@ const TitleWrap = styled.div`
     color: #fff;
   }
   p {
+    margin-left: 5px;
     margin-top: 14px;
     font-size: 12px;
     color: #fff;

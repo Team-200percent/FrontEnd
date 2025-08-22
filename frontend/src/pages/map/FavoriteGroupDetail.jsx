@@ -241,9 +241,7 @@ export default function FavoriteGroupDetail({
               <MapBtn onClick={() => setShowMap((v) => !v)}>
                 <img src="/icons/map/watchmap.svg" alt="" />
               </MapBtn>
-              <DotBtn>
-                <img src="/icons/map/dotdotdot.svg" alt="" />
-              </DotBtn>
+             
             </TopRight>
           </Top>
 
@@ -267,7 +265,9 @@ export default function FavoriteGroupDetail({
               </LockWrap>
             </SubMeta>
             <BtnMeta>
-              <UrlBtn>공유</UrlBtn>
+              <ModifyBtn as="button" type="button">
+                공유
+              </ModifyBtn>
               <ModifyBtn
                 as="button"
                 type="button"
@@ -345,7 +345,7 @@ export default function FavoriteGroupDetail({
             <Footer>
               <AddBtn>
                 <img src="/icons/map/mapdetail/+.svg" alt="" />
-                &nbsp;즐겨찾기 추가
+                &nbsp;&nbsp;즐겨찾기 추가
               </AddBtn>
             </Footer>
           </>
@@ -384,7 +384,7 @@ const Modal = styled.div`
 
 const HeaderBar = styled.div`
   background: #13c0ff;
-  height: 28%;
+  height: 35%;
   color: #fff;
   display: flex;
   flex-direction: column;
@@ -502,6 +502,7 @@ const ModifyBtn = styled.div`
   border-radius: 215px;
   border: 2px solid #1dc3ff;
   cursor: pointer;
+  color: #1dc3ff;
 `;
 
 const Banner = styled.div`
@@ -672,7 +673,7 @@ const AddBtn = styled.button`
   align-items: center;
   justify-content: center;
   img {
-    width: 18px;
+    width: 11.5px;
   }
 `;
 

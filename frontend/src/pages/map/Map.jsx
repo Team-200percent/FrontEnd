@@ -163,7 +163,7 @@ export default function Map() {
               "data:image/svg+xml;base64," +
                 btoa(`
         <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30">
-          <circle cx="15" cy="15" r="12" fill="#ffde00" stroke="white" stroke-width="4"/>
+          <circle cx="15" cy="15" r="12" fill="#ff7b33" stroke="white" stroke-width="4"/>
         </svg>
       `),
               new window.kakao.maps.Size(30, 30), // 마커 크기
@@ -233,7 +233,7 @@ export default function Map() {
 
       const map = new window.kakao.maps.Map(boxRef.current, {
         center: new window.kakao.maps.LatLng(37.507386, 126.960801),
-        level: 4,
+        level: 8,
       });
       mapRef.current = map;
       setIsMapReady(true);

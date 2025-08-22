@@ -1100,12 +1100,11 @@ const Bg = styled.div`
 const Content = styled.div`
   position: relative;
   z-index: 1;
-  padding: 60px 20px 30px;
+  padding: 20px 20px 30px;
   text-align: center;
 `;
 
 const Title = styled.h1`
-  margin-top: 27%;
   font-size: 35px;
   font-weight: 500;
   line-height: 1.4;
@@ -1129,7 +1128,7 @@ const BadgeArea = styled.div`
   display: flex;
   justify-content: center;
   gap: 12px;
-  margin-top: 40px;
+  margin-top: 0px;
 `;
 
 const Badge = styled.img`
@@ -1138,27 +1137,27 @@ const Badge = styled.img`
   height: 85px;
 
   &.bronze {
-    top: 53%;
+    top: 43%;
     left: 4%;
   }
 
   &.silver {
-    top: 45%;
+    top: 35%;
     left: 19%;
   }
 
   &.gold {
-    top: 40%;
+    top: 30%;
     left: 38%;
   }
 
   &.purple {
-    top: 45%;
+    top: 35%;
     right: 23%;
   }
 
   &.black {
-    top: 53%;
+    top: 43%;
     right: 8%;
   }
 `;
@@ -1170,7 +1169,7 @@ const Character = styled.img`
 
 const BottomSheet = styled.div`
   max-width: 430px;
-  height: 60%;
+  height: 75%;
   margin: 0 auto;
   position: fixed;
   bottom: 0;

@@ -286,7 +286,6 @@ const InfoBanner = styled.div`
 const GroupList = styled.ul`
   list-style: none;
   padding: 0;
-  margin-top: 16px;
 `;
 
 const GroupItem = styled.li`
@@ -309,6 +308,7 @@ const GroupItem = styled.li`
 `;
 
 const GroupName = styled.span`
+  margin-left: 3%;
   flex: 1;
 `;
 

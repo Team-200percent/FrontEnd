@@ -7,8 +7,6 @@ import api from "../../../lib/api";
 
 const LoadingSpinner = () => <Spinner>Loading...</Spinner>;
 
-
-
 export default function PlaceSheet({
   open,
   onClose,
@@ -145,190 +143,194 @@ export default function PlaceSheet({
   if (!open) return null;
 
   const CompactContent = ({ place, onViewDetails, onLike }) => {
-  const compactHeartIconSrc = place?.isFavorite
-    ? "/icons/map/compact-heart-on.png"
-    : "/icons/map/compact-heart-off.png";
+    const compactHeartIconSrc = place?.isFavorite
+      ? "/icons/map/compact-heart-on.png"
+      : "/icons/map/compact-heart-off.png";
 
-  return (
-    <CompactWrapper>
-      <CompactHeader>
-        <Title>{place?.name ?? "장소명"}</Title>
-        <LikeButton onClick={onLike}>
-          <img src={compactHeartIconSrc} alt="좋아요" />
-        </LikeButton>
-      </CompactHeader>
-      <Address>{place?.address ?? "주소 정보 없음"}</Address>
-      <InfoRow>
-        <HoursInfo $isOpen={place?.isOpen}>
-          <strong>{place?.isOpen ? "영업중" : "영업종료"}</strong>
-          &nbsp;&nbsp;
-          {place?.hours ?? "정보 없음"}
-        </HoursInfo>
-        <RatingContainer>
-          <span style={{ fontWeight: "600" }}>
-            {place?.rating?.toFixed(1) ?? "N/A"}
-          </span>
-          <StarsWrapper>
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Star key={i} $filled={i < Math.round(place?.rating ?? 0)} />
-            ))}
-          </StarsWrapper>
-        </RatingContainer>
-      </InfoRow>
-      <DetailButton onClick={onViewDetails}>자세히 보기</DetailButton>
-      <ImagePreview
-        $src={(place?.images?.[0]?.url || place?.images?.[0]?.image_url) ?? ""}
-      />
-    </CompactWrapper>
-  );
-};
-
-const ExpandedContent = ({
-  place,
-  onGoBack,
-  onLike,
-  onCloseAll,
-  activeTab,
-  onTabClick,
-  onWriteReview,
-  reviewsVersion,
-}) => {
-  const expandedHeartIconSrc = place?.isFavorite
-    ? "/icons/map/expanded-heart-on.png"
-    : "/icons/map/expanded-heart-off.png";
-
-  return (
-    <ExpandedWrapper>
-      <ExpandedHeader>
-        <BackButton onClick={onGoBack}>
-          <img src="/icons/map/leftarrow.svg" alt="뒤로가기" />
-        </BackButton>
-        <ButtonWrapper>
-          <GrayLikeButton onClick={onLike}>
-            <img src={expandedHeartIconSrc} alt="좋아요" />
-          </GrayLikeButton>
-          <GrayXButton onClick={onCloseAll}>
-            <img src="/icons/map/mapdetail/x.svg" alt="x" />
-          </GrayXButton>
-        </ButtonWrapper>
-      </ExpandedHeader>
-
-      <ContentArea>
-        <TitleSection>
-          {/* place 데이터가 있으면 name을, 없으면 '장소명'을 표시 */}
-          <MainTitle>{place?.name ?? "장소명"}</MainTitle>
-          <SubInfo>
-            <span>
-              <b>{place?.category ?? "카테고리"} ·</b>{" "}
+    return (
+      <CompactWrapper>
+        <CompactHeader>
+          <Title>{place?.name ?? "장소명"}</Title>
+          <LikeButton onClick={onLike}>
+            <img src={compactHeartIconSrc} alt="좋아요" />
+          </LikeButton>
+        </CompactHeader>
+        <Address>{place?.address ?? "주소 정보 없음"}</Address>
+        <InfoRow>
+          <HoursInfo $isOpen={place?.isOpen}>
+            <strong>{place?.isOpen ? "영업중" : "영업종료"}</strong>
+            &nbsp;&nbsp;
+            {place?.hours ?? "정보 없음"}
+          </HoursInfo>
+          <RatingContainer>
+            <span style={{ fontWeight: "600" }}>
+              {place?.rating?.toFixed(1) ?? "N/A"}
             </span>
-            <img
-              src={
-                place?.rating
-                  ? "/icons/map/star.svg"
-                  : "/icons/map/mapdetail/graystar.svg"
-              }
-              alt="별점"
-            />
-            <span>{place?.rating?.toFixed(1) ?? "평점 없음"}</span>
+            <StarsWrapper>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Star key={i} $filled={i < Math.round(place?.rating ?? 0)} />
+              ))}
+            </StarsWrapper>
+          </RatingContainer>
+        </InfoRow>
+        <DetailButton onClick={onViewDetails}>
+          <span>자세히 보기</span>
+        </DetailButton>
+        <ImagePreview
+          $src={
+            (place?.images?.[0]?.url || place?.images?.[0]?.image_url) ?? ""
+          }
+        />
+      </CompactWrapper>
+    );
+  };
 
-            <span>· 리뷰 {place?.reviewCount ?? "0"}</span>
-          </SubInfo>
-        </TitleSection>
+  const ExpandedContent = ({
+    place,
+    onGoBack,
+    onLike,
+    onCloseAll,
+    activeTab,
+    onTabClick,
+    onWriteReview,
+    reviewsVersion,
+  }) => {
+    const expandedHeartIconSrc = place?.isFavorite
+      ? "/icons/map/expanded-heart-on.png"
+      : "/icons/map/expanded-heart-off.png";
 
-        <PhotoSection>
-          {Array.isArray(place?.images) && place.images.length > 0 ? (
-            place.images.map((img) => {
-              const src = img.url || img.image_url; // 혹시 기존 형식도 들어오면 호환
-              return (
-                <Photo
-                  key={img.id ?? src}
-                  src={src}
-                  alt={place?.name ?? "사진"}
-                />
-              );
-            })
-          ) : (
-            <>
-              <PlaceholderPhoto />
-              <PlaceholderPhoto />
-              <PlaceholderPhoto />
-            </>
-          )}
-        </PhotoSection>
+    return (
+      <ExpandedWrapper>
+        <ExpandedHeader>
+          <BackButton onClick={onGoBack}>
+            <img src="/icons/map/leftarrow.svg" alt="뒤로가기" />
+          </BackButton>
+          <ButtonWrapper>
+            <GrayLikeButton onClick={onLike}>
+              <img src={expandedHeartIconSrc} alt="좋아요" />
+            </GrayLikeButton>
+            <GrayXButton onClick={onCloseAll}>
+              <img src="/icons/map/mapdetail/x.svg" alt="x" />
+            </GrayXButton>
+          </ButtonWrapper>
+        </ExpandedHeader>
 
-        <TabNav>
-          <Tab
-            $active={activeTab === "home"}
-            onClick={() => onTabClick("home")}
-          >
-            홈
-          </Tab>
-          {/* <Tab
+        <ContentArea>
+          <TitleSection>
+            {/* place 데이터가 있으면 name을, 없으면 '장소명'을 표시 */}
+            <MainTitle>{place?.name ?? "장소명"}</MainTitle>
+            <SubInfo>
+              <span>
+                <b>{place?.category ?? "카테고리"} ·</b>{" "}
+              </span>
+              <img
+                src={
+                  place?.rating
+                    ? "/icons/map/star.svg"
+                    : "/icons/map/mapdetail/graystar.svg"
+                }
+                alt="별점"
+              />
+              <span>{place?.rating?.toFixed(1) ?? "평점 없음"}</span>
+
+              <span>· 리뷰 {place?.reviewCount ?? "0"}</span>
+            </SubInfo>
+          </TitleSection>
+
+          <PhotoSection>
+            {Array.isArray(place?.images) && place.images.length > 0 ? (
+              place.images.map((img) => {
+                const src = img.url || img.image_url; // 혹시 기존 형식도 들어오면 호환
+                return (
+                  <Photo
+                    key={img.id ?? src}
+                    src={src}
+                    alt={place?.name ?? "사진"}
+                  />
+                );
+              })
+            ) : (
+              <>
+                <PlaceholderPhoto />
+                <PlaceholderPhoto />
+                <PlaceholderPhoto />
+              </>
+            )}
+          </PhotoSection>
+
+          <TabNav>
+            <Tab
+              $active={activeTab === "home"}
+              onClick={() => onTabClick("home")}
+            >
+              홈
+            </Tab>
+            {/* <Tab
             $active={activeTab === "menu"}
             onClick={() => onTabClick("menu")}
           >
             메뉴
           </Tab> */}
-          <Tab
-            $active={activeTab === "review"}
-            onClick={() => onTabClick("review")}
-          >
-            리뷰
-          </Tab>
-          <Tab
-            $active={activeTab === "photo"}
-            onClick={() => onTabClick("photo")}
-          >
-            사진
-          </Tab>
-        </TabNav>
-        {activeTab === "home" && (
-          <InfoList>
-            <InfoItem>
-              <span>
-                <img src="/icons/map/mapdetail/pin.svg" alt="위치" />
-              </span>
-              <p>{place?.address ?? "주소 정보 없음"}</p>
-              <MapButton>지도</MapButton>
-            </InfoItem>
-            <InfoItem>
-              <span>
-                <img src="/icons/map/mapdetail/time.svg" alt="영업시간" />
-              </span>
-              <p>
-                <strong>{place?.isOpen ? "영업중" : "영업종료"}</strong>&nbsp;
-                {place?.closeHour
-                  ? `${place.closeHour}에 영업종료`
-                  : "영업시간 정보 없음"}
-              </p>
-            </InfoItem>
-            <InfoItem>
-              <span>
-                <img src="/icons/map/mapdetail/tel.svg" alt="전화번호" />
-              </span>
-              <p>{place?.phone ?? "전화번호 정보 없음"}</p>
-            </InfoItem>
-            <InfoItem>
-              <span>
-                <img src="/icons/map/mapdetail/link.svg" alt="링크" />
-              </span>
-              <LinkText href={place?.website ?? "#"} target="_blank">
-                {place?.website ?? "웹사이트 정보 없음"}
-              </LinkText>
-            </InfoItem>
-          </InfoList>
-        )}
-        {activeTab === "review" && (
-          <ReviewContent
-            place={place}
-            onWriteReview={onWriteReview}
-            refreshKey={reviewsVersion}
-          />
-        )}
-      </ContentArea>
-    </ExpandedWrapper>
-  );
-};
+            <Tab
+              $active={activeTab === "review"}
+              onClick={() => onTabClick("review")}
+            >
+              리뷰
+            </Tab>
+            <Tab
+              $active={activeTab === "photo"}
+              onClick={() => onTabClick("photo")}
+            >
+              사진
+            </Tab>
+          </TabNav>
+          {activeTab === "home" && (
+            <InfoList>
+              <InfoItem>
+                <span>
+                  <img src="/icons/map/mapdetail/pin.svg" alt="위치" />
+                </span>
+                <p>{place?.address ?? "주소 정보 없음"}</p>
+                <MapButton>지도</MapButton>
+              </InfoItem>
+              <InfoItem>
+                <span>
+                  <img src="/icons/map/mapdetail/time.svg" alt="영업시간" />
+                </span>
+                <p>
+                  <strong>{place?.isOpen ? "영업중" : "영업종료"}</strong>&nbsp;
+                  {place?.closeHour
+                    ? `${place.closeHour}에 영업종료`
+                    : "영업시간 정보 없음"}
+                </p>
+              </InfoItem>
+              <InfoItem>
+                <span>
+                  <img src="/icons/map/mapdetail/tel.svg" alt="전화번호" />
+                </span>
+                <p>{place?.phone ?? "전화번호 정보 없음"}</p>
+              </InfoItem>
+              <InfoItem>
+                <span>
+                  <img src="/icons/map/mapdetail/link.svg" alt="링크" />
+                </span>
+                <LinkText href={place?.website ?? "#"} target="_blank">
+                  {place?.website ?? "웹사이트 정보 없음"}
+                </LinkText>
+              </InfoItem>
+            </InfoList>
+          )}
+          {activeTab === "review" && (
+            <ReviewContent
+              place={place}
+              onWriteReview={onWriteReview}
+              refreshKey={reviewsVersion}
+            />
+          )}
+        </ContentArea>
+      </ExpandedWrapper>
+    );
+  };
 
   return (
     <>
@@ -487,7 +489,6 @@ const InfoRow = styled.div`
 
 const HoursInfo = styled.span`
   color: #8b8585;
-  
 
   strong {
     font-size: 14px;
@@ -524,7 +525,6 @@ const Star = styled.span`
 // ✅ '자세히 보기' 버튼 스타일 (기존 DetailButton 수정)
 const DetailButton = styled.button`
   margin-top: 16px;
-  padding: 8px;
   width: 100px;
   height: 28px;
   border: 1px solid #1dc3ff;
@@ -534,7 +534,14 @@ const DetailButton = styled.button`
   font-size: 11px;
   font-weight: 700;
   cursor: pointer;
-  align-self: flex-start; /* 왼쪽 정렬 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  span {
+    display: block;
+    text-align: center;
+  }
 
   &:hover {
     background-color: #eaf8ff;
