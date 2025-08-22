@@ -696,7 +696,7 @@ function Complete({
       }
     }
 
-    navigate("/home");
+    navigate("/login");
   };
 
   return (
