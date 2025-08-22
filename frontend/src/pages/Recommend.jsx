@@ -3,6 +3,12 @@ import React, { useEffect, useState } from "react";
 import styled from "styled-components";
 import SearchBar from "../components/map/SearchBar";
 import api from "../lib/api"; // ✅ 실제 API 인스턴스 사용
+import { useRecoilValue, useSetRecoilState } from "recoil";
+import {
+  favoriteStateChanged,
+  isGroupSheetOpenState,
+  placeForGroupState,
+} from "../state/atom";
 
 const getAuthHeaders = () => {
   const token =
@@ -43,8 +49,10 @@ async function fetchDynamicSections() {
       address: x.address,
       rating: typeof x.avg_rating === "number" ? x.avg_rating : 0,
       category: x.type || fallbackCategory, // 카드에 보여줄 카테고리 텍스트
-      image: "", // 이미지 필드가 없으므로 placeholder
-      isFavorite: false,
+      image: x.images?.[0] || "", // 이미지 필드가 없으므로 placeholder
+      isFavorite: !!x.is_favorite,
+      lat: x.lat,
+      lng: x.lng,
       _score: typeof x.score === "number" ? x.score : 0, // PICK용
     }));
 
@@ -116,61 +124,77 @@ export default function Recommend() {
   const [pick, setPick] = useState([]);
   const [reviewPick, setReviewPick] = useState([]);
 
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const [nickRes, dynRes, reviewRes] = await Promise.allSettled([
-          fetchNickname(),
-          fetchDynamicSections(),
-          fetchReviewPick(), // ✅ 추가
-        ]);
+  const setIsGroupSheetOpen = useSetRecoilState(isGroupSheetOpenState);
+  const setPlaceForGroup = useSetRecoilState(placeForGroupState);
 
-        if (!mounted) return;
+  const favoriteChanged = useRecoilValue(favoriteStateChanged);
 
-        if (nickRes.status === "fulfilled") setNick(nickRes.value || "");
-        if (dynRes.status === "fulfilled") {
-          setSections(dynRes.value.sections || []);
-          setPick(dynRes.value.pick || []);
-        }
-        if (reviewRes.status === "fulfilled") {
-          setReviewPick(reviewRes.value);
-        }
-      } catch (e) {
-        console.error("추천/닉네임/리뷰 로딩 실패:", e);
-      } finally {
-        if (mounted) setLoading(false);
+  const fetchData = async () => {
+    try {
+      const [nickRes, dynRes, reviewRes] = await Promise.allSettled([
+        fetchNickname(),
+        fetchDynamicSections(),
+        fetchReviewPick(), // ✅ 추가
+      ]);
+
+      if (nickRes.status === "fulfilled") setNick(nickRes.value || "");
+      if (dynRes.status === "fulfilled") {
+        setSections(dynRes.value.sections || []);
+        setPick(dynRes.value.pick || []);
       }
-    })();
-    return () => (mounted = false);
-  }, []);
+      if (reviewRes.status === "fulfilled") {
+        setReviewPick(reviewRes.value);
+      }
+    } catch (e) {
+      console.error("추천/닉네임/리뷰 로딩 실패:", e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, [favoriteChanged]);
+
+  const handleLikeClick = (item) => {
+    try {
+      setPlaceForGroup({
+        id: item.id,
+        name: item.name || item.market_name,
+        lat: item.lat,
+        lng: item.lng,
+      });
+      setIsGroupSheetOpen(true);
+    } catch (e) {
+      console.error("즐겨찾기 처리 실패:", e);
+    }
+  };
 
   const displayNick = nick || "회원님";
 
   return (
     <Page>
       <SearchBar />
+      <Section>
+        <Banner>
+          <LeftIcon>
+            <img src="/icons/recommend/character.png" alt="캐릭터" />
+          </LeftIcon>
+          <TextWrap>
+            <p className="top">
+              AI가 {displayNick}님의 <strong>취향을 반영</strong>해{" "}
+            </p>
+            <span>
+              <strong>좋아할 동네 장소</strong>를 선별해서 보여드려요!
+            </span>
+          </TextWrap>
+        </Banner>
+      </Section>
 
       {loading ? (
         <LoadingMessage />
       ) : (
         <>
-          <Section>
-            <Banner>
-              <LeftIcon>
-                <img src="/icons/recommend/character.png" alt="캐릭터" />
-              </LeftIcon>
-              <TextWrap>
-                <p className="top">
-                  AI가 {displayNick}님의 <strong>취향을 반영</strong>해{" "}
-                </p>
-                <span>
-                  <strong>좋아할 동네 장소</strong>를 선별해서 보여드려요!
-                </span>
-              </TextWrap>
-            </Banner>
-          </Section>
-
           {sections.map((sec) => (
             <Section key={sec.key}>
               <SectionTitle>
@@ -182,14 +206,18 @@ export default function Recommend() {
                   <SkeletonRow />
                 ) : (
                   (sec.items || []).map((item) => (
-                    <PlaceCard key={item.id} item={item} />
+                    <PlaceCard
+                      key={item.id}
+                      item={item}
+                      onLike={() => handleLikeClick(item)}
+                    />
                   ))
                 )}
               </Row>
             </Section>
           ))}
 
-          {pick.length > 0 && (
+          {reviewPick.length > 0 && (
             <Section>
               <BlockTitle>방문자 리얼리뷰 PICK!</BlockTitle>
               <BlockSub>동네 고수들의 솔직한 리뷰를 만나보세요</BlockSub>
@@ -198,7 +226,11 @@ export default function Recommend() {
                   <SkeletonRow wide />
                 ) : (
                   reviewPick.map((item) => (
-                    <PickCard key={item.id} item={item} />
+                    <PickCard
+                      key={item.id}
+                      item={item}
+                      onLike={() => handleLikeClick(item)}
+                    />
                   ))
                 )}
               </Row>
@@ -211,7 +243,18 @@ export default function Recommend() {
   );
 }
 
-function PlaceCard({ item }) {
+function PlaceCard({ item, onLike }) {
+  const [isFavorite, setIsFavorite] = useState(item.isFavorite);
+
+  const handleClick = async () => {
+    try {
+      await onLike(item, !isFavorite);
+      setIsFavorite(!isFavorite);
+    } catch (e) {
+      console.error("즐겨찾기 처리 실패:", e);
+    }
+  };
+
   return (
     <Card>
       <Thumb $src={item.image} />
@@ -222,7 +265,7 @@ function PlaceCard({ item }) {
           <Stars rating={item.rating} />
         </MetaRow>
       </CardBody>
-      <Heart type="button" aria-label="좋아요">
+      <Heart type="button" aria-label="좋아요" onClick={handleClick}>
         <img
           src={
             item.isFavorite
@@ -236,7 +279,18 @@ function PlaceCard({ item }) {
   );
 }
 
-function PickCard({ item }) {
+function PickCard({ item, onLike }) {
+  const [isFavorite, setIsFavorite] = useState(item.isFavorite);
+
+  const handleClick = async () => {
+    try {
+      await onLike(item, !isFavorite);
+      setIsFavorite(!isFavorite);
+    } catch (e) {
+      console.error("즐겨찾기 처리 실패:", e);
+    }
+  };
+
   return (
     <Pick>
       <PickHeader>
@@ -244,7 +298,8 @@ function PickCard({ item }) {
           <Avatar img src="/icons/recommend/usericon.png" />
           <span>{item.nickname || "익명의 사용자"}</span>
           <Recent>
-            최근방문일<br />
+            최근방문일
+            <br />
             {item.recent ?? new Date(item.created).toLocaleDateString("ko-KR")}
           </Recent>
         </UserWrapper>
@@ -258,7 +313,7 @@ function PickCard({ item }) {
           <MetaText>{item.market_type}</MetaText>
         </MetaRow>
       </PickBody>
-      <PickHeart type="button" aria-label="좋아요">
+      <PickHeart type="button" aria-label="좋아요" onClick={handleClick}>
         <img
           src={
             item.isFavorite

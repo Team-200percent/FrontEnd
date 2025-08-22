@@ -19,7 +19,6 @@ export default function PlaceSheet({
   onViewModeChange,
   isGroupSheetOpen,
   onGroupSheetToggle,
-  refetchPlace, 
 }) {
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
   const [isWritingReview, setIsWritingReview] = useState(false);
