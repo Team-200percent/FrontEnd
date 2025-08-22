@@ -81,12 +81,11 @@ export default function Splash() {
     <Shell $sky={phaseSky} $reduced={reduced}>
       <Backdrop aria-hidden>
         <Gradient $progress={progress} />
-        <Sun $progress={progress} />
         <CloudLayer style={{ zIndex: 0, animationDelay: "0ms" }}>
-          <Clouds density={6} seed={1} speed={40} />
+          <Clouds density={3} seed={1} speed={40} />
         </CloudLayer>
         <CloudLayer style={{ zIndex: 0, animationDelay: "600ms" }}>
-          <Clouds density={4} seed={2} speed={28} scale={1.25} opacity={0.85} />
+          <Clouds density={2} seed={2} speed={28} scale={1.25} opacity={0.85} />
         </CloudLayer>
         <Grain />
       </Backdrop>
@@ -369,13 +368,14 @@ const Egg = styled.div`
     filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.12));
   }
   &.on {
-    animation: ${wobble} 780ms ease 120ms both;
+    animation: ${wobble} 1000ms ease 10ms both;
   }
 `;
 
 const Logo = styled.div`
-  margin-top: 8px;
+  margin-top: 5%;
   img {
+    margin: 0 auto;
     width: clamp(160px, 48%, 240px);
     height: auto;
     display: block;
