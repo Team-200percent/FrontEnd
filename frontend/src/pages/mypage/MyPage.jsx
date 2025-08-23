@@ -1037,6 +1037,16 @@ const SheetScroll = styled.div`
   flex: 1;
   overflow-y: auto;
   padding: 12px 16px 100px;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* 파이어폭스 */
+  scrollbar-width: none;
+
+  /* IE, Edge (구버전) */
+  -ms-overflow-style: none;
 `;
 
 const CategoryTitle = styled.h3`
