@@ -17,16 +17,27 @@ import Login from "./pages/Login";
 import MapSearch from "./pages/map/MapSearch";
 import WeeklyMission from "./pages/home/WeeklyMission";
 import Signup from "./pages/Signup";
-import { RecoilRoot, useRecoilState, useRecoilValue } from "recoil";
+import { RecoilRoot, useRecoilState, useRecoilValue, useSetRecoilState } from "recoil";
 import GroupSheet from "./components/map/GroupSheet";
-import { isGroupSheetOpenState, placeForGroupState } from "./state/atom";
+import { favoriteStateChanged, isGroupSheetOpenState, placeForGroupState } from "./state/atom";
 
 function GroupSheetController() {
   const [isOpen, setIsOpen] = useRecoilState(isGroupSheetOpenState);
   const place = useRecoilValue(placeForGroupState);
+  const triggerFavoriteChange = useSetRecoilState(favoriteStateChanged);
+
+  const handleSave = () => {
+    // 저장이 완료되면, favoriteStateChanged 값을 1 증가시켜 변경을 알림
+    triggerFavoriteChange(v => v + 1);
+  };
 
   return (
-    <GroupSheet open={isOpen} onClose={() => setIsOpen(false)} place={place} />
+    <GroupSheet
+      open={isOpen}
+      onClose={() => setIsOpen(false)}
+      place={place}
+      onFavoriteSaved={handleSave}
+    />
   );
 }
 
