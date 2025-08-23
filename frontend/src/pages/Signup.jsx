@@ -4,7 +4,6 @@ import { useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import api from "../lib/api";
 
-
 export default function SignupWizard() {
   const TOTAL = 6;
   const [step, setStep] = useState(1);
@@ -38,24 +37,45 @@ export default function SignupWizard() {
     return regex.test(password);
   };
 
-  // 스텝별 간단 검증 (필요에 따라 빡세게 확장)
   const isStepValid = useMemo(() => {
     switch (step) {
+      // ✅ Step1: 아이디 중복확인 통과 + 닉네임 존재 + 비번 규칙 + 비번 확인 일치
       case 1:
         return (
           form.username.trim().length >= 4 &&
           isUsernameChecked &&
           isUsernameValid === true &&
+          form.nickname.trim().length > 0 &&
           isValidPassword(form.password) &&
           form.password === form.password2
         );
+      // ✅ Step2: 생년월일/휴대전화/초대코드와 무관하게 항상 통과
       case 2:
-        return form.birth && form.phone.length >= 10;
-      // TODO: 3~6 단계 규칙 추가
+        return true;
+      // ✅ Step3: 각 항목(이사시기/전입신고/거주형태/거주인원) 중 최소 하나씩 선택
+      case 3:
+        return (
+          !!form.moveIn &&
+          typeof form.report === "boolean" &&
+          !!form.type &&
+          (form.people === 1 || form.people === 2)
+        );
+      // ✅ Step4/5: 비활성 조건 없음
+      case 4:
+      case 5:
+        return true;
+      // ✅ Step6: 각 카테고리에서 최소 1개 이상 선택
+      case 6:
+        return (
+          (form.cafePreference?.length ?? 0) > 0 &&
+          (form.restaurantPreference?.length ?? 0) > 0 &&
+          (form.sportsPreference?.length ?? 0) > 0 &&
+          (form.culturePreference?.length ?? 0) > 0
+        );
       default:
         return true;
     }
-  }, [step, form]);
+  }, [step, form, isUsernameChecked, isUsernameValid]);
 
   const goNext = () => {
     setStep((s) => s + 1);
@@ -92,7 +112,6 @@ export default function SignupWizard() {
       if (access_token) {
         localStorage.setItem("accessToken", access_token);
         api.defaults.headers.common["Authorization"] = `Bearer ${access_token}`;
-        alert(response.data.message || "성공적으로 등록되었습니다!");
         setStep(7); // 완료 화면으로 이동
       } else {
         throw new Error("토큰이 수신되지 않았습니다.");
@@ -165,7 +184,9 @@ export default function SignupWizard() {
 
           <Bottom>
             {step < 7 ? (
-              <Primary onClick={goNext}>다음</Primary>
+              <Primary onClick={goNext} disabled={!isStepValid}>
+                다음
+              </Primary>
             ) : (
               <Primary
                 onClick={() => {
@@ -320,7 +341,11 @@ function Step2({ form, setForm }) {
         </Radio>
       </BtnRow>
 
-      <Label>생년월일</Label>
+      <LabelWrap>
+        <Label>생년월일</Label>
+        <OptionalBtn>선택</OptionalBtn>
+      </LabelWrap>
+
       {/* <DatePicker
         locale={ko} // 달력을 한국어로 표시
         selected={form.birth ? new Date(form.birth) : null} // 선택된 날짜 (state)
@@ -340,7 +365,11 @@ function Step2({ form, setForm }) {
         />
       </InputWrap>
 
-      <Label>휴대전화 번호</Label>
+      <LabelWrap>
+        <Label>휴대전화 번호</Label>
+        <OptionalBtn>선택</OptionalBtn>
+      </LabelWrap>
+
       <InputWrap>
         {/* <PatternFormat
           format="###-####-####" // 입력될 형식 지정
@@ -361,10 +390,10 @@ function Step2({ form, setForm }) {
           onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
         />
       </InputWrap>
-
-      <AuthBtn>인증하기</AuthBtn>
-
-      <Label>초대코드 (선택)</Label>
+      <LabelWrap>
+        <Label>초대코드</Label>
+        <OptionalBtn>선택</OptionalBtn>
+      </LabelWrap>
       <InputWrap>
         <Input
           placeholder="초대코드가 있을 경우 입력해주세요"
@@ -910,6 +939,9 @@ const Primary = styled.button`
   font-weight: 800;
   font-size: 16px;
 
+  &:hover {
+  }
+
   &.start {
     margin-top: 20%;
   }
@@ -941,7 +973,6 @@ const H2 = styled.h2`
   color: #c1c1c1;
 `;
 const Label = styled.label`
-  margin-top: 20px;
   color: #1dc3ff;
   font-size: 14px;
   font-weight: 700;
@@ -986,23 +1017,6 @@ const ConfirmBtn = styled.button`
   font-size: 11px;
   font-weight: 400;
   color: #8b8585;
-  cursor: pointer;
-
-  &:hover {
-    background: #e6f7ff;
-  }
-`;
-
-const AuthBtn = styled.button`
-  justify-self: end;
-  width: 80px;
-  padding: 10px 15px;
-  border-radius: 10px;
-  border: none;
-  background: #1dc3ff;
-  font-size: 11px;
-  font-weight: 400;
-  color: #fff;
   cursor: pointer;
 
   &:hover {
@@ -1105,6 +1119,7 @@ const Content = styled.div`
 `;
 
 const Title = styled.h1`
+  margin-top: 15%;
   font-size: 35px;
   font-weight: 500;
   line-height: 1.4;
@@ -1137,27 +1152,27 @@ const Badge = styled.img`
   height: 85px;
 
   &.bronze {
-    top: 43%;
+    top: 46%;
     left: 4%;
   }
 
   &.silver {
-    top: 35%;
+    top: 38%;
     left: 19%;
   }
 
   &.gold {
-    top: 30%;
+    top: 33%;
     left: 38%;
   }
 
   &.purple {
-    top: 35%;
+    top: 38%;
     right: 23%;
   }
 
   &.black {
-    top: 43%;
+    top: 46%;
     right: 8%;
   }
 `;
@@ -1272,4 +1287,28 @@ const Chip = styled.button`
   padding: 6px 14px;
   font-size: 14px;
   font-weight: 400;
+`;
+
+const LabelWrap = styled.div`
+  margin-top: 5%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+`;
+
+const OptionalBtn = styled.button`
+  font-size: 12px;
+  font-weight: 400;
+  color: #1dc3ff;
+  background: none;
+  border: 1px solid #1dc3ff;
+  border-radius: 50px;
+  cursor: pointer;
+
+  align-items: center;
+  text-align: center;
+
+  &:hover {
+    text-decoration: underline;
+  }
 `;
