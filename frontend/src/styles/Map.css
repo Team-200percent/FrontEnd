@@ -42,14 +42,16 @@
 
 /* 검색 라벨(말풍선) */
 .search-label {
-  width: 120px;             /* 배경 이미지 크기에 맞춰 조절 */
-  height: 36px;
-  background-image: url("/icons/map/mapbubble.png"); /* ⬅️ 배경 이미지 */
+  margin-top: 25%;
+  width: 135px;             /* 배경 이미지 크기에 맞춰 조절 */
+  height: 31px;
+  background-image: url("/icons/map/mapbubble2.png"); /* ⬅️ 배경 이미지 */
   background-size: cover;
   background-repeat: no-repeat;
   display: flex;
   align-items: center;
   justify-content: center;
+  text-align: center;
 
   color: #fff;
   font-weight: 700;
