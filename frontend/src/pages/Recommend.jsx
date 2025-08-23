@@ -395,7 +395,9 @@ function PickCard({ item, onLike }) {
       <PickHeader>
         <UserWrapper>
           <Avatar img src="/icons/recommend/usericon.png" />
-          <span>{item.nickname || "익명의 사용자"}</span>
+          <Username title={item.nickname || "익명의 사용자"}>
+            {item.nickname || "익명의 사용자"}
+          </Username>
           <Recent>
             최근방문일
             <br />
@@ -652,6 +654,14 @@ const UserWrapper = styled.div`
     font-size: 15px;
     color: #69707a;
   }
+`;
+
+const Username = styled.span`
+  font-size: 15px;
+  color: #69707a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 `;
 
 const Avatar = styled.img.attrs({ draggable: false })`
