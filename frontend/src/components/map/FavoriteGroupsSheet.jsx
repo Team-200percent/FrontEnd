@@ -433,6 +433,7 @@ export default function FavoriteGroupsSheet({
         open={isDetailOpen}
         group={detailGroup}
         onClose={() => setIsDetailOpen(false)}
+        onCloseAll={onCloseAll}
         onGroupUpdated={handleGroupUpdated}
       />
 
