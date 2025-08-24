@@ -123,11 +123,7 @@ export default function GroupSheet({
           <img onClick={onClose} src="icons/map/leftarrow.svg" alt="뒤로가기" />
           <Title>{place?.name}</Title>
 
-          <img
-            onClick={onCloseAll}
-            src="icons/map/mapdetail/x.svg"
-            alt="닫기"
-          />
+          <span></span>
         </Header>
 
         <Content>
