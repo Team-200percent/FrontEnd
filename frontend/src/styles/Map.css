@@ -42,7 +42,7 @@
 
 /* 검색 라벨(말풍선) */
 .search-label {
-  margin-top: 25%;
+  margin-top: 50%;
   width: 135px;             /* 배경 이미지 크기에 맞춰 조절 */
   height: 31px;
   background-image: url("/icons/map/mapbubble2.png"); /* ⬅️ 배경 이미지 */
