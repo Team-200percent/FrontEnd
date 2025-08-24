@@ -422,23 +422,6 @@ export default function MyPage() {
     }
   };
 
-  const onDragEnd = () => {
-    if (!drag.current.dragging) return;
-    const el = sheetRef.current;
-    drag.current.dragging = false;
-    if (el) el.style.transform = ""; // 스냅 원복
-
-    const d = drag.current.delta;
-
-    if (sheetState === SHEET.COLLAPSED) {
-      // 위로 끌어올린 양이 임계값보다 크면 확장
-      if (-d > THRESHOLD) expandSheet();
-    } else {
-      // 펼친 상태에서 아래로 끌어내린 양이 임계값보다 크면 접기
-      if (d > THRESHOLD) collapseSheet();
-    }
-  };
-
   useEffect(() => {
     if (!profile) return;
     setCafeChips(splitPrefs(profile.cafePreference));
