@@ -1,5 +1,5 @@
 // src/pages/Recommend.jsx
-import React, { useEffect, useState } from "react";
+import React, { forwardRef, useEffect, useState } from "react";
 import styled from "styled-components";
 import SearchBar from "../components/map/SearchBar";
 import api from "../lib/api"; // ✅ 실제 API 인스턴스 사용
@@ -10,6 +10,35 @@ import {
   placeForGroupState,
 } from "../state/atom";
 import { useNavigate } from "react-router-dom";
+
+const NoBubbleButton = forwardRef(function NoBubbleButton(
+  { onClick, className, type = "button", ...rest },
+  ref
+) {
+  const handle = (e) => {
+    e.stopPropagation(); // 부모 onClick 차단
+    e.preventDefault();
+    onClick?.(e);
+  };
+
+  const onKeyDown = (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      handle(e);
+    }
+  };
+
+  return (
+    <button
+      ref={ref}
+      className={className}
+      type={type}
+      onClick={handle}
+      onKeyDown={onKeyDown}
+      {...rest}
+    />
+  );
+});
 
 function DragScrollRow({ className, children }) {
   const ref = React.useRef(null);
@@ -265,7 +294,7 @@ export default function Recommend() {
 
   const setIsGroupSheetOpen = useSetRecoilState(isGroupSheetOpenState);
   const setPlaceForGroup = useSetRecoilState(placeForGroupState);
-
+  const isGroupSheetOpen = useRecoilValue(isGroupSheetOpenState);
   const favoriteChanged = useRecoilValue(favoriteStateChanged);
 
   const navigate = useNavigate();
@@ -297,6 +326,14 @@ export default function Recommend() {
     fetchData();
   }, [favoriteChanged]);
 
+  const onSubmit = (q) => {
+    const query = (q ?? "").toString().trim();
+    if (!query) return;
+    navigate("/map", { state: { searchQuery: query } });
+  };
+
+  const displayNick = nick || "회원";
+
   const handleLikeClick = (item) => {
     try {
       setPlaceForGroup({
@@ -311,17 +348,9 @@ export default function Recommend() {
     }
   };
 
-  const onSubmit = (q) => {
-    const query = q.trim();
-    if (!query) return;
-    navigate("/map", { state: { searchQuery: query } });
-  };
-
-  const displayNick = nick || "회원";
-
   return (
     <Page>
-      <SearchBar />
+      {!isGroupSheetOpen && <SearchBar />}
       <ScrollContainer>
         <Section>
           <Banner>
@@ -398,7 +427,7 @@ export default function Recommend() {
 function PlaceCard({ item, onLike, onClick }) {
   const [isFavorite, setIsFavorite] = useState(item.isFavorite);
 
-  const handleClick = async () => {
+  const handleLikeClick = async () => {
     try {
       await onLike();
       setIsFavorite(!isFavorite);
@@ -407,8 +436,17 @@ function PlaceCard({ item, onLike, onClick }) {
     }
   };
 
+  const handleHeartClick = async (e) => {
+    try {
+      await onLike(); // 👉 전달받은 handleLikeClick만 실행
+      setIsFavorite((v) => !v);
+    } catch (err) {
+      console.error("즐겨찾기 처리 실패:", err);
+    }
+  };
+
   return (
-    <Card onClick={onClick}>
+    <Card>
       <Thumb $src={item.image} data-nodrag />
       <CardBody>
         <Name onClick={onClick} data-nodrag title={item.name}>
@@ -419,19 +457,14 @@ function PlaceCard({ item, onLike, onClick }) {
           <Stars rating={item.rating} />
         </MetaRow>
       </CardBody>
-      <Heart
-        type="button"
-        aria-label="좋아요"
-        onClick={handleClick}
-        data-nodrag
-      >
+      <Heart onClick={() => handleHeartClick(item)}>
         <img
           src={
-            isFavorite
+            item.isFavorite
               ? "/icons/map/compact-heart-on.png"
               : "/icons/map/compact-heart-off.png"
           }
-          alt=""
+          alt="관심 장소 추가"
         />
       </Heart>
     </Card>
@@ -689,17 +722,17 @@ const Address = styled.p`
 
 const Heart = styled.button`
   position: absolute;
-  right: 8px;
+  right: 12px;
   bottom: 27px;
   width: 34px;
   height: 34px;
   border-radius: 50%;
+  background: none;
   border: 0;
-  background: #ffffff;
   display: grid;
   place-items: center;
   img {
-    width: 30px;
+    width: 28px;
   }
 `;
 

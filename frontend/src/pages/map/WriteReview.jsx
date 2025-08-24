@@ -1,6 +1,7 @@
 import React, { useRef, useState } from "react";
 import styled from "styled-components";
 import api from "../../lib/api";
+import imageCompression from "browser-image-compression";
 
 const KEYWORD_TAGS = [
   {
@@ -122,17 +123,51 @@ export default function WriteReview({ place, onClose, onSubmitted }) {
 
   // 사진 추가 핸들러
   const handleAddPhotoClick = () => fileInputRef.current?.click();
-  const handleFilesChange = (e) => {
+
+  const handleFilesChange = async (e) => {
+    // ✅ async 키워드 추가
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
-    const newItems = files.map((f) => ({
-      file: f,
-      url: URL.createObjectURL(f),
-    }));
-    // 필요 시 최대 개수 제한
+
+    const options = {
+      maxSizeMB: 1,
+      maxWidthOrHeight: 1920,
+      useWebWorker: true,
+    };
+
+    const newItems = [];
+
+    for (const file of files) {
+      try {
+        let imageFile = file;
+        if (file.size > options.maxSizeMB * 1024 * 1024) {
+          console.log(
+            `${file.name} 파일 용량이 1MB를 초과하여 압축을 시작합니다.`
+          );
+          imageFile = await imageCompression(file, options); // ✅ 이제 정상 동작
+          console.log(
+            `압축 완료: ${file.name} -> ${imageFile.name}, 크기: ${(
+              imageFile.size /
+              1024 /
+              1024
+            ).toFixed(2)}MB`
+          );
+        }
+
+        newItems.push({
+          file: imageFile,
+          url: URL.createObjectURL(imageFile),
+        });
+      } catch (error) {
+        console.error("이미지 처리 중 오류:", error);
+        alert("이미지를 처리하는 중 오류가 발생했습니다.");
+      }
+    }
+
     setPhotos((prev) => [...prev, ...newItems].slice(0, 10));
-    e.target.value = ""; // 같은 파일 다시 선택 가능하게 초기화
+    e.target.value = "";
   };
+
   const handleDeletePhoto = (idx) => {
     setPhotos((prev) => {
       const copy = [...prev];

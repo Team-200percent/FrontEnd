@@ -12,6 +12,15 @@ import {
   placeForGroupState,
 } from "../../state/atom";
 
+const norm = (s = "") =>
+  s
+    .toString()
+    .normalize("NFKC") // 전각/반각 등 통일
+    .toLowerCase() // 대소문자 무시
+    .replace(/\s+/g, ""); // 모든 공백 제거
+
+const tokenize = (q = "") => q.toString().trim().split(/\s+/).filter(Boolean);
+
 function DragScrollRow({ className, children }) {
   const ref = React.useRef(null);
   const drag = React.useRef({
@@ -321,6 +330,7 @@ export default function MapSearch() {
       try {
         const response = await api.get("/market/category/", {
           params: { type: activeCategory },
+          headers: { ...getAuthHeaders() },
         });
         const resultsWithFav = (response.data || []).map((item) => ({
           ...item,
@@ -335,13 +345,53 @@ export default function MapSearch() {
       }
     };
     fetchCategoryResults();
-  }, [activeCategory]);
+  }, [activeCategory, favoriteChanged]);
+
+  useEffect(() => {
+    const q = keyword.trim();
+    if (!q || activeCategory) return; // 카테고리 모드가 아니고 키워드 있을 때만
+
+    let cancelled = false;
+    (async () => {
+      setIsLoading(true);
+      try {
+        const res = await api.get("/market/search/", { params: { name: q } });
+        const raw = Array.isArray(res.data) ? res.data : [];
+
+        // 서버 결과에 즐겨찾기 키 정리
+        const mapped = raw.map((item) => ({
+          ...item,
+          isFavorite: !!item.is_favorite,
+        }));
+
+        // 🔎 느슨한 매칭: "메가 mgc 커피" -> "메가MGC커피 중앙대점"
+        const tokens = tokenize(q); // ["메가","mgc","커피"]
+        const filtered = tokens.length
+          ? mapped.filter((it) => {
+              const nameN = norm(it.name || "");
+              return tokens.every((t) => nameN.includes(norm(t)));
+            })
+          : mapped;
+
+        if (!cancelled) setSearchResults(filtered);
+      } catch (e) {
+        if (!cancelled) setSearchResults([]);
+        console.error("키워드 검색 실패:", e);
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [keyword, activeCategory]);
 
   const handleLikeClick = (item) => {
     setPlaceForGroup({
       id: item.id,
       name: item.name,
-      isFavorite: item.isFavorite,
+      isFavorite: item.is_favorite,
       lat: item.lat,
       lng: item.lng,
     });
@@ -373,6 +423,13 @@ export default function MapSearch() {
     navigate("/map", { state: { searchQuery: query } });
   };
 
+  const getAuthHeaders = () => {
+    const t =
+      localStorage.getItem("access_token") ||
+      localStorage.getItem("accessToken");
+    return t ? { Authorization: `Bearer ${t}` } : {};
+  };
+
   return (
     <Wrapper>
       {!isGroupSheetOpen && (
@@ -393,7 +450,7 @@ export default function MapSearch() {
       )}
 
       <ScrollContainer>
-        {activeCategory ? (
+        {(activeCategory || keyword.trim()) ? (
           <ResultsContainer>
             {isLoading ? (
               <p>검색 중...</p>
@@ -421,6 +478,7 @@ export default function MapSearch() {
                       <HeartButton
                         onClick={(e) => {
                           e.stopPropagation();
+                          e.preventDefault();
                           handleLikeClick(item);
                         }}
                       >
@@ -436,7 +494,7 @@ export default function MapSearch() {
                     </ItemHeader>
                     <ItemStats>
                       <Status $isOpen={item.is_open}>
-                        {item.is_open ? "영업중" : "영업종료"}
+                        {item.is_open ? "영업 중" : "영업종료"}
                         <b>·</b>
                       </Status>
 

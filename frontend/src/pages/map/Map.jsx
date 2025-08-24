@@ -177,6 +177,8 @@ export default function Map() {
         return;
       }
 
+      console.log("백엔드로부터 받은 주소:", response.address);
+
       const geocoder = new window.kakao.maps.services.Geocoder();
       geocoder.addressSearch(preload.address, (result, status) => {
         if (status === window.kakao.maps.services.Status.OK && result[0]) {
