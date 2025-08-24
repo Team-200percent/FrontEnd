@@ -9,6 +9,7 @@ import {
   isGroupSheetOpenState,
   placeForGroupState,
 } from "../state/atom";
+import { useNavigate } from "react-router-dom";
 
 function DragScrollRow({ className, children }) {
   const ref = React.useRef(null);
@@ -17,7 +18,10 @@ function DragScrollRow({ className, children }) {
     startX: 0,
     startScroll: 0,
     moved: false,
-    pointerId: null,
+    lastX: 0,
+    lastT: 0,
+    v: 0, // velocity(px/ms)
+    raf: null,
   });
 
   const isInteractive = (el) =>
@@ -25,64 +29,103 @@ function DragScrollRow({ className, children }) {
       'button, a, input, textarea, select, [role="button"], [data-nodrag]'
     );
 
-  const onPointerDown = (e) => {
+  const setDraggingAttr = (on) => {
     if (!ref.current) return;
-    if (isInteractive(e.target)) return;
+    if (on) ref.current.setAttribute("data-dragging", "1");
+    else ref.current.removeAttribute("data-dragging");
+  };
+
+  const onPointerDown = (e) => {
+    if (!ref.current || isInteractive(e.target)) return;
+
     ref.current.setPointerCapture?.(e.pointerId);
-    drag.current = {
-      active: true,
-      startX: e.clientX,
-      startScroll: ref.current.scrollLeft,
-      moved: false,
-      pointerId: e.pointerId,
-    };
-    // 드래그 중 텍스트 선택/이미지 드래그 방지
+    const now = performance.now();
+
+    drag.current.active = true;
+    drag.current.startX = e.clientX;
+    drag.current.startScroll = ref.current.scrollLeft;
+    drag.current.moved = false;
+    drag.current.lastX = e.clientX;
+    drag.current.lastT = now;
+    drag.current.v = 0;
+
     document.body.style.userSelect = "none";
     document.body.style.cursor = "grabbing";
+    setDraggingAttr(true); // 🔕 스냅 일시 해제
   };
 
   const onPointerMove = (e) => {
     if (!drag.current.active || !ref.current) return;
+
     const dx = e.clientX - drag.current.startX;
-    if (Math.abs(dx) > 8) drag.current.moved = true;
-    ref.current.scrollLeft = drag.current.startScroll - dx;
+    if (Math.abs(dx) > 6) drag.current.moved = true;
+
+    // 속도 추정
+    const now = performance.now();
+    const dt = now - drag.current.lastT || 16;
+    drag.current.v = (e.clientX - drag.current.lastX) / dt; // px/ms
+    drag.current.lastX = e.clientX;
+    drag.current.lastT = now;
+
+    // RAF로 스크롤 갱신
+    if (!drag.current.raf) {
+      drag.current.raf = requestAnimationFrame(() => {
+        drag.current.raf = null;
+        if (!ref.current) return;
+        ref.current.scrollLeft =
+          drag.current.startScroll - (drag.current.lastX - drag.current.startX);
+      });
+    }
   };
 
-  const endDrag = () => {
+  const onPointerUp = () => {
+    if (!drag.current.active) return;
     drag.current.active = false;
-    drag.current.moved = false;
-    drag.current.pointerId = null;
-    document.body.style.userSelect = "";
-    document.body.style.cursor = "";
+
+    // 관성(플링) 옵션
+    const el = ref.current;
+    let v = drag.current.v * 16; // px/frame (dt≈16ms 기준으로 환산)
+    const friction = 0.92; // 감쇠율
+
+    const fling = () => {
+      if (!el) return;
+      if (Math.abs(v) < 0.3) {
+        setDraggingAttr(false); // 스냅 복구
+        document.body.style.userSelect = "";
+        document.body.style.cursor = "";
+        return;
+      }
+      el.scrollLeft -= v;
+      v *= friction;
+      requestAnimationFrame(fling);
+    };
+
+    // moved 아니면 클릭 살리기, moved면 관성 시작
+    if (drag.current.moved) fling();
+    else {
+      setDraggingAttr(false);
+      document.body.style.userSelect = "";
+      document.body.style.cursor = "";
+    }
   };
 
-  useEffect(() => {
-    const move = (e) => onPointerMove(e);
-    const up = () => endDrag();
-    window.addEventListener("pointermove", move);
-    window.addEventListener("pointerup", up);
-    window.addEventListener("pointercancel", up);
-    return () => {
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", up);
-      window.removeEventListener("pointercancel", up);
-    };
-  }, []);
-
-  useEffect(() => {
+  // 휠(세로→가로) 변환은 동일하되, 엘리먼트에만 리스너 부착
+  React.useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const onWheelNative = (e) => {
+    const onWheel = (e) => {
       const absY = Math.abs(e.deltaY);
       const absX = Math.abs(e.deltaX);
-      // 세로 제스처를 가로 스크롤로 흘림
-      if (absY > absX) {
-        el.scrollLeft += e.deltaY;
-        e.preventDefault(); // 이제 경고 안 뜸
+      const canScrollX = el.scrollWidth > el.clientWidth;
+      // 가로 의도(트랙패드 수평/Shift+휠)일 때만 가로로 소비
+      if (!canScrollX) return;
+      if (absX > absY || e.shiftKey) {
+        el.scrollLeft += absX ? e.deltaX : e.deltaY;
+        e.preventDefault(); // 이때만 이벤트 소비
       }
     };
-    el.addEventListener("wheel", onWheelNative, { passive: false });
-    return () => el.removeEventListener("wheel", onWheelNative);
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
   }, []);
 
   return (
@@ -90,6 +133,9 @@ function DragScrollRow({ className, children }) {
       ref={ref}
       className={className}
       onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerUp}
       onClickCapture={(e) => {
         if (drag.current.moved && !isInteractive(e.target)) {
           e.stopPropagation();
@@ -142,7 +188,7 @@ async function fetchDynamicSections() {
       address: x.address,
       rating: typeof x.avg_rating === "number" ? x.avg_rating : 0,
       category: x.type || fallbackCategory, // 카드에 보여줄 카테고리 텍스트
-      image: x.images?.[0] || "", // 이미지 필드가 없으므로 placeholder
+      image: x.images?.[0]?.image_url || "",
       isFavorite: !!x.is_favorite,
       lat: x.lat,
       lng: x.lng,
@@ -222,6 +268,8 @@ export default function Recommend() {
 
   const favoriteChanged = useRecoilValue(favoriteStateChanged);
 
+  const navigate = useNavigate();
+
   const fetchData = async () => {
     try {
       const [nickRes, dynRes, reviewRes] = await Promise.allSettled([
@@ -263,81 +311,91 @@ export default function Recommend() {
     }
   };
 
+  const onSubmit = (q) => {
+    const query = q.trim();
+    if (!query) return;
+    navigate("/map", { state: { searchQuery: query } });
+  };
+
   const displayNick = nick || "회원";
 
   return (
     <Page>
       <SearchBar />
-      <Section>
-        <Banner>
-          <LeftIcon>
-            <img src="/icons/recommend/character.png" alt="캐릭터" />
-          </LeftIcon>
-          <TextWrap>
-            <p className="top">
-              AI가 {displayNick}님의 <strong>취향을 반영</strong>해{" "}
-            </p>
-            <span>
-              <strong>좋아할 동네 장소</strong>를 선별해서 보여드려요!
-            </span>
-          </TextWrap>
-        </Banner>
-      </Section>
+      <ScrollContainer>
+        <Section>
+          <Banner>
+            <LeftIcon>
+              <img src="/icons/recommend/character.png" alt="캐릭터" />
+            </LeftIcon>
+            <TextWrap>
+              <p className="top">
+                AI가 {displayNick}님의 <strong>취향을 반영</strong>해{" "}
+              </p>
+              <span>
+                <strong>좋아할 동네 장소</strong>를 선별해서 보여드려요!
+              </span>
+            </TextWrap>
+          </Banner>
+        </Section>
 
-      {loading ? (
-        <LoadingMessage />
-      ) : (
-        <>
-          {sections.map((sec) => (
-            <Section key={sec.key}>
-              <SectionTitle>
-                {displayNick}님이 좋아할 {sec.label}
-              </SectionTitle>
+        {loading ? (
+          <LoadingMessage />
+        ) : (
+          <>
+            {sections.map((sec) => (
+              <Section key={sec.key}>
+                <SectionTitle>
+                  {displayNick}님이 좋아할 {sec.label}
+                </SectionTitle>
 
-              <DragScrollRow className="personal">
-                {loading ? (
-                  <SkeletonRow />
-                ) : (
-                  (sec.items || []).map((item) => (
-                    <PlaceCard
-                      key={item.id}
-                      item={item}
-                      onLike={() => handleLikeClick(item)}
-                    />
-                  ))
-                )}
-              </DragScrollRow>
-            </Section>
-          ))}
+                <DragScrollRow className="personal">
+                  {loading ? (
+                    <SkeletonRow />
+                  ) : (
+                    (sec.items || []).map((item) => (
+                      <PlaceCard
+                        key={item.id}
+                        item={item}
+                        onLike={() => handleLikeClick(item)}
+                        onSubmit={onSubmit}
+                      />
+                    ))
+                  )}
+                </DragScrollRow>
+              </Section>
+            ))}
 
-          {reviewPick.length > 0 && (
-            <Section>
-              <BlockTitle>방문자 리얼리뷰 PICK!</BlockTitle>
-              <BlockSub>동네 고수들의 솔직한 리뷰를 만나보세요</BlockSub>
-              <DragScrollRow className="real-review">
-                {" "}
-                {loading ? (
-                  <SkeletonRow wide />
-                ) : (
-                  reviewPick.map((item) => (
-                    <PickCard
-                      key={item.id}
-                      item={item}
-                      onLike={() => handleLikeClick(item)}
-                    />
-                  ))
-                )}
-              </DragScrollRow>
-            </Section>
-          )}
-          <BottomSpace />
-        </>
-      )}
+            {reviewPick.length > 0 && (
+              <Section>
+                <BlockTitle>방문자 리얼리뷰 PICK!</BlockTitle>
+                <BlockSub>동네 고수들의 솔직한 리뷰를 만나보세요</BlockSub>
+                <DragScrollRow className="real-review">
+                  {" "}
+                  {loading ? (
+                    <SkeletonRow wide />
+                  ) : (
+                    reviewPick.map((item) => (
+                      <PickCard
+                        key={item.id}
+                        item={item}
+                        onLike={() => handleLikeClick(item)}
+                        onSubmit={onSubmit}
+                      />
+                    ))
+                  )}
+                </DragScrollRow>
+              </Section>
+            )}
+            <BottomSpace />
+          </>
+        )}
+      </ScrollContainer>
     </Page>
   );
 }
 
-function PlaceCard({ item, onLike }) {
+function PlaceCard({ item, onLike, onSubmit }) {
   const [isFavorite, setIsFavorite] = useState(item.isFavorite);
 
   const handleClick = async () => {
@@ -351,7 +409,7 @@ function PlaceCard({ item, onLike }) {
 
   return (
     <Card>
-      <Thumb $src={item.image} />
+      <Thumb onClick={() => onSubmit(item.name)} $src={item.image} />
       <CardBody>
         <Name title={item.name}>{item.name}</Name>
         <Address>{item.address}</Address>
@@ -378,7 +436,7 @@ function PlaceCard({ item, onLike }) {
   );
 }
 
-function PickCard({ item, onLike }) {
+function PickCard({ item, onLike, onSubmit }) {
   const [isFavorite, setIsFavorite] = useState(item.isFavorite);
 
   const handleClick = async () => {
@@ -407,7 +465,12 @@ function PickCard({ item, onLike }) {
       </PickHeader>
       <PickThumb $src={item.images?.[0]} />
       <PickBody>
-        <Name title={item.market_name}>{item.market_name}</Name>
+        <Name
+          onClick={() => onSubmit(item.market_name)}
+          title={item.market_name}
+        >
+          {item.market_name}
+        </Name>
         <MetaRow>
           <Stars rating={item.rating} />
           <SmallDot />
@@ -462,8 +525,6 @@ const Page = styled.div`
   margin: 0 auto;
   min-height: 100vh;
   background: #fff;
-  display: flex;
-  flex-direction: column;
 `;
 
 const Banner = styled.div`
@@ -477,6 +538,17 @@ const Banner = styled.div`
   width: 97%;
   margin: 0 auto;
   margin-top: 20%;
+`;
+
+const ScrollContainer = styled.div`
+  flex: 1; /* SearchBar를 제외한 모든 남은 공간을 차지 */
+  overflow-y: auto; /* 내용이 길어지면 세로 스크롤 자동 생성 */
+
+  /* 스크롤바 숨기기 (선택사항) */
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  scrollbar-width: none;
 `;
 
 const SearchIcon = styled.img`
@@ -597,6 +669,11 @@ const Address = styled.p`
   margin-right: 40px;
   font-size: 11px;
   color: #98a0a7;
+
+  white-space: nowrap; /* 줄바꿈 금지 */
+  overflow: hidden; /* 넘치면 숨김 */
+  text-overflow: ellipsis; /* ... 표시 */
+  max-width: 160px; /* 카드 안에서 적당한 너비 제한 */
 `;
 
 const Heart = styled.button`
@@ -777,28 +854,34 @@ const LoadingText = styled.div`
 
 const RowStyled = styled.div`
   display: flex;
-  flex-direction: row;
   flex-wrap: nowrap;
-
   overflow-x: auto;
   padding: 4px 4px 14px;
-  &::-webkit-scrollbar {
-    display: none;
-  }
-  &.personal {
-    gap: 5px;
-  }
+
   &.real-review {
-    gap: 15px;
+    gap: 8px;
   }
+
   cursor: grab;
   user-select: none;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-x: contain;
+
+  /* 기본은 스냅 켬 */
   scroll-snap-type: x proximity;
-  & > * {
-    scroll-snap-align: start;
-    flex: 0 0 auto;
+
+  /* 드래그 중엔 스냅 끔 → 더 부드럽게 */
+  &[data-dragging="1"] {
+    scroll-snap-type: none;
+    cursor: grabbing;
   }
-  touch-action: pan-x;
+
+  & > * {
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+  }
+
+  scroll-behavior: auto;
+
+  touch-action: pan-y;
 `;
