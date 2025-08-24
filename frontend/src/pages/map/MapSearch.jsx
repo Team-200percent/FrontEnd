@@ -265,8 +265,50 @@ export default function MapSearch() {
   const isGroupSheetOpen = useRecoilValue(isGroupSheetOpenState);
   const favoriteChanged = useRecoilValue(favoriteStateChanged);
 
+  const [recentList, setRecentList] = useState([]);
+  const [isLoadingRecent, setIsLoadingRecent] = useState(false);
+
+  // 최근 검색 저장
+  const saveHistory = async ({ lat, lng }) => {
+    try {
+      await api.post("/market/history/", null, { params: { lat, lng } });
+    } catch (e) {
+      console.error("최근 검색 저장 실패:", e);
+    }
+  };
+
+  // 최근 검색 불러오기(중복 marketId면 최신(createdAt)만 유지)
+  const fetchRecent = async () => {
+    setIsLoadingRecent(true);
+    try {
+      const res = await api.get("/market/history/");
+      const arr = Array.isArray(res.data) ? res.data : [];
+      const map = new Map(); // marketId -> item(최신)
+      for (const it of arr) {
+        const prev = map.get(it.marketId);
+        if (!prev || new Date(it.createdAt) > new Date(prev.createdAt)) {
+          map.set(it.marketId, it);
+        }
+      }
+      // 최신순 정렬
+      const uniqueSorted = [...map.values()].sort(
+        (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+      );
+      setRecentList(uniqueSorted);
+    } catch (e) {
+      console.error("최근 검색 불러오기 실패:", e);
+      setRecentList([]);
+    } finally {
+      setIsLoadingRecent(false);
+    }
+  };
+
   useEffect(() => {
     if (searchInputRef.current) searchInputRef.current.focus();
+  }, []);
+
+  useEffect(() => {
+    fetchRecent();
   }, []);
 
   useEffect(() => {
@@ -312,9 +354,22 @@ export default function MapSearch() {
     setActiveCategory((prev) => (prev === key ? null : key));
   };
 
-  const onSubmit = (q) => {
+  const saveHistoryByName = async (name) => {
+    try {
+      const res = await api.get("/market/search/", { params: { name } });
+      const first = Array.isArray(res.data) ? res.data[0] : null;
+      if (first?.lat != null && first?.lng != null) {
+        await saveHistory({ lat: first.lat, lng: first.lng });
+      }
+    } catch (e) {
+      console.error("검색→히스토리 저장 실패:", e);
+    }
+  };
+
+  const onSubmit = async (q) => {
     const query = (q ?? keyword).trim();
     if (!query) return;
+    await saveHistoryByName(query);
     navigate("/map", { state: { searchQuery: query } });
   };
 
@@ -345,7 +400,18 @@ export default function MapSearch() {
             ) : searchResults.length > 0 ? (
               <ResultList>
                 {searchResults.map((item, index) => (
-                  <ResultItem key={index} onClick={() => onSubmit(item.name)}>
+                  <ResultItem
+                    key={index}
+                    onClick={async () => {
+                      // 서버에 최근 검색 저장 (lat/lng 필요)
+                      if (item.lat != null && item.lng != null) {
+                        await saveHistory({ lat: item.lat, lng: item.lng });
+                        // 최신 목록 갱신(선택)
+                        fetchRecent();
+                      }
+                      onSubmit(item.name); // ← 기존 네비게이션 그대로
+                    }}
+                  >
                     <ItemHeader>
                       <div>
                         <ItemTitle>
@@ -404,16 +470,25 @@ export default function MapSearch() {
               <SectionHeader>
                 <Pill>최근</Pill>
               </SectionHeader>
-              <List>
-                {recentPlaces.map((p) => (
-                  <Item key={p.id} onClick={() => onSubmit(p.name)}>
-                    <Pin>
-                      <img src="/icons/map/listicon.svg" alt="" />
-                    </Pin>
-                    <Title>{p.name}</Title>
-                  </Item>
-                ))}
-              </List>
+              {isLoadingRecent ? (
+                <p>불러오는 중...</p>
+              ) : recentList.length === 0 ? (
+                <p>최근 검색이 없어요.</p>
+              ) : (
+                <List>
+                  {recentList.map((p) => (
+                    <Item
+                      key={p.marketId}
+                      onClick={() => onSubmit(p.market_name)} // ✅ 기존 네비 로직 유지
+                    >
+                      <Pin>
+                        <img src="/icons/map/listicon.svg" alt="" />
+                      </Pin>
+                      <Title>{p.market_name}</Title>
+                    </Item>
+                  ))}
+                </List>
+              )}
             </Content>
           </BottomContainer>
         )}
@@ -695,7 +770,9 @@ const StripRow = styled.div`
   }
 
   /* 스크롤바 숨김(원하면 표시로 바꿔도 됨) */
-  &::-webkit-scrollbar { display: none; }
+  &::-webkit-scrollbar {
+    display: none;
+  }
   scrollbar-width: none;
 
   /* 모바일에서 세로/가로 제스처 모두 허용 (세로 스크롤 자연스럽게) */
