@@ -132,12 +132,12 @@ function getStageIcon(stage, isPressed, currentLevel) {
 const MissionProgress = ({ userXp, currentLevel }) => {
   const areaRef = useRef(null);
 
-  const targetLevel = Math.min(currentLevel + 1, 5);
-  const nextLevelTitle = LEVEL_META[targetLevel]?.title || "다음 레벨";
+  const targetLevel = Math.min(currentLevel + 1, 6);
+  const nextLevelTitle = LEVEL_META[targetLevel]?.title || "MAX";
 
   const cap = XP_THRESHOLDS[currentLevel] ?? 0;
 
-  const isMaxLevel = currentLevel >= 5;
+  const isMaxLevel = currentLevel >= 6;
   const remaining = isMaxLevel ? 0 : Math.max(cap - (userXp ?? 0), 0);
   const denom = isMaxLevel ? cap : cap;
 
@@ -676,7 +676,7 @@ const ProgressLabel = styled.p`
   margin-top: 12px;
   border-radius: 30px;
   background: #1dc3ff;
-  z-index: 9999;
+  z-index: 9999999;
 
   strong {
     font-weight: 700;

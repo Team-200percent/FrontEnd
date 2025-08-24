@@ -38,6 +38,9 @@ export const LEVEL_META = {
     subtitle: "정착을 끝내고 토박이처럼 생활해보세요",
     headerImage: "/icons/home/levelheader/level5.png",
   },
+  6: {
+    title: "MAX",
+  }
 };
 
 export const CATEGORY_ICONS = {

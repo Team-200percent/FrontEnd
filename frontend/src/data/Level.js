@@ -3,7 +3,7 @@ export const XP_THRESHOLDS = {
   2: 900,
   3: 1600,
   4: 3100,
-  5: 3100, // 5레벨은 최종치로 고정
+  5: 5000, // 5레벨은 최종치로 고정
 };
 
 export const MAX_LEVEL = 5;
