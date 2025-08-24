@@ -358,7 +358,7 @@ export default function Recommend() {
                         key={item.id}
                         item={item}
                         onLike={() => handleLikeClick(item)}
-                        onSubmit={onSubmit}
+                        onClick={() => onSubmit(item.name)}
                       />
                     ))
                   )}
@@ -380,7 +380,7 @@ export default function Recommend() {
                         key={item.id}
                         item={item}
                         onLike={() => handleLikeClick(item)}
-                        onSubmit={onSubmit}
+                        onClick={() => onSubmit(item.name)}
                       />
                     ))
                   )}
@@ -395,7 +395,7 @@ export default function Recommend() {
   );
 }
 
-function PlaceCard({ item, onLike, onSubmit }) {
+function PlaceCard({ item, onLike, onClick }) {
   const [isFavorite, setIsFavorite] = useState(item.isFavorite);
 
   const handleClick = async () => {
@@ -408,10 +408,12 @@ function PlaceCard({ item, onLike, onSubmit }) {
   };
 
   return (
-    <Card>
-      <Thumb onClick={() => onSubmit(item.name)} $src={item.image} />
+    <Card onClick={onClick}>
+      <Thumb $src={item.image} data-nodrag />
       <CardBody>
-        <Name title={item.name}>{item.name}</Name>
+        <Name onClick={onClick} data-nodrag title={item.name}>
+          {item.name}
+        </Name>
         <Address>{item.address}</Address>
         <MetaRow>
           <Stars rating={item.rating} />
@@ -436,7 +438,7 @@ function PlaceCard({ item, onLike, onSubmit }) {
   );
 }
 
-function PickCard({ item, onLike, onSubmit }) {
+function PickCard({ item, onLike, onClick }) {
   const [isFavorite, setIsFavorite] = useState(item.isFavorite);
 
   const handleClick = async () => {
@@ -449,7 +451,7 @@ function PickCard({ item, onLike, onSubmit }) {
   };
 
   return (
-    <Pick>
+    <Pick onClick={onClick}>
       <PickHeader>
         <UserWrapper>
           <Avatar img src="/icons/recommend/usericon.png" />
@@ -463,11 +465,15 @@ function PickCard({ item, onLike, onSubmit }) {
           </Recent>
         </UserWrapper>
       </PickHeader>
-      <PickThumb $src={item.images?.[0]} />
+      <PickThumb $src={item.images?.[0]} data-nodrag />
       <PickBody>
         <Name
-          onClick={() => onSubmit(item.market_name)}
           title={item.market_name}
+          onClick={(e) => {
+            e.stopPropagation();
+            onClick();
+          }}
+          data-nodrag
         >
           {item.market_name}
         </Name>
@@ -631,6 +637,11 @@ const Name = styled.h3`
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
 `;
 
 const MetaRow = styled.div`
@@ -821,10 +832,10 @@ const Spinner = styled.div`
 `;
 
 const LoadingText = styled.div`
-  font-size: 20px;
+  font-size: 13px;
   background: #1dc3ff;
   border-radius: 50px;
-  padding: 16px 20px;
+  padding: 8px 10px;
   color: #fff;
   font-weight: 500;
   position: relative;
