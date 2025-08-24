@@ -135,11 +135,6 @@ export default function FavoriteGroupsSheet({
     };
   }, [open, groups]);
 
-  const totalItems = useMemo(
-    () => groups.reduce((sum, g) => sum + (counts[g.id] || 0), 0),
-    [groups, counts]
-  );
-
   const applyTranslate = (px) => {
     const el = sheetRef.current;
     if (!el) return;
