@@ -400,9 +400,17 @@ export default function PlaceSheet({
                 <span>
                   <img src="/icons/map/mapdetail/link.svg" alt="링크" />
                 </span>
-                <LinkText href={place?.website ?? "#"} target="_blank">
-                  {place?.website ?? "웹사이트 정보 없음"}
-                </LinkText>
+                {place?.website ? (
+                  <LinkText
+                    href={place.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {place.website}
+                  </LinkText>
+                ) : (
+                  <PlainText>웹사이트 정보 없음</PlainText>
+                )}
               </InfoItem>
             </InfoList>
           )}
@@ -845,4 +853,9 @@ const Photo = styled.img`
   object-fit: cover;
   border-radius: 12px;
   background: #f0f2f5;
+`;
+
+const PlainText = styled.span`
+  color: #000;   /* 검은 글씨 */
+  font-size: 15px;
 `;
