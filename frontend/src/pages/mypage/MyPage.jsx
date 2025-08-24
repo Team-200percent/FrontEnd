@@ -7,31 +7,31 @@ const LEVEL_ASSETS = {
     level: "/icons/mypage/level/1.png",
     num: "/icons/mypage/levelnum/1.png",
     effect: "/icons/mypage/effect/bronze-effect.png",
-    badge: "/icons/mypage/badge/bronze.png",
+    badge: "/icons/mypage/badge/bronze-signup.png",
   },
   2: {
     level: "/icons/mypage/level/2.png",
     num: "/icons/mypage/levelnum/2.png",
     effect: "/icons/mypage/effect/silver-effect.png",
-    badge: "/icons/mypage/badge/silver.png",
+    badge: "/icons/mypage/badge/silver-signup.png",
   },
   3: {
     level: "/icons/mypage/level/3.png",
     num: "/icons/mypage/levelnum/3.png",
     effect: "/icons/mypage/effect/gold-effect.png",
-    badge: "/icons/mypage/badge/gold.png",
+    badge: "/icons/mypage/badge/gold-signup.png",
   },
   4: {
     level: "/icons/mypage/level/4.png",
     num: "/icons/mypage/levelnum/4.png",
     effect: "/icons/mypage/effect/purple-effect.png",
-    badge: "/icons/mypage/badge/purple.png",
+    badge: "/icons/mypage/badge/purple-signup.png",
   },
   5: {
     level: "/icons/mypage/level/5.png",
     num: "/icons/mypage/levelnum/5.png",
     effect: "/icons/mypage/effect/black-effect.png",
-    badge: "/icons/mypage/badge/black.png",
+    badge: "/icons/mypage/badge/black-signup.png",
   },
 };
 
