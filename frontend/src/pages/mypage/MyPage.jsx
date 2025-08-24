@@ -707,7 +707,7 @@ const Sheet = styled.div`
   margin: 0 auto;
   width: 100%;
   max-width: 430px;
-  height: ${({ $expanded }) => ($expanded ? "100%" : "48%")};
+  height: ${({ $expanded }) => ($expanded ? "100%" : "41%")};
   background: #fff;
   border-top-left-radius: ${({ $expanded }) => ($expanded ? "0px" : "22px")};
   border-top-right-radius: ${({ $expanded }) => ($expanded ? "0px" : "22px")};
@@ -749,7 +749,6 @@ const DisplayName = styled.div`
   text-align: center;
   font-size: 22px;
   font-weight: 700;
-  margin: 14px 0 14px;
   position: relative;
 `;
 
