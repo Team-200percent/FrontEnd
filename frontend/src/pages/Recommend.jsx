@@ -427,16 +427,7 @@ export default function Recommend() {
 function PlaceCard({ item, onLike, onClick }) {
   const [isFavorite, setIsFavorite] = useState(item.isFavorite);
 
-  const handleLikeClick = async () => {
-    try {
-      await onLike();
-      setIsFavorite(!isFavorite);
-    } catch (e) {
-      console.error("즐겨찾기 처리 실패:", e);
-    }
-  };
-
-  const handleHeartClick = async (e) => {
+  const handleHeartClick = async () => {
     try {
       await onLike(); // 👉 전달받은 handleLikeClick만 실행
       setIsFavorite((v) => !v);

@@ -8,9 +8,6 @@ export default function FavoriteGroupsSheet({
   open,
   onClose,
   onCloseAll,
-  placeName,
-  viewMode,
-  onViewModeChange,
 }) {
   const sheetRef = useRef(null);
   const dragRef = useRef({
