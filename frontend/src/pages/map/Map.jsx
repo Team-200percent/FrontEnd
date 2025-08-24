@@ -173,6 +173,7 @@ export default function Map() {
             searchMarkerRef.current = new window.kakao.maps.Marker({
               position: pos,
               image: markerImage, // ✅ 여기서 이미지 지정
+              zIndex: 12,
             });
             searchMarkerRef.current.setMap(mapRef.current);
           } else {
@@ -194,7 +195,7 @@ export default function Map() {
               position: pos,
               content: labelEl,
               xAnchor: 0.5, // 가운데 정렬
-              yAnchor: 1.8, // 마커 위로 띄우기 (값 키우면 더 위)
+              yAnchor: 1.5, // 마커 위로 띄우기 (값 키우면 더 위)
               zIndex: 5,
             });
             searchLabelRef.current.setMap(mapRef.current);
