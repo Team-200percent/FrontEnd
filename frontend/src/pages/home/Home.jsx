@@ -721,7 +721,7 @@ const GameMapBackGround = styled.div`
   border-radius: 12px;
   background-color: #e6f8ff;
   position: relative;
-  top: -40px;
+  top: -80px;
   z-index: 1000;
 
   /* 🔒 잠금 레벨이면 검정 반투명 필터 */
