@@ -377,7 +377,6 @@ export default function PlaceSheet({
                   <img src="/icons/map/mapdetail/pin.svg" alt="위치" />
                 </span>
                 <p>{place?.address ?? "주소 정보 없음"}</p>
-                <MapButton>지도</MapButton>
               </InfoItem>
               <InfoItem>
                 <span>
@@ -821,17 +820,6 @@ const InfoItem = styled.div`
     font-weight: 700;
     color: #e33150;
   }
-`;
-
-const MapButton = styled.button`
-  padding: 6px 12px;
-  border: 1px solid #1dc3ff;
-  color: #1dc3ff;
-  background: #fff;
-  border-radius: 16px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
 `;
 
 const LinkText = styled.a`
