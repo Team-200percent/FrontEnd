@@ -208,7 +208,7 @@ export default function ReviewContent({ place, onWriteReview, refreshKey }) {
                 <UserInfo>
                   <span>{review.nickname ?? `user_${review.user}`}</span>
                   <small>
-                    리뷰 {review.user_review_count}· 팔로워{" "}
+                    리뷰 {review.review_count}· 팔로워{" "}
                     {review.user_follower}
                   </small>
                   <StarsWrapper>

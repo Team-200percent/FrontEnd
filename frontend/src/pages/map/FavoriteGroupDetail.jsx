@@ -317,15 +317,12 @@ export default function FavoriteGroupDetail({
               </LockWrap>
             </SubMeta>
             <BtnMeta>
-              <ModifyBtn as="button" type="button">
-                공유
-              </ModifyBtn>
               <ModifyBtn
                 as="button"
                 type="button"
                 onClick={() => setEditOpen(true)}
               >
-                수정
+                수정하기
               </ModifyBtn>
             </BtnMeta>
           </TitleArea>
@@ -436,12 +433,7 @@ export default function FavoriteGroupDetail({
               )}
             </Body>
 
-            <Footer>
-              <AddBtn>
-                <img src="/icons/map/mapdetail/+.svg" alt="" />
-                &nbsp;&nbsp;즐겨찾기 추가
-              </AddBtn>
-            </Footer>
+            
           </>
         )}
       </Modal>
