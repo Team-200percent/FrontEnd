@@ -382,32 +382,6 @@ export default function MyPage() {
     else collapseSheet();
   };
 
-  const onDragStart = (e) => {
-    const y = e.touches ? e.touches[0].clientY : e.clientY;
-    drag.current = { startY: y, dragging: true, delta: 0 };
-  };
-
-  const onDragMove = (e) => {
-    if (!drag.current.dragging) return;
-    const el = sheetRef.current;
-    if (!el) return;
-
-    const y = e.touches ? e.touches[0].clientY : e.clientY;
-    const raw = y - drag.current.startY; // +면 아래로, -면 위로
-    drag.current.delta = raw;
-
-    // ‘올리기만’ / ‘내리기만’으로 제한해서 시각 피드백
-    if (sheetState === SHEET.COLLAPSED) {
-      // 접힌 상태에서는 위로만 (-)
-      const up = Math.min(0, raw); // 0 ~ 음수
-      el.style.transform = `translateY(${Math.abs(up)}px)`;
-    } else {
-      // 펼친 상태에서는 아래로만 (+)
-      const down = Math.max(0, raw); // 0 ~ 양수
-      el.style.transform = `translateY(${down}px)`;
-    }
-  };
-
   const expandSheet = () => {
     if (sheetState === SHEET.EXPANDED) return;
     window.history.pushState({ mypageSheet: "expanded" }, "");
