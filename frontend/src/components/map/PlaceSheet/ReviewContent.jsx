@@ -184,26 +184,19 @@ export default function ReviewContent({ place, onWriteReview, refreshKey }) {
               <FollowButton>팔로우</FollowButton>
             </ReviewHeader>
 
-            <PhotoSection>
-              {Array.isArray(review.images) && review.images.length > 0 ? (
-                review.images.map((url, idx) => (
+            {Array.isArray(review.images) && review.images.length > 0 && (
+              <PhotoSection>
+                {review.images.map((url, idx) => (
                   <ReviewPhoto
                     key={`${review.created}-${idx}`}
                     src={url}
                     alt={`리뷰 사진 ${idx + 1}`}
                     loading="lazy"
                   />
-                ))
-              ) : (
-                <>
-                  <PlaceholderPhoto />
-                  <PlaceholderPhoto />
-                  <PlaceholderPhoto />
-                </>
-              )}
-            </PhotoSection>
+                ))}
+              </PhotoSection>
+            )}
 
-            {/* ✅ 개별 리뷰의 description을 사용합니다. */}
             <ReviewDescription>{review.description}</ReviewDescription>
 
             <ReviewDate>
@@ -217,9 +210,7 @@ export default function ReviewContent({ place, onWriteReview, refreshKey }) {
             </ReviewDate>
 
             <ReviewTags>
-              {/* ✅ 개별 리뷰의 tags 배열을 사용합니다. */}
               {review.tags.map((tagText) => {
-                // TAG_MAP에서 tagText와 일치하는 항목을 찾습니다.
                 const tagInfo = Object.values(TAG_MAP).find(
                   (t) => t.text === tagText
                 );
