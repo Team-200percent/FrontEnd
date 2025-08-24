@@ -146,81 +146,11 @@ function MediaStrip({ images = [] }) {
     .map((it) => (typeof it === "string" ? it : it?.image_url))
     .filter(Boolean);
 
-  const single = urls.length === 1;
-
   const ref = useRef(null);
-  const drag = useRef({
-    active: false,
-    startX: 0,
-    startY: 0,
-    startScroll: 0,
-    moved: false,
-    lastX: 0,
-    lastT: 0,
-    v: 0,
-    raf: null,
-    captured: false,
-  });
+  
 
   // 사진이 없으면 컨테이너 자체를 렌더하지 않음
   if (urls.length === 0) return null;
-
-  const onPointerDown = (e) => {
-    const isInteractive = (el) =>
-      el.closest?.(
-        'button, a, input, textarea, select, [role="button"], [data-nodrag]'
-      );
-
-    if (!ref.current || isInteractive(e.target)) return;
-    const now = performance.now();
-
-    drag.current.active = true;
-    drag.current.startX = e.clientX;
-    drag.current.startY = e.clientY;
-    drag.current.startScroll = ref.current.scrollLeft;
-    drag.current.moved = false;
-    drag.current.lastX = e.clientX;
-    drag.current.lastT = now;
-    drag.current.v = 0;
-    drag.current.captured = false;
-
-    document.body.style.userSelect = "none";
-    document.body.style.cursor = "grabbing";
-  };
-
-  const onPointerMove = (e) => {
-    if (!drag.current.active || !ref.current) return;
-
-    const dx = e.clientX - drag.current.startX;
-    const dy = e.clientY - drag.current.startY;
-
-    if (!drag.current.captured) {
-      if (Math.abs(dx) > 6 && Math.abs(dx) > Math.abs(dy)) {
-        // 👉 가로 스크롤 시작
-        ref.current.setPointerCapture?.(e.pointerId);
-        drag.current.captured = true;
-        drag.current.moved = true;
-        ref.current.setAttribute("data-dragging", "1");
-      } else if (Math.abs(dy) > Math.abs(dx)) {
-        // 👉 세로 스크롤 의도: Strip 드래그 종료
-        drag.current.active = false;
-        document.body.style.userSelect = "";
-        document.body.style.cursor = "";
-        return; // 브라우저에 세로 스크롤 넘겨줌
-      }
-    }
-
-    if (drag.current.captured) {
-      ref.current.scrollLeft = drag.current.startScroll - dx;
-    }
-  };
-
-  const onPointerUp = () => {
-    drag.current.active = false;
-    drag.current.captured = false;
-    document.body.style.userSelect = "";
-    document.body.style.cursor = "";
-  };
 
   // 휠(세로) → 가로 스크롤
   useEffect(() => {
@@ -251,11 +181,6 @@ function MediaStrip({ images = [] }) {
   );
 }
 
-// 최근 항목 더미
-const recentPlaces = [
-  { id: 1, name: "다솜문화공간" },
-  { id: 2, name: "흑석커피" },
-];
 
 export default function MapSearch() {
   const location = useLocation();
