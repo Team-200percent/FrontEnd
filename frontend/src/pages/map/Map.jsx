@@ -121,6 +121,36 @@ export default function Map() {
     }
   };
 
+  // 컴포넌트 상단(handlers 아래 아무 곳)에 추가
+  const showSearchLabel = (name, pos) => {
+    if (!mapRef.current) return;
+    const el = document.createElement("div");
+    el.className = "search-label";
+    el.textContent = name || "장소";
+
+    if (!searchLabelRef.current) {
+      searchLabelRef.current = new window.kakao.maps.CustomOverlay({
+        position: pos,
+        content: el,
+        xAnchor: 0.5,
+        yAnchor: 1.5, // 마커 바로 위에 붙도록 살짝만 띄움
+        zIndex: 11,
+      });
+    } else {
+      searchLabelRef.current.setContent(el);
+      searchLabelRef.current.setPosition(pos);
+    }
+    searchLabelRef.current.setMap(mapRef.current);
+  };
+
+  const hideSearchLabel = () => {
+    if (searchLabelRef.current) {
+      searchLabelRef.current.setMap(null);
+      // 필요하다면 완전 제거하려면 주석 해제
+      // searchLabelRef.current = null;
+    }
+  };
+
   // 🔑 검색 통합 로직
   const handleSearchSubmit = useCallback(async (query) => {
     const q = (query || "").trim();
@@ -184,27 +214,7 @@ export default function Map() {
             searchLabelRef.current.setMap(null); // 이전 라벨 제거
           }
 
-          // 마커 설정 후에 ↓↓↓ 라벨 처리 추가
-          const labelEl = document.createElement("div");
-          labelEl.className = "search-label";
-          labelEl.textContent = preload.name || "장소";
-
-          if (!searchLabelRef.current) {
-            // 처음 생성
-            searchLabelRef.current = new window.kakao.maps.CustomOverlay({
-              position: pos,
-              content: labelEl,
-              xAnchor: 0.5, // 가운데 정렬
-              yAnchor: 1.5, // 마커 위로 띄우기 (값 키우면 더 위)
-              zIndex: 5,
-            });
-            searchLabelRef.current.setMap(mapRef.current);
-          } else {
-            // 재사용: 텍스트/위치만 갱신
-            searchLabelRef.current.setContent(labelEl);
-            searchLabelRef.current.setPosition(pos);
-            searchLabelRef.current.setMap(mapRef.current);
-          }
+          showSearchLabel(preload.name, pos);
 
           setSelectedPlace({
             name: preload.name,
@@ -322,6 +332,8 @@ export default function Map() {
           markerContent.onclick = () => {
             if (infoWindow) infoWindow.setMap(null);
 
+            hideSearchLabel();
+
             const newInfoWindow = new window.kakao.maps.CustomOverlay({
               position: markerPosition,
               content: `<div class="info-window">${market.name}</div>`,
@@ -353,13 +365,33 @@ export default function Map() {
   }, [location.state, location.pathname, navigate, handleSearchSubmit]);
 
   useEffect(() => {
-    if (!searchLabelRef.current) return;
-    if (sheetViewMode === "expanded") {
-      searchLabelRef.current.setMap(null);
-    } else if (isPlaceSheetOpen) {
-      searchLabelRef.current.setMap(mapRef.current);
+    if (
+      sheetViewMode === "expanded" ||
+      !isPlaceSheetOpen ||
+      isFavoriteSheetOpen ||
+      isGroupSheetOpen
+    ) {
+      hideSearchLabel();
     }
-  }, [sheetViewMode, isPlaceSheetOpen]);
+  }, [sheetViewMode, isPlaceSheetOpen, isFavoriteSheetOpen, isGroupSheetOpen]);
+
+  useEffect(() => {
+    if (!mapRef.current) return;
+    const map = mapRef.current;
+    const ev = window.kakao.maps.event;
+
+    const hide = () => hideSearchLabel();
+
+    ev.addListener(map, "click", hide);
+    ev.addListener(map, "dragstart", hide);
+    ev.addListener(map, "zoom_changed", hide);
+
+    return () => {
+      ev.removeListener(map, "click", hide);
+      ev.removeListener(map, "dragstart", hide);
+      ev.removeListener(map, "zoom_changed", hide);
+    };
+  }, [isMapReady]);
 
   return (
     <div
