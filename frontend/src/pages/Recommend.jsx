@@ -10,6 +10,7 @@ import {
   placeForGroupState,
 } from "../state/atom";
 import { useNavigate } from "react-router-dom";
+import ReviewDetailSheet from "../components/recommend/ReviewDetailSheet";
 
 const NoBubbleButton = forwardRef(function NoBubbleButton(
   { onClick, className, type = "button", ...rest },
@@ -139,7 +140,7 @@ function DragScrollRow({ className, children }) {
   };
 
   // 휠(세로→가로) 변환은 동일하되, 엘리먼트에만 리스너 부착
-  React.useEffect(() => {
+  useEffect(() => {
     const el = ref.current;
     if (!el) return;
     const onWheel = (e) => {
@@ -297,6 +298,9 @@ export default function Recommend() {
   const isGroupSheetOpen = useRecoilValue(isGroupSheetOpenState);
   const favoriteChanged = useRecoilValue(favoriteStateChanged);
 
+  const [isReviewDetailOpen, setIsReviewDetailOpen] = useState(false);
+  const [selectedReview, setSelectedReview] = useState(null);
+
   const navigate = useNavigate();
 
   const fetchData = async () => {
@@ -320,6 +324,11 @@ export default function Recommend() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handlePickCardClick = (item) => {
+    setSelectedReview(item);
+    setIsReviewDetailOpen(true);
   };
 
   useEffect(() => {
@@ -409,7 +418,7 @@ export default function Recommend() {
                         key={item.id}
                         item={item}
                         onLike={() => handleLikeClick(item)}
-                        onClick={() => onSubmit(item.name)}
+                        onClick={() => handlePickCardClick(item)}
                       />
                     ))
                   )}
@@ -420,6 +429,11 @@ export default function Recommend() {
           </>
         )}
       </ScrollContainer>
+      <ReviewDetailSheet
+        open={isReviewDetailOpen}
+        onClose={() => setIsReviewDetailOpen(false)}
+        review={selectedReview}
+      />
     </Page>
   );
 }
@@ -761,11 +775,7 @@ const UserWrapper = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  span {
-    font-size: 15px;
-    color: #69707a;
-  }
+  gap: 5px;
 `;
 
 const Username = styled.span`
@@ -774,11 +784,13 @@ const Username = styled.span`
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  width: 64px;
 `;
 
 const Avatar = styled.img.attrs({ draggable: false })`
   width: 50px;
   height: 50px;
+  margin-bottom: 10px;
 `;
 
 const Recent = styled.div`

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import styled from "styled-components";
 import api from "../../lib/api";
 import AddGroupSheet from "../../components/map/AddGroupSheet";
+import { useNavigate } from "react-router-dom";
 
 const HEART_ICON_BY_COLOR = {
   red: "/icons/map/favorite/heart-red.png",
@@ -27,6 +28,7 @@ export default function FavoriteGroupDetail({
   open,
   group,
   onClose,
+  onCloseAll,
   onGroupUpdated,
 }) {
   const [rows, setRows] = useState([]);
@@ -42,6 +44,31 @@ export default function FavoriteGroupDetail({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState(null);
 
+  const [sortMode, setSortMode] = useState("createdAt"); // "createdAt"=등록순(오래된→최신), "latest"=최신순(최신→오래된)
+  const [isSortOpen, setIsSortOpen] = useState(false);
+  const sortMenuRef = useRef(null);
+
+  const navigate = useNavigate();
+
+  const sortedRows = useMemo(() => {
+    const getTime = (x) => {
+      const t = x?.createdAt ?? x?.created_at ?? x?.updatedAt ?? x?.updated_at;
+      if (t) {
+        const ts = new Date(t).getTime();
+        return Number.isFinite(ts) ? ts : 0;
+      }
+      const idNum = Number(x?.id);
+      return Number.isFinite(idNum) ? idNum : 0;
+    };
+
+    const base = Array.isArray(rows) ? [...rows] : [];
+    base.sort((a, b) => {
+      const diff = getTime(a) - getTime(b);
+      return sortMode === "latest" ? -diff : diff; // 최신순이면 역순
+    });
+    return base;
+  }, [rows, sortMode]);
+
   const heartIcon = useMemo(() => {
     const key = curGroup?.color ?? "blue";
     return HEART_ICON_BY_COLOR[key] ?? HEART_ICON_BY_COLOR.blue;
@@ -53,6 +80,16 @@ export default function FavoriteGroupDetail({
       setCurGroup(group);
     }
   }, [group]);
+
+  useEffect(() => {
+    if (!isSortOpen) return;
+    const onDown = (e) => {
+      if (!sortMenuRef.current) return;
+      if (!sortMenuRef.current.contains(e.target)) setIsSortOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [isSortOpen]);
 
   // 컴포넌트 내부에 util 추가
   const loadKakao = () =>
@@ -224,6 +261,20 @@ export default function FavoriteGroupDetail({
     setPendingDelete(null);
   };
 
+  const handleItemClick = (item) => {
+    const query = (item.name || "").trim();
+    if (!query) return;
+
+    onCloseAll?.();
+
+    // Map.jsx의 검색 로직을 트리거하기 위해 searchQuery를 state에 담아 전달
+    navigate("/map", {
+      state: {
+        searchQuery: query,
+      },
+    });
+  };
+
   // (선택) 조회수 등 표시용
   const total = rows.length;
 
@@ -241,12 +292,13 @@ export default function FavoriteGroupDetail({
               <MapBtn onClick={() => setShowMap((v) => !v)}>
                 <img src="/icons/map/watchmap.svg" alt="" />
               </MapBtn>
-             
             </TopRight>
           </Top>
 
           <TitleArea>
-            <GroupTitle>{curGroup?.name ?? ""}</GroupTitle>
+            <GroupTitle onClick={() => handleItemClick(curGroup)}>
+              {curGroup?.name ?? ""}
+            </GroupTitle>
             <SubMeta>
               <span>
                 조회 <strong>{total}</strong>
@@ -287,7 +339,43 @@ export default function FavoriteGroupDetail({
               {rows.length}
             </span>
           </TextWrap>
-          <SortWrap>등록순</SortWrap>
+          <SortWrap ref={sortMenuRef}>
+            <SortButton
+              onClick={() => setIsSortOpen((v) => !v)}
+              aria-haspopup="menu"
+              aria-expanded={isSortOpen}
+            >
+              <span>{sortMode === "createdAt" ? "등록순" : "최신순"}</span>
+              <img src="/icons/map/underarrow.svg" alt="" />
+            </SortButton>
+
+            {isSortOpen && (
+              <SortMenu role="menu" onClick={(e) => e.stopPropagation()}>
+                <SortItem
+                  role="menuitemradio"
+                  aria-checked={sortMode === "createdAt"}
+                  onClick={() => {
+                    setSortMode("createdAt");
+                    setIsSortOpen(false);
+                  }}
+                  $active={sortMode === "createdAt"}
+                >
+                  등록순
+                </SortItem>
+                <SortItem
+                  role="menuitemradio"
+                  aria-checked={sortMode === "latest"}
+                  onClick={() => {
+                    setSortMode("latest");
+                    setIsSortOpen(false);
+                  }}
+                  $active={sortMode === "latest"}
+                >
+                  최신순
+                </SortItem>
+              </SortMenu>
+            )}
+          </SortWrap>
         </Banner>
 
         {showMap ? (
@@ -307,8 +395,8 @@ export default function FavoriteGroupDetail({
               )}
 
               <List>
-                {rows.map((it) => (
-                  <Row key={it.id}>
+                {sortedRows.map((it) => (
+                  <Row key={it.id} onClick={() => handleItemClick(it)}>
                     <Left>
                       <Heart>
                         <img src={heartIcon} alt="" />
@@ -318,7 +406,13 @@ export default function FavoriteGroupDetail({
                         <Secondary>{it.address || ""}</Secondary>
                       </TextCol>
                     </Left>
-                    <RemoveBtn aria-label="삭제" onClick={() => askDelete(it)}>
+                    <RemoveBtn
+                      aria-label="삭제"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        askDelete(it);
+                      }}
+                    >
                       <img src="/icons/map/mapdetail/x.svg" alt="삭제" />
                     </RemoveBtn>
                   </Row>
@@ -448,6 +542,11 @@ const GroupTitle = styled.h1`
   font-size: 24px;
   font-weight: 600;
   color: #fff;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
 `;
 
 const SubMeta = styled.div`
@@ -532,7 +631,7 @@ const TextWrap = styled.div`
 `;
 
 const SortWrap = styled.div`
-  font-size: 14px;
+  font-size: 24px;
   color: #dddde4;
   position: relative; /* 드롭다운 기준점 */
 `;
@@ -573,10 +672,12 @@ const SortItem = styled.button`
 `;
 
 const SortButton = styled.button`
+margin-top: 1px;
   background: none;
   border: none;
-  font-size: 16px;
-  color: #000;
+  font-size: 13px;
+  font-weight: 600;
+  color: #dddde4;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -586,6 +687,7 @@ const SortButton = styled.button`
     width: 10px;
     height: 5px;
     margin-bottom: 4px;
+    background:
   }
 `;
 

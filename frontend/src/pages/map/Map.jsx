@@ -192,7 +192,7 @@ export default function Map() {
               "data:image/svg+xml;base64," +
                 btoa(`
         <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30">
-          <circle cx="15" cy="15" r="12" fill="#ff7b33" stroke="white" stroke-width="4"/>
+          <circle cx="15" cy="15" r="10" fill="#ff7b33" stroke="white" stroke-width="3"/>
         </svg>
       `),
               new window.kakao.maps.Size(30, 30), // 마커 크기
@@ -226,6 +226,7 @@ export default function Map() {
             lat: preload.lat,
             lng: preload.lng,
             images: preload.images ?? [],
+            hours: preload.business_hours,
           });
           setIsPlaceSheetOpen(true);
           setSheetViewMode("compact");

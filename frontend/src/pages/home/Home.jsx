@@ -700,13 +700,14 @@ const GameMapContainer = styled.div`
 const LockedBadge = styled.div`
   position: absolute;
   text-align: center;
-  width: 80%;
-  left: 50%;
+  width: 75%;
+  top: 3%;
+  left: 37.5%;
   transform: translateX(-50%);
   z-index: 3;
   background: rgba(0, 0, 0, 0.7);
   color: #fff;
-  padding: 6px 10px;
+  padding: 6px 8px;
   border-radius: 10px;
   font-size: 12px;
   pointer-events: none;
@@ -719,7 +720,7 @@ const GameMapBackGround = styled.div`
   border-radius: 12px;
   background-color: #e6f8ff;
   position: relative;
-  top: -40px;
+  top: -87px;
   z-index: 1000;
 
   /* 🔒 잠금 레벨이면 검정 반투명 필터 */

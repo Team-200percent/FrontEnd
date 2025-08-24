@@ -166,7 +166,7 @@ const SearchBar = forwardRef(
                 onClick={(e) => e.stopPropagation()}
               />
             ) : (
-              <Placeholder>목적지를 입력하세요</Placeholder>
+              <Placeholder>장소, 가게, 음식점 등을 검색하세요</Placeholder>
             )}
 
             {/* 우측 아이콘: 모드에 상관없이 음성인식 시작 */}
@@ -243,8 +243,8 @@ const Input = styled.input`
   width: 100%;
   border: none;
   background: transparent;
-  font-size: 16px;
-  font-weight: 500;
+  font-size: 15px;
+  font-weight: 400;
   color: #333;
   outline: none;
   cursor: text;

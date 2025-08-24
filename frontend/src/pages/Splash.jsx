@@ -282,7 +282,7 @@ const Frame = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 24px 20px 56px;
+  padding: 24px 20px 96px;
 `;
 
 const Copy = styled.div`

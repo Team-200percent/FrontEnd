@@ -182,6 +182,7 @@ function MediaStrip({ images = [] }) {
 }
 
 
+
 export default function MapSearch() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -614,7 +615,7 @@ const ItemStats = styled.div`
 
 const Status = styled.span`
   font-weight: 600;
-  color: ${({ $isOpen }) => ($isOpen ? "#1DC3FF" : "#E33150")};
+  color: #E33150;
 `;
 
 const ResultItem = styled.div`
