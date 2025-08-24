@@ -587,12 +587,6 @@ const Banner = styled.div`
 const ScrollContainer = styled.div`
   flex: 1; /* SearchBar를 제외한 모든 남은 공간을 차지 */
   overflow-y: auto; /* 내용이 길어지면 세로 스크롤 자동 생성 */
-
-  /* 스크롤바 숨기기 (선택사항) */
-  &::-webkit-scrollbar {
-    display: none;
-  }
-  scrollbar-width: none;
 `;
 
 const SearchIcon = styled.img`
@@ -637,9 +631,7 @@ const Row = styled.div`
   grid-auto-columns: 160px;
   overflow-x: auto;
   padding: 4px 4px 14px;
-  &::-webkit-scrollbar {
-    display: none;
-  }
+ 
 
   &.personal {
     gap: 62px;

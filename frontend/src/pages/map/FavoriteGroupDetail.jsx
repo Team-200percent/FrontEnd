@@ -432,8 +432,7 @@ export default function FavoriteGroupDetail({
                 </ConfirmBackdrop>
               )}
             </Body>
-
-            
+            <Footer></Footer>
           </>
         )}
       </Modal>
@@ -664,7 +663,7 @@ const SortItem = styled.button`
 `;
 
 const SortButton = styled.button`
-margin-top: 1px;
+  margin-top: 1px;
   background: none;
   border: none;
   font-size: 13px;
@@ -679,7 +678,7 @@ margin-top: 1px;
     width: 10px;
     height: 5px;
     margin-bottom: 4px;
-    background:
+    background: ;
   }
 `;
 

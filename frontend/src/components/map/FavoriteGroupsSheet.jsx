@@ -4,11 +4,7 @@ import AddGroupSheet from "./AddGroupSheet";
 import FavoriteGroupDetail from "../../pages/map/FavoriteGroupDetail";
 import api from "../../lib/api";
 
-export default function FavoriteGroupsSheet({
-  open,
-  onClose,
-  onCloseAll,
-}) {
+export default function FavoriteGroupsSheet({ open, onClose, onCloseAll }) {
   const sheetRef = useRef(null);
   const dragRef = useRef({
     active: false,
@@ -97,40 +93,81 @@ export default function FavoriteGroupsSheet({
     }
     let aborted = false;
 
-    const fetchCounts = async () => {
-      try {
-        const reqs = groups.map((g) =>
-          api.get(`/market/favoriteitem/${g.id}/`)
-        );
-        const results = await Promise.allSettled(reqs);
-
-        const map = {};
-        results.forEach((r, idx) => {
-          const gid = groups[idx].id;
-          if (r.status === "fulfilled") {
-            const data = r.value?.data;
-            // 명세: { count, results: [...] }
-            const c = Number(
-              data?.count ??
-                (Array.isArray(data?.results) ? data.results.length : 0)
-            );
-            map[gid] = isNaN(c) ? 0 : c;
-          } else {
-            map[gid] = 0; // 실패한 그룹은 0으로 처리(원하면 null 표시도 가능)
-          }
-        });
-
-        if (!aborted) setCounts(map);
-      } catch (err) {
-        if (!aborted) console.error("count 로딩 실패:", err);
-      }
-    };
-
     fetchCounts();
     return () => {
       aborted = true;
     };
   }, [open, groups]);
+
+  const fetchGroupsAndCounts = async () => {
+    setLoading(true);
+    setLoadError("");
+    try {
+      const res = await api.get("/market/favoritegroup/");
+      const groupList = Array.isArray(res.data) ? res.data : [];
+      setGroups(groupList);
+
+      if (groupList.length > 0) {
+        const countPromises = groupList.map((g) =>
+          api.get(`/market/favoriteitem/${g.id}/`).then((r) => ({
+            id: g.id,
+            count: r.data?.count ?? 0,
+          }))
+        );
+        const countResults = await Promise.all(countPromises);
+        const countsMap = Object.fromEntries(
+          countResults.map((item) => [item.id, item.count])
+        );
+        setCounts(countsMap);
+      }
+    } catch (e) {
+      console.error(e);
+      setLoadError("그룹을 불러오지 못했어요.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ✅ 2. 시트가 열릴 때 이 함수를 호출합니다.
+
+  const handleGroupUpdated = (updatedGroup) => {
+    // 3. 로컬 상태를 즉시 업데이트하여 빠른 UX 제공
+    setGroups((prev) =>
+      prev.map((g) =>
+        g.id === updatedGroup.id ? { ...g, ...updatedGroup } : g
+      )
+    );
+
+    // ✅ 4. (선택적이지만 권장) 서버로부터 전체 목록을 다시 불러와 완벽하게 동기화
+    // fetchGroupsAndCounts();
+  };
+
+  const fetchCounts = async () => {
+    try {
+      const reqs = groups.map((g) => api.get(`/market/favoriteitem/${g.id}/`));
+      const results = await Promise.allSettled(reqs);
+
+      const map = {};
+      results.forEach((r, idx) => {
+        const gid = groups[idx].id;
+        if (r.status === "fulfilled") {
+          const data = r.value?.data;
+          // 명세: { count, results: [...] }
+          const c = Number(
+            data?.count ??
+              (Array.isArray(data?.results) ? data.results.length : 0)
+          );
+          map[gid] = isNaN(c) ? 0 : c;
+        } else {
+          map[gid] = 0; // 실패한 그룹은 0으로 처리(원하면 null 표시도 가능)
+        }
+      });
+
+      if (!aborted) setCounts(map);
+    } catch (err) {
+      if (!aborted) console.error("count 로딩 실패:", err);
+    }
+  };
 
   const applyTranslate = (px) => {
     const el = sheetRef.current;
@@ -264,15 +301,7 @@ export default function FavoriteGroupsSheet({
     setPendingDelete(null);
   };
 
-  const handleGroupUpdated = (updated) => {
-    setGroups((prev) =>
-      prev.map((g) => (g.id === updated.id ? { ...g, ...updated } : g))
-    );
 
-    setDetailGroup((prev) =>
-      prev && prev.id === updated.id ? { ...prev, ...updated } : prev
-    );
-  };
 
   if (!open) return null; // open이 false면 아무것도 렌더링하지 않음
 

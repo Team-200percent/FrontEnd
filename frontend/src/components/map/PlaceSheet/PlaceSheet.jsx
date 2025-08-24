@@ -363,12 +363,7 @@ export default function PlaceSheet({
             >
               리뷰
             </Tab>
-            <Tab
-              $active={activeTab === "photo"}
-              onClick={() => onTabClick("photo")}
-            >
-              사진
-            </Tab>
+            
           </TabNav>
           {activeTab === "home" && (
             <InfoList>
