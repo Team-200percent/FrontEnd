@@ -12,6 +12,125 @@ import {
   placeForGroupState,
 } from "../../state/atom";
 
+function DragScrollRow({ className, children }) {
+  const ref = React.useRef(null);
+  const drag = React.useRef({
+    active: false,
+    startX: 0,
+    startScroll: 0,
+    moved: false,
+    lastX: 0,
+    lastT: 0,
+    v: 0, // velocity(px/ms)
+    raf: null,
+  });
+
+  const isInteractive = (el) =>
+    el.closest?.(
+      'button, a, input, textarea, select, [role="button"], [data-nodrag]'
+    );
+
+  const setDraggingAttr = (on) => {
+    if (!ref.current) return;
+    if (on) ref.current.setAttribute("data-dragging", "1");
+    else ref.current.removeAttribute("data-dragging");
+  };
+
+  const onPointerDown = (e) => {
+    if (!ref.current || isInteractive(e.target)) return;
+
+    ref.current.setPointerCapture?.(e.pointerId);
+    const now = performance.now();
+
+    drag.current.active = true;
+    drag.current.startX = e.clientX;
+    drag.current.startScroll = ref.current.scrollLeft;
+    drag.current.moved = false;
+    drag.current.lastX = e.clientX;
+    drag.current.lastT = now;
+    drag.current.v = 0;
+
+    document.body.style.userSelect = "none";
+    document.body.style.cursor = "grabbing";
+    setDraggingAttr(true); // 🔕 스냅 일시 해제
+  };
+
+  const onPointerMove = (e) => {
+    if (!drag.current.active || !ref.current) return;
+
+    const dx = e.clientX - drag.current.startX;
+    if (Math.abs(dx) > 6) drag.current.moved = true;
+
+    // 속도 추정
+    const now = performance.now();
+    const dt = now - drag.current.lastT || 16;
+    drag.current.v = (e.clientX - drag.current.lastX) / dt; // px/ms
+    drag.current.lastX = e.clientX;
+    drag.current.lastT = now;
+
+    // RAF로 스크롤 갱신
+    if (!drag.current.raf) {
+      drag.current.raf = requestAnimationFrame(() => {
+        drag.current.raf = null;
+        if (!ref.current) return;
+        ref.current.scrollLeft =
+          drag.current.startScroll - (drag.current.lastX - drag.current.startX);
+      });
+    }
+  };
+
+  const onPointerUp = () => {
+    if (!drag.current.active) return;
+    drag.current.active = false;
+
+    // 관성(플링)
+    const el = ref.current;
+    let v = drag.current.v * 16; // px/frame (dt≈16ms)
+    const friction = 0.92;
+
+    const fling = () => {
+      if (!el) return;
+      if (Math.abs(v) < 0.3) {
+        setDraggingAttr(false);
+        document.body.style.userSelect = "";
+        document.body.style.cursor = "";
+        return;
+      }
+      el.scrollLeft -= v;
+      v *= friction;
+      requestAnimationFrame(fling);
+    };
+
+    if (drag.current.moved) fling();
+    else {
+      setDraggingAttr(false);
+      document.body.style.userSelect = "";
+      document.body.style.cursor = "";
+    }
+  };
+
+  return (
+    <StripRow
+      ref={ref}
+      className={className}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerUp}
+      onClickCapture={(e) => {
+        // 드래그했으면 카드/이미지 클릭 방지
+        if (drag.current.moved && !isInteractive(e.target)) {
+          e.stopPropagation();
+          e.preventDefault();
+        }
+        drag.current.moved = false;
+      }}
+    >
+      {children}
+    </StripRow>
+  );
+}
+
 function MediaStrip({ images = [] }) {
   // images: ['url', ...] 또는 [{image_url: '...'} , ...]
   const urls = (images || [])
@@ -24,37 +143,72 @@ function MediaStrip({ images = [] }) {
   const drag = useRef({
     active: false,
     startX: 0,
+    startY: 0,
     startScroll: 0,
     moved: false,
+    lastX: 0,
+    lastT: 0,
+    v: 0,
+    raf: null,
+    captured: false,
   });
 
   // 사진이 없으면 컨테이너 자체를 렌더하지 않음
   if (urls.length === 0) return null;
 
   const onPointerDown = (e) => {
-    if (!ref.current) return;
-    ref.current.setPointerCapture?.(e.pointerId);
-    drag.current = {
-      active: true,
-      startX: e.clientX,
-      startScroll: ref.current.scrollLeft,
-      moved: false,
-    };
+    const isInteractive = (el) =>
+      el.closest?.(
+        'button, a, input, textarea, select, [role="button"], [data-nodrag]'
+      );
+
+    if (!ref.current || isInteractive(e.target)) return;
+    const now = performance.now();
+
+    drag.current.active = true;
+    drag.current.startX = e.clientX;
+    drag.current.startY = e.clientY;
+    drag.current.startScroll = ref.current.scrollLeft;
+    drag.current.moved = false;
+    drag.current.lastX = e.clientX;
+    drag.current.lastT = now;
+    drag.current.v = 0;
+    drag.current.captured = false;
+
     document.body.style.userSelect = "none";
     document.body.style.cursor = "grabbing";
-    // ResultItem 클릭 네비게이션 막기
-    e.stopPropagation();
   };
 
   const onPointerMove = (e) => {
     if (!drag.current.active || !ref.current) return;
+
     const dx = e.clientX - drag.current.startX;
-    if (Math.abs(dx) > 4) drag.current.moved = true;
-    ref.current.scrollLeft = drag.current.startScroll - dx;
+    const dy = e.clientY - drag.current.startY;
+
+    if (!drag.current.captured) {
+      if (Math.abs(dx) > 6 && Math.abs(dx) > Math.abs(dy)) {
+        // 👉 가로 스크롤 시작
+        ref.current.setPointerCapture?.(e.pointerId);
+        drag.current.captured = true;
+        drag.current.moved = true;
+        ref.current.setAttribute("data-dragging", "1");
+      } else if (Math.abs(dy) > Math.abs(dx)) {
+        // 👉 세로 스크롤 의도: Strip 드래그 종료
+        drag.current.active = false;
+        document.body.style.userSelect = "";
+        document.body.style.cursor = "";
+        return; // 브라우저에 세로 스크롤 넘겨줌
+      }
+    }
+
+    if (drag.current.captured) {
+      ref.current.scrollLeft = drag.current.startScroll - dx;
+    }
   };
 
   const onPointerUp = () => {
     drag.current.active = false;
+    drag.current.captured = false;
     document.body.style.userSelect = "";
     document.body.style.cursor = "";
   };
@@ -77,20 +231,13 @@ function MediaStrip({ images = [] }) {
 
   return (
     <Gallery onClick={(e) => e.stopPropagation()}>
-      <Strip
-        $single={single}
-        ref={ref}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
-      >
+      <DragScrollRow className="media">
         {urls.map((src, i) => (
           <Shot key={`${src}-${i}`}>
             <img src={src} alt={`photo-${i + 1}`} loading="lazy" />
           </Shot>
         ))}
-      </Strip>
+      </DragScrollRow>
     </Gallery>
   );
 }
@@ -190,85 +337,87 @@ export default function MapSearch() {
         </>
       )}
 
-      {activeCategory ? (
-        <ResultsContainer>
-          {isLoading ? (
-            <p>검색 중...</p>
-          ) : searchResults.length > 0 ? (
-            <ResultList>
-              {searchResults.map((item, index) => (
-                <ResultItem key={index} onClick={() => onSubmit(item.name)}>
-                  <ItemHeader>
-                    <div>
-                      <ItemTitle>
-                        {item.name}&nbsp;<strong>{item.category}</strong>
-                      </ItemTitle>
-                    </div>
-                    <HeartButton
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleLikeClick(item);
-                      }}
-                    >
-                      <img
-                        src={
-                          item.isFavorite
-                            ? "/icons/map/expanded-heart-on.png"
-                            : "/icons/map/expanded-heart-off.png"
-                        }
-                        alt="관심 장소 추가"
-                      />
-                    </HeartButton>
-                  </ItemHeader>
-                  <ItemStats>
-                    <Status $isOpen={item.is_open}>
-                      {item.is_open ? "영업중" : "영업종료"}
-                      <b>·</b>
-                    </Status>
+      <ScrollContainer>
+        {activeCategory ? (
+          <ResultsContainer>
+            {isLoading ? (
+              <p>검색 중...</p>
+            ) : searchResults.length > 0 ? (
+              <ResultList>
+                {searchResults.map((item, index) => (
+                  <ResultItem key={index} onClick={() => onSubmit(item.name)}>
+                    <ItemHeader>
+                      <div>
+                        <ItemTitle>
+                          {item.name}&nbsp;<strong>{item.category}</strong>
+                        </ItemTitle>
+                      </div>
+                      <HeartButton
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleLikeClick(item);
+                        }}
+                      >
+                        <img
+                          src={
+                            item.isFavorite
+                              ? "/icons/map/expanded-heart-on.png"
+                              : "/icons/map/expanded-heart-off.png"
+                          }
+                          alt="관심 장소 추가"
+                        />
+                      </HeartButton>
+                    </ItemHeader>
+                    <ItemStats>
+                      <Status $isOpen={item.is_open}>
+                        {item.is_open ? "영업중" : "영업종료"}
+                        <b>·</b>
+                      </Status>
 
-                    <span>
-                      <img src="/icons/map/star.svg" alt="평점" />{" "}
-                      {item.avg_rating?.toFixed?.(1) ?? "N/A"}
-                      <b>·</b>
-                    </span>
+                      <span>
+                        <img src="/icons/map/star.svg" alt="평점" />{" "}
+                        {item.avg_rating?.toFixed?.(1) ?? "N/A"}
+                        <b>·</b>
+                      </span>
 
-                    <span>
-                      <strong>리뷰 {item.review_count}</strong>{" "}
-                    </span>
-                  </ItemStats>
+                      <span>
+                        <strong>리뷰 {item.review_count}</strong>{" "}
+                      </span>
+                    </ItemStats>
 
-                  {/* ✅ 사진이 하나도 없으면 MediaStrip이 렌더되지 않음 */}
-                  <MediaStrip images={item.images} />
-                </ResultItem>
-              ))}
-            </ResultList>
-          ) : (
-            <p>검색 결과가 없습니다.</p>
-          )}
-        </ResultsContainer>
-      ) : (
-        <BottomContainer>
-          <Line />
-          <AdBanner>
-            <img src="/images/mapsearchad.png" alt="Ad Banner" />
-          </AdBanner>
-          <Content>
-            <SectionHeader>
-              <Pill>최근</Pill>
-            </SectionHeader>
-            <List>
-              {recentPlaces.map((p) => (
-                <Item key={p.id} onClick={() => onSubmit(p.name)}>
-                  <Pin>
-                    <img src="/icons/map/listicon.svg" alt="" />
-                  </Pin>
-                  <Title>{p.name}</Title>
-                </Item>
-              ))}
-            </List>
-          </Content>
-        </BottomContainer>
-      )}
+                    {/* ✅ 사진이 하나도 없으면 MediaStrip이 렌더되지 않음 */}
+                    <MediaStrip images={item.images} />
+                  </ResultItem>
+                ))}
+              </ResultList>
+            ) : (
+              <p>검색 결과가 없습니다.</p>
+            )}
+          </ResultsContainer>
+        ) : (
+          <BottomContainer>
+            <Line />
+            <AdBanner>
+              <img src="/images/mapsearchad.png" alt="Ad Banner" />
+            </AdBanner>
+            <Content>
+              <SectionHeader>
+                <Pill>최근</Pill>
+              </SectionHeader>
+              <List>
+                {recentPlaces.map((p) => (
+                  <Item key={p.id} onClick={() => onSubmit(p.name)}>
+                    <Pin>
+                      <img src="/icons/map/listicon.svg" alt="" />
+                    </Pin>
+                    <Title>{p.name}</Title>
+                  </Item>
+                ))}
+              </List>
+            </Content>
+          </BottomContainer>
+        )}
+      </ScrollContainer>
     </Wrapper>
   );
 }
@@ -449,6 +598,8 @@ const Strip = styled.div`
   }
   scrollbar-width: none;
   -ms-overflow-style: none;
+
+  touch-action: pan-y pan-x;
 `;
 
 const Shot = styled.div`
@@ -510,5 +661,48 @@ const HeartButton = styled.button`
   img {
     width: 20px;
     height: auto;
+  }
+`;
+
+const ScrollContainer = styled.div`
+  flex: 1;
+  overflow-y: auto; /* 세로 스크롤을 이 컨테이너에서 처리 */
+
+  /* 스크롤바 숨기고 싶으면 */
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  scrollbar-width: none;
+`;
+
+const StripRow = styled.div`
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 10px;
+
+  /* 드래그 UX */
+  cursor: grab;
+  user-select: none;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+
+  /* 스냅 - 기본 ON, 드래그 중 OFF */
+  scroll-snap-type: x proximity;
+  &[data-dragging="1"] {
+    scroll-snap-type: none;
+    cursor: grabbing;
+  }
+
+  /* 스크롤바 숨김(원하면 표시로 바꿔도 됨) */
+  &::-webkit-scrollbar { display: none; }
+  scrollbar-width: none;
+
+  /* 모바일에서 세로/가로 제스처 모두 허용 (세로 스크롤 자연스럽게) */
+  touch-action: pan-y pan-x;
+
+  & > * {
+    flex: 0 0 auto;
+    scroll-snap-align: start;
   }
 `;
