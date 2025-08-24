@@ -822,6 +822,7 @@ const InfoItem = styled.div`
   }
 `;
 
+
 const LinkText = styled.a`
   color: #2b7cff;
   text-decoration: none;
