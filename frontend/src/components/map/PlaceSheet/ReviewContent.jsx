@@ -39,6 +39,36 @@ export default function ReviewContent({ place, onWriteReview, refreshKey }) {
   const [isReviewsExpanded, setIsReviewsExpanded] = useState(false);
   const [photoReviews, setPhotoReviews] = useState([]);
 
+  // ✅ 1. 팔로우/언팔로우 API를 호출하는 함수
+  const handleFollow = async (reviewNickname, reviewIndex) => {
+    try {
+      const response = await api.post("/account/follow/", null, {
+        params: { nickname: reviewNickname },
+      });
+
+      // ✅ 2. API 성공 시, 프론트엔드 상태를 즉시 업데이트
+      setReviewData((prev) => {
+        const newReviews = [...prev.reviews];
+        const targetReview = newReviews[reviewIndex];
+
+        // is_following 상태를 반전시키고, 팔로워 수를 조정
+        const isNowFollowing = !targetReview.is_following;
+        const followerAdjustment = isNowFollowing ? 1 : -1;
+
+        newReviews[reviewIndex] = {
+          ...targetReview,
+          is_following: isNowFollowing,
+          user_follower: (targetReview.user_follower || 0) + followerAdjustment,
+        };
+
+        return { ...prev, reviews: newReviews };
+      });
+    } catch (error) {
+      console.error("팔로우 처리 실패:", error);
+      alert("요청을 처리하지 못했습니다. 다시 시도해주세요.");
+    }
+  };
+
   useEffect(() => {
     // API 호출에 필요한 lat, lng가 없으면 실행하지 않음 (안전장치)
     if (!place || !place.lat || !place.lng) {
@@ -57,9 +87,18 @@ export default function ReviewContent({ place, onWriteReview, refreshKey }) {
           },
         });
 
-        // ✅ 2. 응답 데이터 전체를 state에 저장
-        setReviewData(response.data);
+        const reviewsWithFollowStatus = (response.data.reviews || []).map(
+          (r) => ({
+            ...r,
+            is_following: !!r.is_following,
+          })
+        );
 
+        // ✅ 2. 응답 데이터 전체를 state에 저장
+        setReviewData({
+          ...response.data,
+          reviews: reviewsWithFollowStatus,
+        });
         const photoRes = await api.get(`/review/photo/`, {
           params: { lat: place.lat, lng: place.lng },
         });
@@ -161,15 +200,17 @@ export default function ReviewContent({ place, onWriteReview, refreshKey }) {
           <strong>상세</strong> 리뷰
         </SectionTitle>
 
-        {displayedReviews.map((review) => (
+        {displayedReviews.map((review, index) => (
           <UserReviewItem key={review.created}>
             <ReviewHeader>
               <UserProfile>
                 <img src="/icons/map/review/usericon.png" alt="User Icon" />
                 <UserInfo>
-                  {/* nickname이 구현되면 review.nickname으로 변경 */}
                   <span>{review.nickname ?? `user_${review.user}`}</span>
-                  <small>리뷰 {review.review_count}· 팔로워 36</small>
+                  <small>
+                    리뷰 {review.user_review_count}· 팔로워{" "}
+                    {review.user_follower}
+                  </small>
                   <StarsWrapper>
                     {/* ✅ 개별 리뷰의 rating을 사용합니다. */}
                     {Array.from({ length: 5 }).map((_, i) => (
@@ -181,7 +222,12 @@ export default function ReviewContent({ place, onWriteReview, refreshKey }) {
                   </StarsWrapper>
                 </UserInfo>
               </UserProfile>
-              <FollowButton>팔로우</FollowButton>
+              <FollowButton
+                $isFollowing={review.is_following}
+                onClick={() => handleFollow(review.nickname, index)}
+              >
+                {review.is_following ? "팔로잉" : "팔로우"}
+              </FollowButton>{" "}
             </ReviewHeader>
 
             {Array.isArray(review.images) && review.images.length > 0 && (
@@ -436,7 +482,6 @@ const UserInfo = styled.div`
   flex-direction: column;
   gap: 10px;
   padding: 4px;
-  margin-right: 130px;
   span {
     font-weight: 600;
     font-size: 14px;
@@ -446,16 +491,16 @@ const UserInfo = styled.div`
     font-size: 12px;
   }
 `;
-const FollowButton = styled.button`
-  padding: 6px 12px;
-  border: 1px solid #1dc3ff;
-  color: #1dc3ff;
-  background: #fff;
-  border-radius: 16px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-`;
+// const FollowButton = styled.button`
+//   padding: 6px 12px;
+//   border: 1px solid #1dc3ff;
+//   color: #1dc3ff;
+//   background: #fff;
+//   border-radius: 16px;
+//   font-size: 12px;
+//   font-weight: 600;
+//   cursor: pointer;
+// `;
 const StarsWrapper = styled.div`
   display: flex;
   gap: 2px;
@@ -539,4 +584,18 @@ const ReviewPhoto = styled.img`
   height: 197px;
   object-fit: cover;
   border-radius: 20px;
+`;
+
+const FollowButton = styled.button`
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  border: 1px solid
+    ${({ $isFollowing }) => ($isFollowing ? "#DBDBDB" : "#1DC3FF")};
+  color: ${({ $isFollowing }) => ($isFollowing ? "#555" : "#1DC3FF")};
+  background: #fff;
 `;
