@@ -40,6 +40,8 @@ const MAP_SEARCH_ICONS = {
   },
 };
 
+const DRAG_THRESHOLD = 12;
+
 export default function CategoryChips({ onSelect, defaultActive = null }) {
   const { pathname } = useLocation();
   const pageType = pathname === "/map-search" ? "map-search" : "map";
@@ -47,10 +49,10 @@ export default function CategoryChips({ onSelect, defaultActive = null }) {
 
   const scrollerRef = useRef(null);
   const dragRef = useRef({
-    active: false,
+    tracking: false, // pointerdown 이후 움직임을 '관찰' 중인지
+    dragging: false, // 임계값을 넘겨 실제 드래그 상태인지
     startX: 0,
     scrollLeft: 0,
-    moved: false,
     pointerId: null,
   });
 
@@ -59,8 +61,8 @@ export default function CategoryChips({ onSelect, defaultActive = null }) {
   }, [defaultActive]);
 
   const handleClick = (key) => {
-    // ✅ 드래그 중이면 클릭 무시
-    if (dragRef.current.moved) return;
+    // ✅ 실제로 드래그한 상태라면 클릭 무시
+    if (dragRef.current.dragging) return;
     setActive(key);
     onSelect?.(key);
   };
@@ -69,44 +71,55 @@ export default function CategoryChips({ onSelect, defaultActive = null }) {
     const el = scrollerRef.current;
     if (!el) return;
 
-    el.setPointerCapture?.(e.pointerId);
-    dragRef.current.active = true;
-    dragRef.current.moved = false;
+    dragRef.current.tracking = true;
+    dragRef.current.dragging = false;
     dragRef.current.pointerId = e.pointerId;
     dragRef.current.startX = e.clientX;
     dragRef.current.scrollLeft = el.scrollLeft;
-
-    // UX 보조
-    document.body.style.userSelect = "none";
-    el.style.cursor = "grabbing";
   };
 
   const onPointerMove = (e) => {
-    if (!dragRef.current.active) return;
     const el = scrollerRef.current;
-    if (!el) return;
+    const d = dragRef.current;
+    if (!el || !d.tracking) return;
 
-    const dx = e.clientX - dragRef.current.startX;
-    if (Math.abs(dx) > 3) dragRef.current.moved = true;
+    const dx = e.clientX - d.startX;
 
-    // 좌우로 스크롤 이동 (반대방향으로 보정)
-    el.scrollLeft = dragRef.current.scrollLeft - dx;
+    // 아직 드래그 시작 안했고, 임계값 넘기 전: 클릭으로 간주 (아무것도 안함)
+    if (!d.dragging && Math.abs(dx) < DRAG_THRESHOLD) return;
+
+    // ✅ 여기서부터 드래그 시작!
+    if (!d.dragging) {
+      d.dragging = true;
+      el.setPointerCapture?.(d.pointerId);
+      document.body.style.userSelect = "none";
+      el.style.cursor = "grabbing";
+    }
+
+    // 좌우 스크롤 이동
+    el.scrollLeft = d.scrollLeft - dx;
   };
 
-  const onPointerUp = () => {
-    if (!dragRef.current.active) return;
-    dragRef.current.active = false;
-    dragRef.current.pointerId = null;
-
+  const endDrag = () => {
     const el = scrollerRef.current;
+    const d = dragRef.current;
+    if (!d.tracking) return;
+
+    d.tracking = false;
+
+    if (d.dragging) {
+      // 드래그 종료 후 한 프레임 뒤에 dragging 플래그 해제
+      requestAnimationFrame(() => {
+        d.dragging = false;
+      });
+    }
+
     if (el) el.style.cursor = "";
-
-    // 드래그 후 한 프레임 뒤에 moved 플래그 제거(클릭 무시 1번 보장)
-    requestAnimationFrame(() => {
-      dragRef.current.moved = false;
-    });
     document.body.style.userSelect = "";
+    d.pointerId = null;
   };
+
+  const onPointerUp = endDrag;
 
   // 전역 캡처(커서가 밖으로 나가도 추적)
   useEffect(() => {
@@ -122,6 +135,22 @@ export default function CategoryChips({ onSelect, defaultActive = null }) {
     };
   }, []);
 
+  // ✅ Windows에서 휠(세로) → 가로 스크롤로 변환 (마우스만 써도 부드럽게)
+  useEffect(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    const onWheel = (e) => {
+      // 트랙패드 수평 제스처는 건드리지 않고,
+      // 일반 휠(세로 delta)만 가로 스크롤로 바꿔줌
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+        el.scrollLeft += e.deltaY;
+        e.preventDefault();
+      }
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, []);
+
   const categories =
     pageType === "map"
       ? MAP_ICONS
@@ -133,13 +162,7 @@ export default function CategoryChips({ onSelect, defaultActive = null }) {
 
   return (
     <Wrapper>
-      <Scroller
-        ref={scrollerRef}
-        onPointerDown={onPointerDown}
-        onClick={(e) => {
-          if (dragRef.current.moved) e.preventDefault();
-        }}
-      >
+      <Scroller ref={scrollerRef} onPointerDown={onPointerDown}>
         {categories.map(({ key, label, icon }) => {
           let imgSrc = icon; // /map 용
           if (pageType === "map-search") {
@@ -195,6 +218,7 @@ const Scroller = styled.div`
   }
   cursor: grab;
   touch-action: pan-x;
+  user-select: none;
   mask-image: linear-gradient(
     to right,
     transparent 0,
