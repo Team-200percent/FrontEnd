@@ -222,7 +222,9 @@ async function fetchDynamicSections() {
       isFavorite: !!x.is_favorite,
       lat: x.lat,
       lng: x.lng,
+
       _score: typeof x.score === "number" ? x.score : 0, // PICK용
+      
     }));
 
   const sections = [];
@@ -270,6 +272,11 @@ const list = res.data?.results ?? [];
      market_id: x.market_id,      // ★ 즐겨찾기는 보통 마켓 id 기준
      market_name: x.market_name,
      market_type: x.market_type,
+     avg_rating: x.avg_rating,
+     market_review_count: x.market_review_count,
+     user_review_count: x.user_review_count,
+     user_follower: x.user_follower,
+     description: x.description,
      images: x.images,
      rating: x.rating,
      created: x.created,

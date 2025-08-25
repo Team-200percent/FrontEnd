@@ -15,14 +15,19 @@ const TAG_MAP = {
 export default function ReviewDetailSheet({ open, onClose, review }) {
   const navigate = useNavigate();
 
+  const images = Array.isArray(review?.images) ? review.images : [];
+  const tags = Array.isArray(review?.tags) ? review.tags : [];
+
   const [isFollowing, setIsFollowing] = useState(review?.is_following ?? false);
   const [followerCount, setFollowerCount] = useState(
-    review?.user_follower ?? 0
+    Number.isFinite(review?.user_follower) ? review.user_follower : 0
   );
 
   useEffect(() => {
     setIsFollowing(review?.is_following ?? false);
-    setFollowerCount(review?.user_follower ?? 0);
+    setFollowerCount(
+      Number.isFinite(review?.user_follower) ? review.user_follower : 0
+    );
   }, [review]);
 
   const handleViewDetails = () => {
@@ -49,6 +54,23 @@ export default function ReviewDetailSheet({ open, onClose, review }) {
 
   if (!open || !review) return null;
 
+  const avgRating =
+    typeof review.avg_rating === "number"
+      ? review.avg_rating.toFixed(1)
+      : "N/A";
+  const roundedRating =
+    typeof review.rating === "number"
+      ? Math.min(5, Math.max(0, Math.round(review.rating)))
+      : 0;
+
+  let createdLabel = "날짜 정보 없음";
+  if (review.created) {
+    const d = new Date(review.created);
+    createdLabel = isNaN(d.getTime())
+      ? "날짜 정보 없음"
+      : d.toLocaleDateString();
+  }
+
   return (
     <Wrapper>
       <Header>
@@ -59,10 +81,10 @@ export default function ReviewDetailSheet({ open, onClose, review }) {
 
       <ScrollContent>
         <TitleSection>
-          <MainTitle>{review.market_name}</MainTitle>
+          <MainTitle>{review.market_name ?? "가게명 없음"}</MainTitle>
           <SubInfo>
-            <span>{review.market_type}</span>
-            <span>·</span>
+            {review.market_type && <span>{review.market_type}</span>}
+            {review.market_type && <span>·</span>}
             <span>
               <img src="/icons/map/star.svg" alt="별점" />{" "}
               {review.avg_rating?.toFixed(1) ?? "N/A"}
@@ -78,10 +100,9 @@ export default function ReviewDetailSheet({ open, onClose, review }) {
             <UserProfile>
               <img src="/icons/map/review/usericon.png" alt="User Icon" />
               <UserInfo>
-                <span>{review.nickname}</span>
+                <span>{review.nickname ?? "익명의 사용자"}</span>
                 <small>
-                  리뷰 {review.user_review_count} · 팔로워{followerCount}
-                  {review.user_follower}
+                  리뷰 {review.user_review_count ?? 0} · 팔로워 {review.user_follower}
                 </small>
               </UserInfo>
             </UserProfile>
@@ -90,12 +111,14 @@ export default function ReviewDetailSheet({ open, onClose, review }) {
             </FollowButton>
           </ReviewHeader>
 
-          <PhotoGrid>
-            {review.images.map((url, idx) => (
-              <Photo key={idx} src={url} alt={`리뷰 사진 ${idx + 1}`} />
-            ))}
-            {/* 시안처럼 +3 이미지가 필요하다면 추가 구현 */}
-          </PhotoGrid>
+          {images.length > 0 && (
+            <PhotoGrid>
+              {images.map((url, idx) => (
+                <Photo key={idx} src={url} alt={`리뷰 사진 ${idx + 1}`} />
+              ))}
+              {/* 시안처럼 +3 이미지가 필요하다면 추가 구현 */}
+            </PhotoGrid>
+          )}
 
           <ReviewRating>
             {Array.from({ length: 5 }).map((_, i) => (
@@ -103,20 +126,23 @@ export default function ReviewDetailSheet({ open, onClose, review }) {
             ))}
           </ReviewRating>
 
-          <ReviewDescription>{review.description}</ReviewDescription>
+          {review.description && (
+            <ReviewDescription>{review.description}</ReviewDescription>
+          )}
 
-          <ReviewTags>
-            {review.tags.map((tagText) => (
-              <Tag key={tagText}>
-                {/* TAG_MAP에서 아이콘 경로를 찾아 <img> 태그를 추가합니다. */}
-                {TAG_MAP[tagText] && <img src={TAG_MAP[tagText]} alt="" />}
-                {tagText}
-              </Tag>
-            ))}
-          </ReviewTags>
+          {tags.length > 0 && (
+            <ReviewTags>
+              {tags.map((tagText) => (
+                <Tag key={tagText}>
+                  {TAG_MAP[tagText] && <img src={TAG_MAP[tagText]} alt="" />}
+                  {tagText}
+                </Tag>
+              ))}
+            </ReviewTags>
+          )}
 
           <ReviewMeta>
-            <span>{new Date(review.created).toLocaleDateString()}</span>
+            <span>{createdLabel}</span>
             <span>· 1번째 방문</span>
           </ReviewMeta>
         </UserReviewItem>
