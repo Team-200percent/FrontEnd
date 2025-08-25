@@ -118,7 +118,6 @@ export default function ReviewDetailSheet({ open, onClose, review }) {
           <ReviewMeta>
             <span>{new Date(review.created).toLocaleDateString()}</span>
             <span>· 1번째 방문</span>
-            <span>· 영수증 인증</span>
           </ReviewMeta>
         </UserReviewItem>
       </ScrollContent>
