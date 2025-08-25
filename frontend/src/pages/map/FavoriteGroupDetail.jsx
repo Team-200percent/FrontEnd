@@ -728,7 +728,7 @@ const Heart = styled.span`
 const TextCol = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 7px;
 `;
 
 const Primary = styled.div`
