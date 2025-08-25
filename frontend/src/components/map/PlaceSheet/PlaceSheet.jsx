@@ -130,6 +130,8 @@ export default function PlaceSheet({
     pointerId: null,
     pointerType: "mouse",
     moved: false,
+    baseTopPx: 0,
+    currentTopPx: 0,
   });
   const THRESHOLD_TOUCH = 80;
   const THRESHOLD_MOUSE = 24;
@@ -156,6 +158,12 @@ export default function PlaceSheet({
       pointerId: e.pointerId,
       pointerType: e.pointerType || "mouse",
       moved: false,
+      baseTopPx: sheetRef.current
+        ? sheetRef.current.getBoundingClientRect().top
+        : 0,
+      currentTopPx: sheetRef.current
+        ? sheetRef.current.getBoundingClientRect().top
+        : 0,
     };
     e.currentTarget.setPointerCapture?.(e.pointerId);
     document.body.style.userSelect = "none"; // 드래그 중 텍스트 선택 방지
@@ -167,17 +175,18 @@ export default function PlaceSheet({
     drag.current.delta = raw;
     drag.current.moved = true;
 
+    const vh = window.innerHeight || 800;
     if (viewMode === "compact") {
-      if (raw < 0) {
-        // 위로 끌기(확장 제스처)
-        applyTranslate(raw);
-      } else {
-        // 아래로 끌기(닫기 제스처)
-        applyTranslate(raw);
-      }
+      // 시작점(top: baseTopPx)에서 위/아래로 이동
+      // 위로는 0(화면 최상단)까지, 아래로는 적당히 제한
+      const next = Math.min(Math.max(0, drag.current.baseTopPx + raw), vh - 80);
+      drag.current.currentTopPx = next;
+      setTopPx(next);
     } else {
-      const down = Math.max(0, raw); // 아래로만
-      applyTranslate(down);
+      // expanded 상태: 아래로만 끌어 내리기
+      const next = Math.min(Math.max(0, raw), vh * 0.8);
+      drag.current.currentTopPx = next;
+      setTopPx(next);
     }
   };
 
@@ -196,6 +205,31 @@ export default function PlaceSheet({
     }
   };
 
+  const setTopPx = (px) => {
+    const el = sheetRef.current;
+    if (!el) return;
+    el.style.top = `${px}px`;
+  };
+
+  const snapTop = (targetPx, ms = 200) => {
+    const el = sheetRef.current;
+    if (!el) return;
+    const prev = el.style.transition;
+    el.style.transition = `top ${ms}ms ease-out`;
+    requestAnimationFrame(() => {
+      setTopPx(targetPx);
+      setTimeout(() => {
+        el.style.transition = prev;
+      }, ms + 20);
+    });
+  };
+
+  const clearInlineTop = () => {
+    const el = sheetRef.current;
+    if (!el) return;
+    el.style.top = ""; // CSS에서 정의한 top(65% or 0) 다시 적용
+  };
+
   // 전역 포인터 업/무브로 스냅/확장 처리
   useEffect(() => {
     const move = (e) => onPointerMove(e);
@@ -207,11 +241,42 @@ export default function PlaceSheet({
           ? THRESHOLD_MOUSE
           : THRESHOLD_TOUCH;
 
+      const from = drag.current.baseTopPx;
+      const to = drag.current.currentTopPx;
+      const movedUp = from - to; // 위로 양수
+      const movedDown = to - from; // 아래로 양수
+
       if (viewMode === "compact") {
-        if (-d > threshold) handleExpand();
-        else if (d > threshold) onClose(); // 👈 아래로 끌면 닫기
+        if (movedUp > threshold) {
+          // 위로 충분히 끌었으면 → expanded
+          // 우선 inline top 제거하고(=CSS top 65% 복귀) 바로 모드 전환으로 top 0 애니메이션
+          clearInlineTop();
+          onViewModeChange("expanded");
+          // 상세조회는 그대로 실행
+          handleExpand();
+        } else if (movedDown > threshold) {
+          // 아래로 충분히 끌면 닫기
+          // 원래 위치로 스냅 후 닫기
+          snapTop(from, 180);
+          setTimeout(() => {
+            clearInlineTop();
+            onClose();
+          }, 200);
+        } else {
+          // 변화가 작으면 원래 자리로 스냅
+          snapTop(from, 160);
+          setTimeout(() => clearInlineTop(), 180);
+        }
       } else {
-        if (d > threshold) onViewModeChange("compact");
+        // expanded 상태: 아래로 충분히 끌면 compact로
+        if (movedDown > threshold) {
+          clearInlineTop();
+          onViewModeChange("compact");
+        } else {
+          // 돌아가기
+          snapTop(0, 160);
+          setTimeout(() => clearInlineTop(), 180);
+        }
       }
       endDrag();
     };
@@ -363,7 +428,6 @@ export default function PlaceSheet({
             >
               리뷰
             </Tab>
-            
           </TabNav>
           {activeTab === "home" && (
             <InfoList>
@@ -485,7 +549,7 @@ const SheetContainer = styled.div`
   background: #fff;
   z-index: 1001;
   box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.1);
-  will-change: top, height, transform;
+  will-change: top, height;
   transition: top 0.3s ease-out, height 0.3s ease-out,
     border-radius 0.3s ease-out;
 
@@ -818,7 +882,6 @@ const InfoItem = styled.div`
   }
 `;
 
-
 const LinkText = styled.a`
   color: #2b7cff;
   text-decoration: none;
@@ -841,6 +904,6 @@ const Photo = styled.img`
 `;
 
 const PlainText = styled.span`
-  color: #000;   /* 검은 글씨 */
+  color: #000; /* 검은 글씨 */
   font-size: 15px;
 `;
