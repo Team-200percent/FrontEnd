@@ -58,7 +58,7 @@ AI 기반 로컬 큐레이션 서비스
 ---
 
 ## 🛠️ Tech Stack
-- **Frontend** : React, styled-components, TailwindCSS, React Router  
+- **Frontend** : React, styled-components, Recoil, React Router, Vite
 - **Backend** : Django REST Framework, JWT 인증  
 - **Infra** : AWS, Docker, Netlify, Cloudflare  
 - **Database** : PostgreSQL  
