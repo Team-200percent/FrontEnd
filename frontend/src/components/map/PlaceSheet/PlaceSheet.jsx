@@ -5,6 +5,136 @@ import ReviewContent from "./ReviewContent";
 import WriteReview from "../../../pages/map/WriteReview";
 import api from "../../../lib/api";
 
+function useDragScroll() {
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    let dragging = false;
+    let startX = 0;
+    let startScroll = 0;
+    let moved = false;
+    let v = 0; // px/ms
+    let lastX = 0;
+    let lastT = 0;
+    let raf = 0;
+
+    const onDown = (e) => {
+      // 스크롤 여지가 없으면 무시
+      if (el.scrollWidth <= el.clientWidth) return;
+
+      // 기본 제스처(텍스트 선택/이미지 드래그/터치 스크롤) 차단
+      e.preventDefault();
+
+      dragging = true;
+      el.setPointerCapture?.(e.pointerId);
+
+      startX = e.clientX;
+      startScroll = el.scrollLeft;
+      moved = false;
+      lastX = e.clientX;
+      lastT = performance.now();
+      v = 0;
+
+      // UX
+      document.body.style.userSelect = "none";
+      document.body.style.cursor = "grabbing";
+      // 이동/업을 el 자체에서 받습니다 (window X)
+      el.addEventListener("pointermove", onMove, { passive: false });
+      el.addEventListener("pointerup", onUp, { passive: false });
+      el.addEventListener("pointercancel", onUp, { passive: false });
+    };
+
+    const onMove = (e) => {
+      if (!dragging) return;
+      e.preventDefault();
+
+      const dx = e.clientX - startX;
+      if (Math.abs(dx) > 4) moved = true;
+
+      const now = performance.now();
+      const dt = now - lastT || 16;
+      v = (e.clientX - lastX) / dt; // px/ms
+      lastX = e.clientX;
+      lastT = now;
+
+      if (!raf) {
+        raf = requestAnimationFrame(() => {
+          raf = 0;
+          el.scrollLeft = startScroll - dx;
+        });
+      }
+    };
+
+    const onUp = () => {
+      if (!dragging) return;
+      dragging = false;
+
+      try {
+        el.releasePointerCapture?.();
+      } catch {}
+
+      el.removeEventListener("pointermove", onMove);
+      el.removeEventListener("pointerup", onUp);
+      el.removeEventListener("pointercancel", onUp);
+
+      // 관성(플링)
+      let vel = v * 16; // px/frame
+      const friction = 0.92;
+      const fling = () => {
+        if (Math.abs(vel) < 0.3) {
+          document.body.style.userSelect = "";
+          document.body.style.cursor = "";
+          return;
+        }
+        el.scrollLeft -= vel;
+        vel *= friction;
+        requestAnimationFrame(fling);
+      };
+
+      if (moved) fling();
+      else {
+        document.body.style.userSelect = "";
+        document.body.style.cursor = "";
+      }
+    };
+
+    const onWheel = (e) => {
+      const canScrollX = el.scrollWidth > el.clientWidth;
+      if (!canScrollX) return;
+      // 세로 휠을 가로로 변환(트랙패드/Shift 지원)
+      const absX = Math.abs(e.deltaX);
+      const absY = Math.abs(e.deltaY);
+      if (absX > absY || e.shiftKey) {
+        el.scrollLeft += absX ? e.deltaX : e.deltaY;
+        e.preventDefault();
+      }
+    };
+
+    const blockDragStart = (e) => e.preventDefault();
+
+    el.addEventListener("pointerdown", onDown, { passive: false });
+    el.addEventListener("wheel", onWheel, { passive: false });
+    el.addEventListener("dragstart", blockDragStart);
+
+    // iOS/안드로이드 제스처 힌트
+    el.style.touchAction = "pan-x";
+
+    return () => {
+      el.removeEventListener("pointerdown", onDown);
+      el.removeEventListener("wheel", onWheel);
+      el.removeEventListener("dragstart", blockDragStart);
+      el.removeEventListener("pointermove", onMove);
+      el.removeEventListener("pointerup", onUp);
+      el.removeEventListener("pointercancel", onUp);
+    };
+  }, []);
+
+  return ref;
+}
+
 const LoadingSpinner = () => <Spinner>Loading...</Spinner>;
 
 export default function PlaceSheet({
@@ -23,6 +153,47 @@ export default function PlaceSheet({
   const [reviewsVersion, setReviewsVersion] = useState(0);
   const [activeTab, setActiveTab] = useState("home");
   const sheetRef = useRef(null);
+  const railRef = useDragScroll();
+
+  // --- 사진 레일 자동 스크롤 제어 ---
+  const scrollRaf = useRef(0);
+  const autoDir = useRef(0); // 1: 오른쪽, -1: 왼쪽(필요 시)
+
+  const tickAutoScroll = () => {
+    const el = railRef.current;
+    if (!el) return stopAutoScroll();
+    // 끝에 다다르면 멈춤
+    if (
+      autoDir.current > 0 &&
+      el.scrollLeft + el.clientWidth >= el.scrollWidth - 1
+    ) {
+      return stopAutoScroll();
+    }
+    if (autoDir.current < 0 && el.scrollLeft <= 0) {
+      return stopAutoScroll();
+    }
+    el.scrollLeft += 8 * autoDir.current; // 프레임당 8px (원하면 조절)
+    scrollRaf.current = requestAnimationFrame(tickAutoScroll);
+  };
+
+  const startAutoScrollRight = () => {
+    if (scrollRaf.current) cancelAnimationFrame(scrollRaf.current);
+    autoDir.current = 1;
+    scrollRaf.current = requestAnimationFrame(tickAutoScroll);
+  };
+
+  const stopAutoScroll = () => {
+    if (scrollRaf.current) cancelAnimationFrame(scrollRaf.current);
+    scrollRaf.current = 0;
+    autoDir.current = 0;
+  };
+
+  // 버튼 탭(클릭) 시 살짝만 이동
+  const nudgeRight = () => {
+    const el = railRef.current;
+    if (!el) return;
+    el.scrollBy({ left: Math.min(240, el.scrollWidth), behavior: "smooth" });
+  };
 
   const handleReviewSubmitted = () => {
     setIsWritingReview(false);
@@ -188,6 +359,18 @@ export default function PlaceSheet({
       drag.current.currentTopPx = next;
       setTopPx(next);
     }
+  };
+
+  const startAutoScrollLeft = () => {
+    if (scrollRaf.current) cancelAnimationFrame(scrollRaf.current);
+    autoDir.current = -1;
+    scrollRaf.current = requestAnimationFrame(tickAutoScroll);
+  };
+
+  const nudgeLeft = () => {
+    const el = railRef.current;
+    if (!el) return;
+    el.scrollBy({ left: -240, behavior: "smooth" });
   };
 
   // 클릭-투-토글: 거의 움직이지 않았으면 토글 처리
@@ -388,26 +571,52 @@ export default function PlaceSheet({
             </SubInfo>
           </TitleSection>
 
-          <PhotoSection>
-            {Array.isArray(place?.images) && place.images.length > 0 ? (
-              place.images.map((img) => {
-                const src = img.url || img.image_url; // 혹시 기존 형식도 들어오면 호환
-                return (
-                  <Photo
-                    key={img.id ?? src}
-                    src={src}
-                    alt={place?.name ?? "사진"}
-                  />
-                );
-              })
-            ) : (
-              <>
-                <PlaceholderPhoto />
-                <PlaceholderPhoto />
-                <PlaceholderPhoto />
-              </>
-            )}
-          </PhotoSection>
+          <PhotoRailWrap>
+            <PhotoRail ref={railRef} onPointerDown={(e) => e.stopPropagation()}>
+              {Array.isArray(place?.images) && place.images.length > 0 ? (
+                place.images.map((img) => {
+                  const src = img.url || img.image_url; // 혹시 기존 형식도 들어오면 호환
+                  return (
+                    <Photo
+                      key={img.id ?? src}
+                      src={src}
+                      alt={place?.name ?? "사진"}
+                    />
+                  );
+                })
+              ) : (
+                <>
+                  <PlaceholderPhoto />
+                  <PlaceholderPhoto />
+                  <PlaceholderPhoto />
+                </>
+              )}
+            </PhotoRail>
+
+            {/* 왼쪽 버튼 */}
+            <LeftScrollHotspot
+              onMouseDown={startAutoScrollLeft}
+              onTouchStart={startAutoScrollLeft}
+              onMouseUp={stopAutoScroll}
+              onMouseLeave={stopAutoScroll}
+              onTouchEnd={stopAutoScroll}
+              onClick={nudgeLeft}
+            >
+              ‹
+            </LeftScrollHotspot>
+
+            {/* 오른쪽 버튼 */}
+            <RightScrollHotspot
+              onMouseDown={startAutoScrollRight}
+              onTouchStart={startAutoScrollRight}
+              onMouseUp={stopAutoScroll}
+              onMouseLeave={stopAutoScroll}
+              onTouchEnd={stopAutoScroll}
+              onClick={nudgeRight}
+            >
+              ›
+            </RightScrollHotspot>
+          </PhotoRailWrap>
 
           <TabNav>
             <Tab
@@ -416,12 +625,7 @@ export default function PlaceSheet({
             >
               홈
             </Tab>
-            {/* <Tab
-            $active={activeTab === "menu"}
-            onClick={() => onTabClick("menu")}
-          >
-            메뉴
-          </Tab> */}
+
             <Tab
               $active={activeTab === "review"}
               onClick={() => onTabClick("review")}
@@ -894,16 +1098,90 @@ const Spinner = styled.div`
   height: 100%;
 `;
 
-const Photo = styled.img`
+const PlainText = styled.span`
+  color: #000; /* 검은 글씨 */
+  font-size: 15px;
+`;
+
+const PhotoRail = styled.div`
+  display: flex;
+  gap: 8px;
+  padding: 0 0 30px 30px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  touch-action: pan-x; /* 터치 제스처 */
+  user-select: none; /* 텍스트 선택 방지 */
+  cursor: grab;
+  &:active {
+    cursor: grabbing;
+  }
+
+  /* 스크롤바 한 줄 */
+  scrollbar-width: thin;
+  scrollbar-color: #c9d4df transparent;
+  &::-webkit-scrollbar {
+    height: 8px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #c9d4df;
+    border-radius: 8px;
+  }
+`;
+
+const Photo = styled.img.attrs({ draggable: false })`
   flex-shrink: 0;
   width: 197px;
   height: 197px;
   object-fit: cover;
   border-radius: 12px;
   background: #f0f2f5;
+
+  /* 드래그 시작을 레일이 받도록(클릭 필요 없으면 유지 권장) */
+  pointer-events: none;
 `;
 
-const PlainText = styled.span`
-  color: #000; /* 검은 글씨 */
-  font-size: 15px;
+const PhotoRailWrap = styled.div`
+  position: relative;
+  /* 레이아웃은 기존 간격에 맞춰 그대로 */
+`;
+
+const ScrollHotspot = styled.button`
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.35); /* 회색 투명 원 */
+  color: #fff;
+  font-size: 20px;
+  font-weight: bold;
+  cursor: pointer;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.5);
+  }
+  &:active {
+    transform: translateY(-50%) scale(0.92); /* 눌릴 때 작아짐 */
+  }
+`;
+
+const LeftScrollHotspot = styled(ScrollHotspot)`
+  left: 30px;
+  top: 100px;
+  font-size: 40px;
+`;
+
+const RightScrollHotspot = styled(ScrollHotspot)`
+  right: 10px;
+  top: 100px;
+  font-size: 40px;
 `;
