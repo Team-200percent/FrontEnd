@@ -170,7 +170,7 @@ export default function PlaceSheet({
     if (viewMode === "compact") {
       if (raw < 0) {
         // 위로 끌기(확장 제스처)
-        applyTranslate(Math.abs(raw));
+        applyTranslate(raw);
       } else {
         // 아래로 끌기(닫기 제스처)
         applyTranslate(raw);
@@ -485,7 +485,7 @@ const SheetContainer = styled.div`
   background: #fff;
   z-index: 1001;
   box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.1);
-  will-change: top, height;
+  will-change: top, height, transform;
   transition: top 0.3s ease-out, height 0.3s ease-out,
     border-radius 0.3s ease-out;
 
@@ -512,6 +512,7 @@ const HandleBar = styled.div`
   border-radius: 2px;
   margin: 8px auto;
   cursor: grab;
+  touch-action: none;
 `;
 
 // Compact View 스타일
