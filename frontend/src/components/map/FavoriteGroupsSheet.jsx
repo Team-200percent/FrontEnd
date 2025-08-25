@@ -5,6 +5,7 @@ import FavoriteGroupDetail from "../../pages/map/FavoriteGroupDetail";
 import api from "../../lib/api";
 
 export default function FavoriteGroupsSheet({ open, onClose, onCloseAll }) {
+  const abortedRef = useRef(false);
   const sheetRef = useRef(null);
   const dragRef = useRef({
     active: false,
@@ -91,11 +92,11 @@ export default function FavoriteGroupsSheet({ open, onClose, onCloseAll }) {
       setCounts({});
       return;
     }
-    let aborted = false;
 
+    abortedRef.current = false;
     fetchCounts();
     return () => {
-      aborted = true;
+      abortedRef.current = true;
     };
   }, [open, groups]);
 
@@ -128,18 +129,14 @@ export default function FavoriteGroupsSheet({ open, onClose, onCloseAll }) {
     }
   };
 
-  // ✅ 2. 시트가 열릴 때 이 함수를 호출합니다.
-
   const handleGroupUpdated = (updatedGroup) => {
-    // 3. 로컬 상태를 즉시 업데이트하여 빠른 UX 제공
+    // 로컬 상태를 즉시 업데이트하여 빠른 UX 제공
     setGroups((prev) =>
       prev.map((g) =>
         g.id === updatedGroup.id ? { ...g, ...updatedGroup } : g
       )
     );
-
-    // ✅ 4. (선택적이지만 권장) 서버로부터 전체 목록을 다시 불러와 완벽하게 동기화
-    // fetchGroupsAndCounts();
+    fetchGroupsAndCounts();
   };
 
   const fetchCounts = async () => {
@@ -163,9 +160,9 @@ export default function FavoriteGroupsSheet({ open, onClose, onCloseAll }) {
         }
       });
 
-      if (!aborted) setCounts(map);
+      if (!abortedRef.current) setCounts(map);
     } catch (err) {
-      if (!aborted) console.error("count 로딩 실패:", err);
+      if (!abortedRef.current) console.error("count 로딩 실패:", err);
     }
   };
 
@@ -300,8 +297,6 @@ export default function FavoriteGroupsSheet({ open, onClose, onCloseAll }) {
     setConfirmOpen(false);
     setPendingDelete(null);
   };
-
-
 
   if (!open) return null; // open이 false면 아무것도 렌더링하지 않음
 
