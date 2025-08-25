@@ -85,10 +85,8 @@ export default function ReviewDetailSheet({ open, onClose, review }) {
           <SubInfo>
             {review.market_type && <span>{review.market_type}</span>}
             {review.market_type && <span>·</span>}
-            <span>
-              <img src="/icons/map/star.svg" alt="별점" />{" "}
-              {review.avg_rating?.toFixed(1) ?? "N/A"}
-            </span>
+            <img src="/icons/map/star.svg" alt="별점" />{" "}
+            <b>{review.avg_rating?.toFixed(1) ?? "N/A"}</b>
             <span>·</span>
             <span>리뷰 {review.market_review_count ?? "0"}</span>
           </SubInfo>
@@ -102,7 +100,8 @@ export default function ReviewDetailSheet({ open, onClose, review }) {
               <UserInfo>
                 <span>{review.nickname ?? "익명의 사용자"}</span>
                 <small>
-                  리뷰 {review.user_review_count ?? 0} · 팔로워 {review.user_follower}
+                  리뷰 {review.user_review_count ?? 0} · 팔로워{" "}
+                  {review.user_follower}
                 </small>
               </UserInfo>
             </UserProfile>
@@ -170,6 +169,7 @@ const Wrapper = styled.div`
 `;
 
 const Header = styled.header`
+  margin-top: 5%;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -195,6 +195,7 @@ const HeaderBtn = styled.button`
   place-items: center;
   img {
     height: 20px;
+    margin-left: 7px;
   }
 `;
 
@@ -266,7 +267,7 @@ const UserProfile = styled.div`
 const UserInfo = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 6px;
   span {
     font-weight: 700;
     font-size: 15px;
@@ -345,6 +346,6 @@ const ReviewMeta = styled.div`
   display: flex;
   justify-content: end;
   gap: 4px;
-  font-size: 9px;
+  font-size: 12px;
   color: #888;
 `;
