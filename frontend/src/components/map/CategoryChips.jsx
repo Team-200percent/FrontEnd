@@ -1,5 +1,5 @@
 import styled from "styled-components";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 
 // /map 페이지 아이콘 (단일 버전)
@@ -45,14 +45,82 @@ export default function CategoryChips({ onSelect, defaultActive = null }) {
   const pageType = pathname === "/map-search" ? "map-search" : "map";
   const [active, setActive] = useState(defaultActive);
 
+  const scrollerRef = useRef(null);
+  const dragRef = useRef({
+    active: false,
+    startX: 0,
+    scrollLeft: 0,
+    moved: false,
+    pointerId: null,
+  });
+
   useEffect(() => {
     setActive(defaultActive);
   }, [defaultActive]);
 
   const handleClick = (key) => {
+    // ✅ 드래그 중이면 클릭 무시
+    if (dragRef.current.moved) return;
     setActive(key);
     onSelect?.(key);
   };
+
+  const onPointerDown = (e) => {
+    const el = scrollerRef.current;
+    if (!el) return;
+
+    el.setPointerCapture?.(e.pointerId);
+    dragRef.current.active = true;
+    dragRef.current.moved = false;
+    dragRef.current.pointerId = e.pointerId;
+    dragRef.current.startX = e.clientX;
+    dragRef.current.scrollLeft = el.scrollLeft;
+
+    // UX 보조
+    document.body.style.userSelect = "none";
+    el.style.cursor = "grabbing";
+  };
+
+  const onPointerMove = (e) => {
+    if (!dragRef.current.active) return;
+    const el = scrollerRef.current;
+    if (!el) return;
+
+    const dx = e.clientX - dragRef.current.startX;
+    if (Math.abs(dx) > 3) dragRef.current.moved = true;
+
+    // 좌우로 스크롤 이동 (반대방향으로 보정)
+    el.scrollLeft = dragRef.current.scrollLeft - dx;
+  };
+
+  const onPointerUp = () => {
+    if (!dragRef.current.active) return;
+    dragRef.current.active = false;
+    dragRef.current.pointerId = null;
+
+    const el = scrollerRef.current;
+    if (el) el.style.cursor = "";
+
+    // 드래그 후 한 프레임 뒤에 moved 플래그 제거(클릭 무시 1번 보장)
+    requestAnimationFrame(() => {
+      dragRef.current.moved = false;
+    });
+    document.body.style.userSelect = "";
+  };
+
+  // 전역 캡처(커서가 밖으로 나가도 추적)
+  useEffect(() => {
+    const move = (e) => onPointerMove(e);
+    const up = () => onPointerUp();
+    window.addEventListener("pointermove", move, { passive: true });
+    window.addEventListener("pointerup", up, { passive: true });
+    window.addEventListener("pointercancel", up, { passive: true });
+    return () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+    };
+  }, []);
 
   const categories =
     pageType === "map"
@@ -65,7 +133,13 @@ export default function CategoryChips({ onSelect, defaultActive = null }) {
 
   return (
     <Wrapper>
-      <Scroller>
+      <Scroller
+        ref={scrollerRef}
+        onPointerDown={onPointerDown}
+        onClick={(e) => {
+          if (dragRef.current.moved) e.preventDefault();
+        }}
+      >
         {categories.map(({ key, label, icon }) => {
           let imgSrc = icon; // /map 용
           if (pageType === "map-search") {
@@ -84,7 +158,7 @@ export default function CategoryChips({ onSelect, defaultActive = null }) {
               onClick={() => handleClick(key)}
             >
               <IconBox>
-                <img src={imgSrc} alt="" />
+                <img src={imgSrc} alt="" draggable={false} />
               </IconBox>
               <span>{label}</span>
             </Chip>
@@ -119,6 +193,8 @@ const Scroller = styled.div`
   &::-webkit-scrollbar {
     display: none;
   }
+  cursor: grab;
+  touch-action: pan-x;
   mask-image: linear-gradient(
     to right,
     transparent 0,
