@@ -157,7 +157,6 @@ export default function Map() {
     if (!q) return;
 
     try {
-      // ✅ SDK 준비 보장
       await ensureKakaoReady();
 
       const response = await api.get("/market/search/", {
@@ -168,6 +167,64 @@ export default function Map() {
         alert("검색 결과가 없습니다.");
         return;
       }
+
+      const openSheetWith = (lat, lng) => {
+      const pos = new window.kakao.maps.LatLng(lat, lng);
+
+      // 지도 이동/레벨
+      mapRef.current.setLevel(3);
+      mapRef.current.setCenter(pos);
+
+      // 마커
+      if (!searchMarkerRef.current) {
+        const markerImage = new window.kakao.maps.MarkerImage(
+          "data:image/svg+xml;base64," +
+            btoa(`
+              <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30">
+                <circle cx="15" cy="15" r="10" fill="#ff7b33" stroke="white" stroke-width="3"/>
+              </svg>
+            `),
+          new window.kakao.maps.Size(30, 30),
+          { offset: new window.kakao.maps.Point(15, 15) }
+        );
+        searchMarkerRef.current = new window.kakao.maps.Marker({
+          position: pos,
+          image: markerImage,
+          zIndex: 12,
+        });
+        searchMarkerRef.current.setMap(mapRef.current);
+      } else {
+        searchMarkerRef.current.setPosition(pos);
+        searchMarkerRef.current.setMap(mapRef.current);
+      }
+
+      // 라벨
+      if (searchLabelRef.current) searchLabelRef.current.setMap(null);
+      showSearchLabel(preload.name, pos);
+
+      // 시트 오픈용 데이터
+      setSelectedPlace({
+        name: preload.name,
+        address: preload.address,
+        category: preload.category,
+        rating: preload.avg_rating,
+        reviewCount: preload.review_count,
+        isOpen: preload.is_open,
+        isFavorite: preload.is_favorite,
+        lat,
+        lng,
+        images: preload.images ?? [],
+        hours: preload.business_hours,
+      });
+      setIsPlaceSheetOpen(true);
+      setSheetViewMode("compact");
+    };
+
+    // 1) lat/lng가 있으면 우선 사용
+    if (Number.isFinite(preload.lat) && Number.isFinite(preload.lng)) {
+      openSheetWith(preload.lat, preload.lng);
+      return;
+    }
 
       if (!window.kakao.maps.services?.Geocoder) {
         console.error(
@@ -181,57 +238,27 @@ export default function Map() {
         if (status === window.kakao.maps.services.Status.OK && result[0]) {
           const lat = parseFloat(result[0].y);
           const lng = parseFloat(result[0].x);
-          const pos = new window.kakao.maps.LatLng(lat, lng);
-
-          mapRef.current.setLevel(3);
-          mapRef.current.setCenter(pos);
-
-          if (!searchMarkerRef.current) {
-            // 노란 원 마커 스타일 정의
-            const markerImage = new window.kakao.maps.MarkerImage(
-              "data:image/svg+xml;base64," +
-                btoa(`
-        <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30">
-          <circle cx="15" cy="15" r="10" fill="#ff7b33" stroke="white" stroke-width="3"/>
-        </svg>
-      `),
-              new window.kakao.maps.Size(30, 30), // 마커 크기
-              { offset: new window.kakao.maps.Point(15, 15) } // 중심점
-            );
-
-            searchMarkerRef.current = new window.kakao.maps.Marker({
-              position: pos,
-              image: markerImage, // ✅ 여기서 이미지 지정
-              zIndex: 12,
-            });
-            searchMarkerRef.current.setMap(mapRef.current);
+          openSheetWith(lat, lng);
           } else {
-            searchMarkerRef.current.setPosition(pos);
-          }
-
-          if (searchLabelRef.current) {
-            searchLabelRef.current.setMap(null); // 이전 라벨 제거
-          }
-
-          showSearchLabel(preload.name, pos);
-
-          setSelectedPlace({
-            name: preload.name,
-            address: preload.address,
-            category: preload.category,
-            rating: preload.avg_rating,
-            reviewCount: preload.review_count,
-            isOpen: preload.is_open,
-            isFavorite: preload.is_favorite, // ✅ 중요
-            lat: preload.lat,
-            lng: preload.lng,
-            images: preload.images ?? [],
-            hours: preload.business_hours,
-          });
-          setIsPlaceSheetOpen(true);
-          setSheetViewMode("compact");
-        }
-      });
+        // 3) 지오코딩 실패해도 시트는 열기
+        console.warn("Geocoding failed:", status, preload.address);
+        setSelectedPlace({
+          name: preload.name,
+          address: preload.address,
+          category: preload.category,
+          rating: preload.avg_rating,
+          reviewCount: preload.review_count,
+          isOpen: preload.is_open,
+          isFavorite: preload.is_favorite,
+          lat: undefined,
+          lng: undefined,
+          images: preload.images ?? [],
+          hours: preload.business_hours,
+        });
+        setIsPlaceSheetOpen(true);
+        setSheetViewMode("compact");
+      }
+    });
     } catch (err) {
       console.error("검색 실패:", err);
     }
