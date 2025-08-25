@@ -147,7 +147,6 @@ function MediaStrip({ images = [] }) {
     .filter(Boolean);
 
   const ref = useRef(null);
-  
 
   // 사진이 없으면 컨테이너 자체를 렌더하지 않음
   if (urls.length === 0) return null;
@@ -181,8 +180,6 @@ function MediaStrip({ images = [] }) {
   );
 }
 
-
-
 export default function MapSearch() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -202,6 +199,8 @@ export default function MapSearch() {
 
   const [recentList, setRecentList] = useState([]);
   const [isLoadingRecent, setIsLoadingRecent] = useState(false);
+
+  const [visibleCount, setVisibleCount] = useState(10);
 
   // 최근 검색 저장
   const saveHistory = async ({ lat, lng }) => {
@@ -313,6 +312,10 @@ export default function MapSearch() {
     };
   }, [keyword, activeCategory]);
 
+  useEffect(() => {
+    setVisibleCount(10);
+  }, [activeCategory, keyword]);
+
   const handleLikeClick = (item) => {
     setPlaceForGroup({
       id: item.id,
@@ -376,70 +379,83 @@ export default function MapSearch() {
       )}
 
       <ScrollContainer>
-        {(activeCategory || keyword.trim()) ? (
+        {activeCategory || keyword.trim() ? (
           <ResultsContainer>
             {isLoading ? (
               <p>검색 중...</p>
             ) : searchResults.length > 0 ? (
-              <ResultList>
-                {searchResults.map((item, index) => (
-                  <ResultItem
-                    key={index}
-                    onClick={async () => {
-                      // 서버에 최근 검색 저장 (lat/lng 필요)
-                      if (item.lat != null && item.lng != null) {
-                        await saveHistory({ lat: item.lat, lng: item.lng });
-                        // 최신 목록 갱신(선택)
-                        fetchRecent();
-                      }
-                      onSubmit(item.name); // ← 기존 네비게이션 그대로
-                    }}
-                  >
-                    <ItemHeader>
-                      <div>
-                        <ItemTitle>
-                          {item.name}&nbsp;<strong>{item.category}</strong>
-                        </ItemTitle>
-                      </div>
-                      <HeartButton
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          e.preventDefault();
-                          handleLikeClick(item);
-                        }}
-                      >
-                        <img
-                          src={
-                            item.isFavorite
-                              ? "/icons/map/expanded-heart-on.png"
-                              : "/icons/map/expanded-heart-off.png"
-                          }
-                          alt="관심 장소 추가"
-                        />
-                      </HeartButton>
-                    </ItemHeader>
-                    <ItemStats>
-                      <Status $isOpen={item.is_open}>
-                        {item.is_open ? "영업 중" : "영업종료"}
-                        <b>·</b>
-                      </Status>
+              <>
+                <ResultList>
+                  {searchResults.slice(0, visibleCount).map((item, index) => (
+                    <ResultItem
+                      key={index}
+                      onClick={async () => {
+                        // 서버에 최근 검색 저장 (lat/lng 필요)
+                        if (item.lat != null && item.lng != null) {
+                          await saveHistory({ lat: item.lat, lng: item.lng });
+                          // 최신 목록 갱신(선택)
+                          fetchRecent();
+                        }
+                        onSubmit(item.name); // ← 기존 네비게이션 그대로
+                      }}
+                    >
+                      <ItemHeader>
+                        <div>
+                          <ItemTitle>
+                            {item.name}&nbsp;<strong>{item.category}</strong>
+                          </ItemTitle>
+                        </div>
+                        <HeartButton
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            handleLikeClick(item);
+                          }}
+                        >
+                          <img
+                            src={
+                              item.isFavorite
+                                ? "/icons/map/expanded-heart-on.png"
+                                : "/icons/map/expanded-heart-off.png"
+                            }
+                            alt="관심 장소 추가"
+                          />
+                        </HeartButton>
+                      </ItemHeader>
+                      <ItemStats>
+                        <Status $isOpen={item.is_open}>
+                          {item.is_open ? "영업 중" : "영업종료"}
+                          <b>·</b>
+                        </Status>
 
-                      <span>
-                        <img src="/icons/map/star.svg" alt="평점" />{" "}
-                        {item.avg_rating?.toFixed?.(1) ?? "N/A"}
-                        <b>·</b>
-                      </span>
+                        <span>
+                          <img src="/icons/map/star.svg" alt="평점" />{" "}
+                          {item.avg_rating?.toFixed?.(1) ?? "N/A"}
+                          <b>·</b>
+                        </span>
 
-                      <span>
-                        <strong>리뷰 {item.review_count}</strong>{" "}
-                      </span>
-                    </ItemStats>
+                        <span>
+                          <strong>리뷰 {item.review_count}</strong>{" "}
+                        </span>
+                      </ItemStats>
 
-                    {/* ✅ 사진이 하나도 없으면 MediaStrip이 렌더되지 않음 */}
-                    <MediaStrip images={item.images} />
-                  </ResultItem>
-                ))}
-              </ResultList>
+                      {/* ✅ 사진이 하나도 없으면 MediaStrip이 렌더되지 않음 */}
+                      <MediaStrip images={item.images} />
+                    </ResultItem>
+                  ))}
+                </ResultList>
+
+                {visibleCount < searchResults.length && (
+                  <BtnWrap>
+                    <LoadMoreButton
+                      onClick={() => setVisibleCount((prev) => prev + 10)}
+                    >
+                      <img src="/icons/map/loadmorebutton.png" alt="더보기" />
+                    </LoadMoreButton>
+                    <Divider />
+                  </BtnWrap>
+                )}
+              </>
             ) : (
               <p>검색 결과가 없습니다.</p>
             )}
@@ -615,7 +631,7 @@ const ItemStats = styled.div`
 
 const Status = styled.span`
   font-weight: 600;
-  color: #E33150;
+  color: #e33150;
 `;
 
 const ResultItem = styled.div`
@@ -766,4 +782,36 @@ const StripRow = styled.div`
     flex: 0 0 auto;
     scroll-snap-align: start;
   }
+`;
+
+const LoadMoreButton = styled.button`
+  display: flex;
+  justify-content: center;
+  margin: 0 auto;
+  width: 10%;
+  padding: 14px;
+  margin-top: 16px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  z-index: 2001;
+  img {
+    width: 30px;
+    margin: 0 auto;
+  }
+`;
+
+const Divider = styled.div`
+  position: relative;
+  width: 100%;
+  top: -30px;
+  height: 1px;
+  background-color: #ACE9FF;
+  z-index: 2000;
+`;
+
+const BtnWrap = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap:-10px;
 `;
