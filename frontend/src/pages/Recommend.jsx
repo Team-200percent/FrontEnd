@@ -264,8 +264,20 @@ async function fetchReviewPick() {
     const res = await api.get("/review/recommend/", {
       headers: { ...getAuthHeaders() },
     });
-    return res.data?.results ?? [];
-  } catch (e) {
+const list = res.data?.results ?? [];
+   return list.map(x => ({
+     id: x.id,                    // 리뷰 id
+     market_id: x.market_id,      // ★ 즐겨찾기는 보통 마켓 id 기준
+     market_name: x.market_name,
+     market_type: x.market_type,
+     images: x.images,
+     rating: x.rating,
+     created: x.created,
+     nickname: x.nickname,
+     isFavorite: !!x.is_favorite, // ★ 서버 필드명을 여기에 매핑
+     lat: x.lat,
+     lng: x.lng,
+   }));  } catch (e) {
     console.error("리뷰 PICK 불러오기 실패:", e);
     return [];
   }
@@ -346,7 +358,7 @@ export default function Recommend() {
   const handleLikeClick = (item) => {
     try {
       setPlaceForGroup({
-        id: item.id,
+        id: item.market_id ?? item.id,
         name: item.name || item.market_name,
         lat: item.lat,
         lng: item.lng,
@@ -439,13 +451,18 @@ export default function Recommend() {
 }
 
 function PlaceCard({ item, onLike, onClick }) {
-  const [isFavorite, setIsFavorite] = useState(item.isFavorite);
+  const [isFavorite, setIsFavorite] = useState(!!item.isFavorite);
+
+  useEffect(() => {
+    setIsFavorite(!!item.isFavorite);
+  }, [item.isFavorite]);
 
   const handleHeartClick = async () => {
     try {
-      await onLike(); // 👉 전달받은 handleLikeClick만 실행
       setIsFavorite((v) => !v);
+      await onLike();
     } catch (err) {
+      setIsFavorite((v) => !v);
       console.error("즐겨찾기 처리 실패:", err);
     }
   };
@@ -477,19 +494,24 @@ function PlaceCard({ item, onLike, onClick }) {
 }
 
 function PickCard({ item, onLike, onClick }) {
-  const [isFavorite, setIsFavorite] = useState(item.isFavorite);
+  const [isFavorite, setIsFavorite] = useState(!!item.isFavorite);
 
-  const handleClick = async () => {
+  useEffect(() => {
+    setIsFavorite(!!item.isFavorite);
+  }, [item.isFavorite]);
+
+  const handleHeartClick = async () => {
     try {
+      setIsFavorite((v) => !v);
       await onLike();
-      setIsFavorite(!isFavorite);
-    } catch (e) {
-      console.error("즐겨찾기 처리 실패:", e);
+    } catch (err) {
+      setIsFavorite((v) => !v);
+      console.error("즐겨찾기 처리 실패:", err);
     }
   };
 
   return (
-    <Pick onClick={onClick}>
+    <Pick>
       <PickHeader>
         <UserWrapper>
           <Avatar img src="/icons/recommend/usericon.png" />
@@ -524,12 +546,12 @@ function PickCard({ item, onLike, onClick }) {
       <PickHeart
         type="button"
         aria-label="좋아요"
-        onClick={handleClick}
+        onClick={handleHeartClick}
         data-nodrag
       >
         <img
           src={
-            isFavorite
+            item.isFavorite
               ? "/icons/map/compact-heart-on.png"
               : "/icons/map/compact-heart-off.png"
           }
@@ -631,7 +653,6 @@ const Row = styled.div`
   grid-auto-columns: 160px;
   overflow-x: auto;
   padding: 4px 4px 14px;
- 
 
   &.personal {
     gap: 62px;
