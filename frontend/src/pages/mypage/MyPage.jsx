@@ -103,7 +103,6 @@ function PreferenceEditSheet({
     "채식 · 비건",
     "다이어트식",
     "고기집",
-    "디저트 · 베이커리",
   ];
   const SPORTS = [
     "헬스 / 피트니스",
