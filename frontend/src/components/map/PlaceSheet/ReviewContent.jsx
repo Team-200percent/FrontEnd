@@ -39,6 +39,7 @@ export default function ReviewContent({ place, onWriteReview, refreshKey }) {
   const [isReviewsExpanded, setIsReviewsExpanded] = useState(false);
   const [photoReviews, setPhotoReviews] = useState([]);
 
+
   // ✅ 1. 팔로우/언팔로우 API를 호출하는 함수
   const handleFollow = async (reviewNickname, reviewIndex) => {
     try {
@@ -268,7 +269,7 @@ export default function ReviewContent({ place, onWriteReview, refreshKey }) {
             </UserReviewItem>
           ))
         ) : (
-          <p>아직은 리뷰가 없어요</p>
+          <b>아직은 리뷰가 없어요</b>
         )}
 
         {!isReviewsExpanded && reviewData.reviews.length > 1 && (
@@ -295,11 +296,13 @@ const BUBBLE_COLORS = [
 const ReviewWrapper = styled.div`
   padding: 24px 30px;
 
-  p {
+  b {
     color: #bababaff;
     font-size: 12px;
     font-weight: 400;
   }
+
+  
 `;
 const SectionTitle = styled.h3`
   font-size: 16px;
@@ -557,6 +560,7 @@ const ReviewTags = styled.div`
   flex-wrap: wrap;
   gap: 6px;
   padding: 0px 10px;
+  
 `;
 const Tag = styled.span`
   border-radius: 30px;
