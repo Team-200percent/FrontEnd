@@ -275,7 +275,7 @@ export default function Map() {
           const center = new window.kakao.maps.LatLng(latitude, longitude);
 
           // 지도 이동
-          mapRef.current.setLevel(4);
+          mapRef.current.setLevel(9);
           mapRef.current.panTo(center);
 
           // ✅ DOM element 생성
