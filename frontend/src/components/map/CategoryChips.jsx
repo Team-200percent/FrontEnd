@@ -61,7 +61,6 @@ export default function CategoryChips({ onSelect, defaultActive = null }) {
   }, [defaultActive]);
 
   const handleClick = (key) => {
-    // ✅ 실제로 드래그한 상태라면 클릭 무시
     if (dragRef.current.dragging) return;
     setActive(key);
     onSelect?.(key);
@@ -88,7 +87,6 @@ export default function CategoryChips({ onSelect, defaultActive = null }) {
     // 아직 드래그 시작 안했고, 임계값 넘기 전: 클릭으로 간주 (아무것도 안함)
     if (!d.dragging && Math.abs(dx) < DRAG_THRESHOLD) return;
 
-    // ✅ 여기서부터 드래그 시작!
     if (!d.dragging) {
       d.dragging = true;
       el.setPointerCapture?.(d.pointerId);
@@ -135,7 +133,6 @@ export default function CategoryChips({ onSelect, defaultActive = null }) {
     };
   }, []);
 
-  // ✅ Windows에서 휠(세로) → 가로 스크롤로 변환 (마우스만 써도 부드럽게)
   useEffect(() => {
     const el = scrollerRef.current;
     if (!el) return;
