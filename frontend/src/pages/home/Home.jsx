@@ -6,6 +6,7 @@ import LevelSelector from "../../components/home/LevelSelector";
 import WeeklyMissionBox from "../../components/home/WeeklyMissionBox";
 import {
   CATEGORY_ICONS,
+  EGG_META,
   LEVEL_META,
   STAGE_POSITIONS,
 } from "../../data/HomeData";
@@ -449,6 +450,27 @@ export default function Home() {
     }
   };
 
+  const asActivated = (src) => {
+    if (!src) return src;
+    const i = src.lastIndexOf(".");
+    if (i <= 0) return `${src}-activated`;
+    return `${src.slice(0, i)}-activated${src.slice(i)}`;
+  };
+
+  // 헬퍼: EGG_META에서 안전하게 eggs 배열 뽑기 + activated 원본은 제거
+  const getEggsFor = (level, stageIdx) => {
+    const raw = EGG_META?.[level]?.[stageIdx];
+    const arr = Array.isArray(raw) ? raw : raw ? [raw] : [];
+    // 원본 데이터에 activated 이미지가 같이 들어있으면 제외
+    return arr.filter(
+      (e) => typeof e?.src === "string" && !e.src.includes("-activated")
+    );
+  };
+
+  const isLevelCleared =
+    serverStages.length > 0 &&
+    serverStages.every((s) => s.status === "completed");
+
   return (
     <Wrapper>
       <LevelSelector
@@ -497,18 +519,45 @@ export default function Home() {
 
                 {serverStages.map((stage, i) => {
                   const pressed = activeStageIndex === i;
+
+                  const eggs = getEggsFor(currentLevel, i); // 여러 개 가능
+                  const isCompleted = stage.status === "completed";
+
                   return (
-                    <StageIcon
-                      key={i}
-                      $status={stage.status}
-                      $type={stage.type}
-                      $level={currentLevel}
-                      style={{ top: stage.top, left: stage.left }}
-                      onClick={() => handleStageClick(i)}
-                      disabled={loadingStages}
-                    >
-                      {getStageIcon(stage, pressed, currentLevel)}
-                    </StageIcon>
+                    <>
+                      {eggs.map((egg, k) => {
+                        const baseSrc = egg.src;
+                        const src = isLevelCleared
+                          ? asActivated(baseSrc)
+                          : baseSrc;
+
+                        return (
+                          <EggIcon
+                            key={k}
+                            src={src}
+                            alt="egg"
+                            style={{
+                              bottom: `calc(100% + ${egg.offsetY ?? 0}px)`, // 버튼 위 정렬
+                              marginLeft: egg.offsetX ?? 0,
+                            }}
+                            $scale={egg.scale ?? 1}
+                            $z={egg.z ?? 2}
+                          />
+                        );
+                      })}
+
+                      <StageIcon
+                        key={i}
+                        $status={stage.status}
+                        $type={stage.type}
+                        $level={currentLevel}
+                        style={{ top: stage.top, left: stage.left }}
+                        onClick={() => handleStageClick(i)}
+                        disabled={loadingStages}
+                      >
+                        {getStageIcon(stage, pressed, currentLevel)}
+                      </StageIcon>
+                    </>
                   );
                 })}
 
@@ -688,6 +737,7 @@ const GameMapContainer = styled.div`
   width: 100%;
   height: 500px;
   position: relative;
+  z-inex: 4;
 
   background-image: url("/icons/home/level-path.png");
   background-position: center;
@@ -847,4 +897,14 @@ const StartButton = styled.button`
   font-size: 16px;
   font-weight: 700;
   cursor: pointer;
+`;
+
+const EggIcon = styled.img`
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%) ${({ $scale }) => `scale(${$scale || 1})`};
+  pointer-events: none;
+  z-index: ${({ $z }) => $z ?? 2};
+  width: 32px;
+  height: auto;
 `;

@@ -1,16 +1,217 @@
-
 export const STAGE_POSITIONS = [
-  { top: "17%", left: "12%", tooltipTop: "27%", tooltipAnchor: "8%", tooltipAnchorDirection: "top" },
-  { top: "17%", left: "41%", tooltipTop: "27%", tooltipAnchor: "41%", tooltipAnchorDirection: "top" },
-  { top: "17%", left: "70%", tooltipTop: "27%", tooltipAnchor: "72%", tooltipAnchorDirection: "top" },
-  { top: "32%", left: "88%", tooltipTop: "41%", tooltipAnchor: "92%", tooltipAnchorDirection: "top" },
-  { top: "49%", left: "70%", tooltipTop: "58%", tooltipAnchor: "72%", tooltipAnchorDirection: "top" },
-  { top: "49%", left: "41%", tooltipTop: "58%", tooltipAnchor: "41%", tooltipAnchorDirection: "top" },
-  { top: "65%", left: "12%", tooltipTop: "27%", tooltipAnchor: "9%",  tooltipAnchorDirection: "bottom" },
-  { top: "82%", left: "30%", tooltipTop: "45%", tooltipAnchor: "28%", tooltipAnchorDirection: "bottom" },
-  { top: "82%", left: "59%", tooltipTop: "45%", tooltipAnchor: "59%", tooltipAnchorDirection: "bottom" },
-  { top: "82%", left: "88%", tooltipTop: "45%", tooltipAnchor: "91%", tooltipAnchorDirection: "bottom" },
+  {
+    top: "17%",
+    left: "12%",
+    tooltipTop: "27%",
+    tooltipAnchor: "8%",
+    tooltipAnchorDirection: "top",
+  },
+  {
+    top: "17%",
+    left: "41%",
+    tooltipTop: "27%",
+    tooltipAnchor: "41%",
+    tooltipAnchorDirection: "top",
+  },
+  {
+    top: "17%",
+    left: "70%",
+    tooltipTop: "27%",
+    tooltipAnchor: "72%",
+    tooltipAnchorDirection: "top",
+  },
+  {
+    top: "32%",
+    left: "88%",
+    tooltipTop: "41%",
+    tooltipAnchor: "92%",
+    tooltipAnchorDirection: "top",
+  },
+  {
+    top: "49%",
+    left: "70%",
+    tooltipTop: "58%",
+    tooltipAnchor: "72%",
+    tooltipAnchorDirection: "top",
+  },
+  {
+    top: "49%",
+    left: "41%",
+    tooltipTop: "58%",
+    tooltipAnchor: "41%",
+    tooltipAnchorDirection: "top",
+  },
+  {
+    top: "65%",
+    left: "12%",
+    tooltipTop: "27%",
+    tooltipAnchor: "9%",
+    tooltipAnchorDirection: "bottom",
+  },
+  {
+    top: "82%",
+    left: "30%",
+    tooltipTop: "45%",
+    tooltipAnchor: "28%",
+    tooltipAnchorDirection: "bottom",
+  },
+  {
+    top: "82%",
+    left: "59%",
+    tooltipTop: "45%",
+    tooltipAnchor: "59%",
+    tooltipAnchorDirection: "bottom",
+  },
+  {
+    top: "82%",
+    left: "88%",
+    tooltipTop: "45%",
+    tooltipAnchor: "91%",
+    tooltipAnchorDirection: "bottom",
+  },
 ];
+
+export const EGG_META = {
+  1: {
+    0: [
+      {
+        src: "/images/egg/1-1.png",
+        offsetX: -120,
+        offsetY: -238,
+        scale: 3.3,
+        z: -3,
+      },
+      {
+        src: "/images/egg/1-1-activated.png",
+        offsetX: -120,
+        offsetY: -238,
+        scale: 3.3,
+        z: -3,
+      },
+    ],
+    1: [
+      {
+        src: "/images/egg/1-2.png",
+        offsetX: 80,
+        offsetY: -360,
+        scale: 3.8,
+        z: -3,
+      },
+      {
+        src: "/images/egg/1-2-activated.png",
+        offsetX: 80,
+        offsetY: -360,
+        scale: 3.8,
+        z: -3,
+      },
+    ],
+  },
+  2: {
+    0: [
+      {
+        src: "/images/egg/2-1.png",
+        offsetX: -120,
+        offsetY: -240,
+        scale: 3.0,
+        z: -3,
+      },
+      {
+        src: "/images/egg/2-1-activated.png",
+        offsetX: -120,
+        offsetY: -240,
+        scale: 3.0,
+        z: -3,
+      },
+    ],
+
+    1: [
+      {
+        src: "/images/egg/2-2.png",
+        offsetX: 50,
+        offsetY: -205,
+        scale: 1.8,
+        z: -3,
+      },
+      {
+        src: "/images/egg/2-2-activated.png",
+        offsetX: -120,
+        offsetY: -240,
+        scale: 3.0,
+        z: -3,
+      },
+    ],
+  },
+  3: {
+    0: [
+      {
+        src: "/images/egg/3-1.png",
+        offsetX: -40,
+        offsetY: -380,
+        scale: 1.8,
+        z: -2,
+      },
+      {
+        src: "/images/egg/3-1-activated.png",
+        offsetX: -120,
+        offsetY: -240,
+        scale: 3.0,
+        z: -3,
+      },
+    ],
+  },
+  4: {
+    0: [
+      {
+        src: "/images/egg/4-1.png",
+        offsetX: -110,
+        offsetY: -230,
+        scale: 1.8,
+        z: -2,
+      },
+      {
+        src: "/images/egg/4-1-activated.png",
+        offsetX: -120,
+        offsetY: -240,
+        scale: 3.0,
+        z: -3,
+      },
+    ],
+    1: [
+      {
+        src: "/images/egg/4-2.png",
+        offsetX: 67,
+        offsetY: -370,
+        scale: 2.7,
+        z: -3,
+      },
+      {
+        src: "/images/egg/4-2-activated.png",
+        offsetX: -120,
+        offsetY: -240,
+        scale: 3.0,
+        z: -3,
+      },
+    ],
+  },
+  5: {
+    0: [
+      {
+        src: "/images/egg/5-1.png",
+        offsetX: -110,
+        offsetY: -236,
+        scale: 2.9,
+        z: -2,
+      },
+      {
+        src: "/images/egg/5-1-activated.png",
+        offsetX: -110,
+        offsetY: -236,
+        scale: 2.9,
+        z: -2,
+      },
+    ],
+  },
+};
 
 export const LEVEL_META = {
   1: {
@@ -40,7 +241,7 @@ export const LEVEL_META = {
   },
   6: {
     title: "MAX",
-  }
+  },
 };
 
 export const CATEGORY_ICONS = {
@@ -143,5 +344,3 @@ export const CATEGORY_ICONS = {
     inactive_pressed: "/icons/home/levelicon/heart/inactive-pressed.png",
   },
 };
-
-
