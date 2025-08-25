@@ -182,12 +182,7 @@ export default function ReviewContent({ place, onWriteReview, refreshKey }) {
                 <Photo key={idx} src={url} alt={`리뷰 사진 ${idx + 1}`} />
               ))
             ) : (
-              <>
-                <PhotoPlaceholder />
-                <PhotoPlaceholder />
-                <PhotoPlaceholder />
-                <PhotoPlaceholder />
-              </>
+              <p>아직은 리뷰가 없어요</p>
             )}
           </PhotoGrid>
         </SectionTitle>
@@ -200,76 +195,81 @@ export default function ReviewContent({ place, onWriteReview, refreshKey }) {
           <strong>상세</strong> 리뷰
         </SectionTitle>
 
-        {displayedReviews.map((review, index) => (
-          <UserReviewItem key={review.created}>
-            <ReviewHeader>
-              <UserProfile>
-                <img src="/icons/map/review/usericon.png" alt="User Icon" />
-                <UserInfo>
-                  <span>{review.nickname ?? `user_${review.user}`}</span>
-                  <small>
-                    리뷰 {review.review_count}· 팔로워{" "}
-                    {review.user_follower}
-                  </small>
-                  <StarsWrapper>
-                    {/* ✅ 개별 리뷰의 rating을 사용합니다. */}
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Star
-                        key={i}
-                        $filled={i < Math.round(review.rating ?? 0)}
+        {displayedReviews.length > 0 ? (
+          displayedReviews.map((review, index) => (
+            <UserReviewItem key={review.created}>
+              <ReviewHeader>
+                <UserProfile>
+                  <img src="/icons/map/review/usericon.png" alt="User Icon" />
+                  <UserInfo>
+                    <span>{review.nickname ?? `user_${review.user}`}</span>
+                    <small>
+                      리뷰 {review.review_count} · 팔로워 {review.user_follower}
+                    </small>
+                    <StarsWrapper>
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Star
+                          key={i}
+                          $filled={i < Math.round(review.rating ?? 0)}
+                        />
+                      ))}
+                    </StarsWrapper>
+                  </UserInfo>
+                </UserProfile>
+                <FollowButton
+                  $isFollowing={review.is_following}
+                  onClick={() => handleFollow(review.nickname, index)}
+                >
+                  {review.is_following ? "팔로잉" : "팔로우"}
+                </FollowButton>
+              </ReviewHeader>
+
+              {Array.isArray(review.images) && review.images.length > 0 && (
+                <PhotoSection>
+                  {review.images.map((url, idx) => (
+                    <ReviewPhoto
+                      key={`${review.created}-${idx}`}
+                      src={url}
+                      alt={`리뷰 사진 ${idx + 1}`}
+                      loading="lazy"
+                    />
+                  ))}
+                </PhotoSection>
+              )}
+
+              <ReviewDescription>{review.description}</ReviewDescription>
+
+              <ReviewDate>
+                {(() => {
+                  const d = new Date(review.created);
+                  const yy = String(d.getFullYear()).slice(2);
+                  const mm = String(d.getMonth() + 1).padStart(2, "0");
+                  const dd = String(d.getDate()).padStart(2, "0");
+                  return `${yy}.${mm}.${dd}`;
+                })()}
+              </ReviewDate>
+
+              <ReviewTags>
+                {review.tags.map((tagText) => {
+                  const tagInfo = Object.values(TAG_MAP).find(
+                    (t) => t.text === tagText
+                  );
+                  return (
+                    <Tag key={tagText}>
+                      <img
+                        src={tagInfo?.icon.replace("-white", "-sky")}
+                        alt=""
                       />
-                    ))}
-                  </StarsWrapper>
-                </UserInfo>
-              </UserProfile>
-              <FollowButton
-                $isFollowing={review.is_following}
-                onClick={() => handleFollow(review.nickname, index)}
-              >
-                {review.is_following ? "팔로잉" : "팔로우"}
-              </FollowButton>{" "}
-            </ReviewHeader>
-
-            {Array.isArray(review.images) && review.images.length > 0 && (
-              <PhotoSection>
-                {review.images.map((url, idx) => (
-                  <ReviewPhoto
-                    key={`${review.created}-${idx}`}
-                    src={url}
-                    alt={`리뷰 사진 ${idx + 1}`}
-                    loading="lazy"
-                  />
-                ))}
-              </PhotoSection>
-            )}
-
-            <ReviewDescription>{review.description}</ReviewDescription>
-
-            <ReviewDate>
-              {(() => {
-                const d = new Date(review.created);
-                const yy = String(d.getFullYear()).slice(2); // 두 자리 연도
-                const mm = String(d.getMonth() + 1).padStart(2, "0");
-                const dd = String(d.getDate()).padStart(2, "0");
-                return `${yy}.${mm}.${dd}`;
-              })()}
-            </ReviewDate>
-
-            <ReviewTags>
-              {review.tags.map((tagText) => {
-                const tagInfo = Object.values(TAG_MAP).find(
-                  (t) => t.text === tagText
-                );
-                return (
-                  <Tag key={tagText}>
-                    <img src={tagInfo?.icon.replace("-white", "-sky")} alt="" />
-                    {tagText}
-                  </Tag>
-                );
-              })}
-            </ReviewTags>
-          </UserReviewItem>
-        ))}
+                      {tagText}
+                    </Tag>
+                  );
+                })}
+              </ReviewTags>
+            </UserReviewItem>
+          ))
+        ) : (
+          <p>아직은 리뷰가 없어요</p>
+        )}
 
         {!isReviewsExpanded && reviewData.reviews.length > 1 && (
           <DetailReviewExpandButton onClick={() => setIsReviewsExpanded(true)}>
@@ -294,6 +294,12 @@ const BUBBLE_COLORS = [
 // --- ReviewContent 전용 스타일 ---
 const ReviewWrapper = styled.div`
   padding: 24px 30px;
+
+  p {
+    color: #bababaff;
+    font-size: 12px;
+    font-weight: 400;
+  }
 `;
 const SectionTitle = styled.h3`
   font-size: 16px;
@@ -434,6 +440,11 @@ const PhotoGrid = styled.div`
   gap: 8px;
   overflow-x: auto;
 
+  p {
+    color: #bababaff;
+    font-size: 12px;
+    font-weight: 400;
+  }
   &::-webkit-scrollbar {
     display: none;
   }
