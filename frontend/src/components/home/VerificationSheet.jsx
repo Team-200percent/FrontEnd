@@ -6,7 +6,7 @@ export default function VerificationSheet({
   onClose,
   missionTitle,
   onComplete,
-  className = "main"
+  className = "main",
 }) {
   const [image, setImage] = useState(null);
   const handleImageUpload = (e) => {
@@ -48,7 +48,9 @@ export default function VerificationSheet({
           </UploadButton>
         </Content>
         <Footer>
-          <SubmitButton className={className} onClick={handleSubmit}>관리자 승인 요청</SubmitButton>
+          <SubmitButton className={className} onClick={handleSubmit}>
+            관리자 승인 요청
+          </SubmitButton>
         </Footer>
       </SheetContainer>
     </>
@@ -108,7 +110,6 @@ const Content = styled.div`
   flex-direction: column;
 `;
 const MissionInfo = styled.div`
-  margin: 40px;
   text-align: center;
   p {
     font-size: 14px;
@@ -122,20 +123,23 @@ const MissionInfo = styled.div`
   }
 `;
 const ImageUploader = styled.div`
-  height: 30%;
+  width: 100%;
+  aspect-ratio: 3 / 4; /* 4:3 비율 박스 */
   margin: 24px 0;
   background-color: #d9d9d9;
   border-radius: 12px;
   display: grid;
   place-items: center;
+  overflow: hidden; /* 넘치는 부분 잘라내기 */
 `;
+
 const UploadPlaceholder = styled.p`
   color: #888;
 `;
 const ImagePreview = styled.img`
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
 `;
 const UploadButton = styled.button`
   padding: 14px;
@@ -170,7 +174,7 @@ const SubmitButton = styled.button`
   font-weight: 700;
   cursor: pointer;
 
-   &.main {
+  &.main {
     background: #1dc3ff;
   }
 
@@ -178,4 +182,3 @@ const SubmitButton = styled.button`
     background: #ff8a23;
   }
 `;
-
