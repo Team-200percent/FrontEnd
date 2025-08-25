@@ -494,7 +494,7 @@ export default function MyPage() {
           <Handle />
         </HandleArea>
         <SheetInner $expanded={sheetState === SHEET.EXPANDED}>
-          <DisplayName>
+          <DisplayName $expanded={sheetState === SHEET.EXPANDED}>
             {profile?.nickname || profile?.username || "사용자"}
           </DisplayName>
 
@@ -753,9 +753,8 @@ const SheetInner = styled.div`
   padding: ${({ $expanded }) =>
     $expanded ? "74px 18px 16px" : "6px 18px 16px"};
   transition: padding 200ms ease;
-  /* ✅ 접힘에서는 스크롤 불가, 펼친 뒤에만 스크롤 */
   overflow-y: ${({ $expanded }) => ($expanded ? "auto" : "hidden")};
-  /* ✅ 터치 제스처도 접힘 상태에선 막기 */
+  scrollbar-gutter: stable both-edges; /* 스크롤 유무와 관계없이 공간을 고정 예약 */
   touch-action: ${({ $expanded }) => ($expanded ? "auto" : "none")};
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
@@ -766,6 +765,8 @@ const DisplayName = styled.div`
   font-size: 22px;
   font-weight: 700;
   position: relative;
+  margin-top: ${({ $expanded }) => ($expanded ? "-15%" : "0")};
+
 `;
 
 const TopWrapper = styled.div`
