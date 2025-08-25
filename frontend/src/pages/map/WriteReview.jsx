@@ -47,7 +47,7 @@ export default function WriteReview({ place, onClose, onSubmitted }) {
   const [hoverRating, setHoverRating] = useState(0);
 
   // 🖼️ 사진 업로드 상태
-  const [photos, setPhotos] = useState([]); // [{file, url}]
+  const [photo, setPhoto] = useState(null);
   const fileInputRef = useRef(null);
 
   // 태그 선택
@@ -98,7 +98,13 @@ export default function WriteReview({ place, onClose, onSubmitted }) {
           typeof v === "boolean" ? (v ? "true" : "false") : String(v)
         )
       );
-      photos.forEach(({ file }) => form.append("images", file));
+
+      if (photo?.file) {
+        // ✅ 백엔드가 기대하는 필드명으로 맞추세요.
+        //   DRF 쪽이 getlist('images')만 처리한다면 'images'로,
+        //   단일 파일이면 보통 'image'를 씁니다.
+        form.append("image", photo.file); // 또는 form.append("images", photo.file);
+      }
 
       const response = await api.post("/review/", form, {
         params: { lat: place.lat, lng: place.lng },
@@ -125,9 +131,24 @@ export default function WriteReview({ place, onClose, onSubmitted }) {
   const handleAddPhotoClick = () => fileInputRef.current?.click();
 
   const handleFilesChange = async (e) => {
-    // ✅ async 키워드 추가
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
+
+    // 이미 하나 올려둔 상태면 막기
+    if (photo) {
+      alert("사진은 1장만 업로드할 수 있어요.");
+      e.target.value = "";
+      return;
+    }
+
+    // 여러 장 선택하면 막기
+    if (files.length > 1) {
+      alert("사진은 1장만 업로드할 수 있어요.");
+      e.target.value = "";
+      return;
+    }
+
+    const file = files[0];
 
     const options = {
       maxSizeMB: 1,
@@ -135,37 +156,20 @@ export default function WriteReview({ place, onClose, onSubmitted }) {
       useWebWorker: true,
     };
 
-    const newItems = [];
-
-    for (const file of files) {
-      try {
-        let imageFile = file;
-        if (file.size > options.maxSizeMB * 1024 * 1024) {
-          console.log(
-            `${file.name} 파일 용량이 1MB를 초과하여 압축을 시작합니다.`
-          );
-          imageFile = await imageCompression(file, options); // ✅ 이제 정상 동작
-          console.log(
-            `압축 완료: ${file.name} -> ${imageFile.name}, 크기: ${(
-              imageFile.size /
-              1024 /
-              1024
-            ).toFixed(2)}MB`
-          );
-        }
-
-        newItems.push({
-          file: imageFile,
-          url: URL.createObjectURL(imageFile),
-        });
-      } catch (error) {
-        console.error("이미지 처리 중 오류:", error);
-        alert("이미지를 처리하는 중 오류가 발생했습니다.");
+    try {
+      let imageFile = file;
+      if (file.size > options.maxSizeMB * 1024 * 1024) {
+        imageFile = await imageCompression(file, options);
       }
-    }
 
-    setPhotos((prev) => [...prev, ...newItems].slice(0, 10));
-    e.target.value = "";
+      const url = URL.createObjectURL(imageFile);
+      setPhoto({ file: imageFile, url });
+    } catch (error) {
+      console.error("이미지 처리 중 오류:", error);
+      alert("이미지를 처리하는 중 오류가 발생했습니다.");
+    } finally {
+      e.target.value = "";
+    }
   };
 
   const handleDeletePhoto = (idx) => {
@@ -241,7 +245,13 @@ export default function WriteReview({ place, onClose, onSubmitted }) {
 
           <PhotoUploader>
             <AddPhotoButton
-              onClick={handleAddPhotoClick}
+              onClick={() => {
+                if (photo) {
+                  alert("사진은 1장만 업로드할 수 있어요.");
+                  return;
+                }
+                handleAddPhotoClick();
+              }}
               aria-label="사진 추가"
             >
               <img src="/icons/map/review/addphoto.png" alt="추가" />
@@ -252,23 +262,25 @@ export default function WriteReview({ place, onClose, onSubmitted }) {
               ref={fileInputRef}
               type="file"
               accept="image/*"
-              multiple
               style={{ display: "none" }}
               onChange={handleFilesChange}
             />
 
             {/* 미리보기들 */}
-            {photos.map((p, idx) => (
-              <PhotoPreview key={idx}>
-                <img src={p.url} alt={`업로드 이미지 ${idx + 1}`} />
+            {photo && (
+              <PhotoPreview>
+                <img src={photo.url} alt="업로드 이미지" />
                 <DeleteButton
-                  onClick={() => handleDeletePhoto(idx)}
+                  onClick={() => {
+                    URL.revokeObjectURL(photo.url);
+                    setPhoto(null);
+                  }}
                   aria-label="사진 삭제"
                 >
                   <img src="/icons/map/review/x.png" alt="삭제" />
                 </DeleteButton>
               </PhotoPreview>
-            ))}
+            )}
           </PhotoUploader>
         </Section>
 
