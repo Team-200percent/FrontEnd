@@ -176,7 +176,10 @@ const SearchBar = forwardRef(
               data-listening={listening ? "1" : undefined}
               onClick={startVoice}
             >
-              <img src="/icons/map/microphone.svg" alt="음성검색 마이크 아이콘" />
+              <img
+                src="/icons/map/microphone.svg"
+                alt="음성검색 마이크 아이콘"
+              />
             </RightIcon>
           </SearchBox>
         </Row>
@@ -236,6 +239,7 @@ const Placeholder = styled.div`
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+  margin-left: 2px;
 `;
 
 const Input = styled.input`

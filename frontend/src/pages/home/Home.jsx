@@ -879,8 +879,12 @@ const TooltipContent = styled.div`
   align-items: center;
 
   span {
+    width: 80%;
     font-size: 16px;
     font-weight: 500;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
   }
   strong {
     font-size: 16px;
@@ -899,11 +903,11 @@ const StartButton = styled.button`
     $status === "completed" ? "#0092c7" : "#fff"};
 
   color: ${({ $status }) =>
-  $status === "completed"
-    ? "#fff"
-    : $status === "in_progress"
-    ? "#1dc3ff"
-    : "#bbbcc4"};
+    $status === "completed"
+      ? "#fff"
+      : $status === "in_progress"
+      ? "#1dc3ff"
+      : "#bbbcc4"};
   border-radius: 12px;
   font-size: 16px;
   font-weight: 700;
