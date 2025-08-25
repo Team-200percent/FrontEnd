@@ -332,8 +332,8 @@ export default function MyPage() {
 
     // 상태별로 한 방향만 시각 피드백
     if (sheetState === SHEET.COLLAPSED) {
-      const up = Math.min(0, raw); // 위로만
-      applyTranslate(Math.abs(up));
+      const up = Math.min(0, raw);
+      applyTranslate(up);
     } else {
       const down = Math.max(0, raw); // 아래로만
       applyTranslate(down);
@@ -359,9 +359,23 @@ export default function MyPage() {
           : THRESHOLD_TOUCH;
 
       if (sheetState === SHEET.COLLAPSED) {
-        if (-d > threshold) expandSheet();
+        if (-d > threshold) {
+          expandSheet();
+          requestAnimationFrame(() => {
+            applyTranslate(0);
+            setTimeout(() => endDrag(), 250);
+          });
+          return;
+        }
       } else {
-        if (d > threshold) collapseSheet();
+        if (d > threshold) {
+          collapseSheet();
+          requestAnimationFrame(() => {
+            applyTranslate(0);
+            setTimeout(() => endDrag(), 250);
+          });
+          return;
+        }
       }
       endDrag();
     };
@@ -712,7 +726,9 @@ const Sheet = styled.div`
   border-top-left-radius: ${({ $expanded }) => ($expanded ? "0px" : "22px")};
   border-top-right-radius: ${({ $expanded }) => ($expanded ? "0px" : "22px")};
   box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.12);
-  transition: height 260ms ease, border-radius 260ms ease;
+  transition: height 260ms ease, border-radius 260ms ease,
+    transform 220ms ease-out;
+  will-change: transform, height;
   z-index: 200;
   touch-action: pan-y;
 `;
