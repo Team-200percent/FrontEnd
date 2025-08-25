@@ -725,7 +725,7 @@ const ProgressLabel = styled.p`
   margin-top: 12px;
   border-radius: 30px;
   background: #1dc3ff;
-  z-index: 9999999;
+  z-index: 9999;
 
   strong {
     font-weight: 700;
@@ -827,7 +827,9 @@ const TooltipWrapper = styled.div`
   transform: translateX(-50%);
   width: 90%;
   background-color: ${({ $status }) =>
-    $status === "completed" || $status === "in_progress"
+    $status === "completed"
+      ? "#0092C7"
+      : $status === "in_progress"
       ? "#1DC3FF"
       : "#bbbcc4"};
   border-radius: 16px;
@@ -852,9 +854,11 @@ const TooltipWrapper = styled.div`
 
     ${({ $anchorDirection, $status }) => {
       const color =
-        $status === "completed" || $status === "in_progress"
+        $status === "completed"
+          ? "#0092C7"
+          : $status === "in_progress"
           ? "#1DC3FF"
-          : "#BDBDBD";
+          : "#bbbcc4";
       if ($anchorDirection === "bottom") {
         return `
           bottom: -8px;
@@ -888,11 +892,18 @@ const StartButton = styled.button`
   width: 100%;
   padding: 10px;
   border: none;
-  background-color: #fff;
+  border: ${({ $status }) =>
+    $status === "completed" ? "2px solid #fff" : "none"};
+
+  background-color: ${({ $status }) =>
+    $status === "completed" ? "#0092c7" : "#fff"};
+
   color: ${({ $status }) =>
-    $status === "completed" || $status === "in_progress"
-      ? "#1DC3FF"
-      : "#bbbcc4"};
+  $status === "completed"
+    ? "#fff"
+    : $status === "in_progress"
+    ? "#1dc3ff"
+    : "#bbbcc4"};
   border-radius: 12px;
   font-size: 16px;
   font-weight: 700;
