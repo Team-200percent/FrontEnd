@@ -98,7 +98,7 @@ export default function WriteReview({ place, onClose, onSubmitted }) {
           typeof v === "boolean" ? (v ? "true" : "false") : String(v)
         )
       );
-      photos.forEach(({ file }) => form.append("image", file));
+      photos.forEach(({ file }) => form.append("images", file));
 
       const response = await api.post("/review/", form, {
         params: { lat: place.lat, lng: place.lng },
