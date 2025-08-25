@@ -329,6 +329,29 @@ export const CATEGORY_ICONS = {
     inactive_unpressed: "/icons/home/levelicon/facility/inactive.png",
     inactive_pressed: "/icons/home/levelicon/facility/inactive-pressed.png",
   },
+  cafe: {
+    active2_unpressed: "/icons/home/levelicon/cafe/active2.png",
+    active2_pressed: "/icons/home/levelicon/cafe/active2-pressed.png",
+    active3_unpressed: "/icons/home/levelicon/cafe/active3.png",
+    active3_pressed: "/icons/home/levelicon/cafe/active3-pressed.png",
+    active4_unpressed: "/icons/home/levelicon/cafe/active4.png",
+    active4_pressed: "/icons/home/levelicon/cafe/active4-pressed.png",
+    inactive_unpressed: "/icons/home/levelicon/cafe/inactive.png",
+    inactive_pressed: "/icons/home/levelicon/cafe/inactive-pressed.png",
+  },
+  restaurant: {
+    active2_unpressed: "/icons/home/levelicon/restaurant/active2.png",
+    active2_pressed: "/icons/home/levelicon/restaurant/active2-pressed.png",
+    inactive_unpressed: "/icons/home/levelicon/restaurant/inactive.png",
+    inactive_pressed: "/icons/home/levelicon/restaurant/inactive-pressed.png",
+  },
+  book: {
+    active3_unpressed: "/icons/home/levelicon/book/active3.png",
+    active3_pressed: "/icons/home/levelicon/book/active3-pressed.png",
+    inactive_unpressed: "/icons/home/levelicon/book/inactive.png",
+    inactive_pressed: "/icons/home/levelicon/book/inactive-pressed.png",
+  },
+
   _default: {
     active1_unpressed: "/icons/home/levelicon/heart/active1.png",
     active1_pressed: "/icons/home/levelicon/heart/active1-pressed.png",
